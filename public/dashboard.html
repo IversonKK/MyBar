@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Bar Management POS</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📝</text></svg>">
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+    <style>
+        /* Base Reset */
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: #080808; color: #e0e0e0; margin: 0; padding: 15px; display: flex; flex-direction: column; height: 100vh; height: 100dvh; overflow: hidden; box-sizing: border-box; gap: 15px; }
+
+        /* Header */
+        .pos-header { flex: 0 0 auto; background: #151515; border: 1px solid #2a2a2a; border-radius: 12px; padding: 12px 20px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 20px rgba(0,0,0,0.5); z-index: 100; }
+        .header-left { display: flex; align-items: center; gap: 20px; }
+        .header-left h1 { margin: 0; font-size: 1.8em; color: #f39c12; letter-spacing: 1px; display: flex; align-items: center; gap: 10px; }
+        .header-right { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+
+        /* Clock & Badges */
+        .digital-clock { font-size: 1.3em; font-weight: bold; color: #3498db; background: rgba(52, 152, 219, 0.1); padding: 6px 12px; border-radius: 8px; border: 1px solid rgba(52, 152, 219, 0.3); font-family: monospace; letter-spacing: 1px; }
+        .pending-badge { background: #e74c3c; color: white; border-radius: 20px; padding: 2px 10px; font-size: 0.5em; vertical-align: middle; animation: breathingBadge 1.5s infinite ease-in-out; }
+        @keyframes breathingBadge { 0% { box-shadow: 0 0 5px rgba(231,76,60,0.4); transform: scale(1); } 50% { box-shadow: 0 0 15px rgba(231,76,60,0.9); transform: scale(1.15); } 100% { box-shadow: 0 0 5px rgba(231,76,60,0.4); transform: scale(1); } }
+
+        /* Buttons */
+        .pos-btn { background: #222; color: #fff; border: 1px solid #444; padding: 8px 16px; border-radius: 8px; font-weight: bold; cursor: pointer; transition: 0.2s; font-size: 0.95em; display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
+        .pos-btn:hover { background: #333; border-color: #555; transform: translateY(-2px); }
+        .pos-btn:active { transform: translateY(0); }
+        .btn-primary { background: #f39c12; color: #000; border-color: #f39c12; }
+        .btn-primary:hover { background: #e67e22; border-color: #e67e22; color: #000; }
+        .btn-danger { background: rgba(231, 76, 60, 0.1); color: #e74c3c; border-color: rgba(231, 76, 60, 0.3); }
+        .btn-danger:hover { background: #e74c3c; color: #fff; }
+
+        /* Settings Wrap */
+        .settings-wrap { display: flex; align-items: center; gap: 8px; background: #1a1a1a; padding: 6px 12px; border-radius: 8px; border: 1px solid #333; }
+        .settings-wrap label { font-size: 0.85em; color: #aaa; font-weight: bold; }
+        .settings-wrap select { background: transparent; color: #e74c3c; border: none; font-weight: bold; font-size: 1em; cursor: pointer; outline: none; }
+
+        /* Main Workspace */
+        .pos-workspace { flex: 1; display: flex; gap: 15px; overflow: hidden; position: relative; }
+
+        /* Kanban Container */
+        .kanban-container { flex: 1; display: flex; gap: 15px; overflow: hidden; }
+        .kanban-col { flex: 1; display: flex; flex-direction: column; background: #111; border: 1px solid #222; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.3); }
+        .kanban-col-header { padding: 15px; font-weight: bold; font-size: 1.15em; display: flex; justify-content: space-between; align-items: center; background: #161616; border-bottom: 2px solid transparent; z-index: 10; box-shadow: 0 2px 10px rgba(0,0,0,0.2); }
+        .kanban-col-count { background: rgba(255,255,255,0.1); padding: 2px 10px; border-radius: 12px; font-size: 0.85em; color: #ccc; }
+
+        /* Column Theme Colors */
+        #col-pending .kanban-col-header { border-bottom-color: #f39c12; }
+        #col-pending .kanban-col-count { background: rgba(243, 156, 18, 0.2); color: #f39c12; }
+        #col-making .kanban-col-header { border-bottom-color: #3498db; }
+        #col-making .kanban-col-count { background: rgba(52, 152, 219, 0.2); color: #3498db; }
+        #col-completed .kanban-col-header { border-bottom-color: #27ae60; }
+        #col-completed .kanban-col-count { background: rgba(39, 174, 96, 0.2); color: #27ae60; }
+
+        .kanban-list { flex: 1; padding: 12px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; min-height: 100px; }
+        .kanban-list::-webkit-scrollbar { width: 6px; }
+        .kanban-list::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+        .kanban-list::-webkit-scrollbar-track { background: transparent; }
+
+        /* Order Card Redesign */
+        .order-card { background: #1c1c1c; border-radius: 10px; border: 1px solid #333; padding: 12px; display: flex; flex-direction: column; gap: 10px; position: relative; cursor: grab; transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s, filter 0.3s; }
+        .order-card:active { cursor: grabbing; transform: scale(0.98); }
+        .order-card:hover { border-color: #555; box-shadow: 0 4px 12px rgba(0,0,0,0.4); }
+
+        /* Card Status Themes */
+        .order-card.status-pending { border-left: 4px solid #f39c12; }
+        .order-card.status-making { border-left: 4px solid #3498db; background: linear-gradient(135deg, #1c1c1c 0%, #16242e 100%); }
+        .order-card.status-completed { border-left: 4px solid #27ae60; opacity: 0.55; filter: grayscale(0.8); }
+        .order-card.status-rejected { border-left: 4px solid #e74c3c; opacity: 0.4; background: #2a1515; }
+        .order-card.status-rejected .card-drink-name { text-decoration: line-through; color: #e74c3c; }
+
+        .card-header { display: flex; justify-content: space-between; align-items: flex-start; }
+        .card-guest { display: flex; align-items: center; gap: 8px; font-weight: bold; font-size: 1.05em; color: #ccc; cursor: pointer; transition: color 0.2s; }
+        .card-guest:hover { color: #fff; }
+        .card-guest img { width: 26px; height: 26px; border-radius: 50%; border: 1px solid #444; background: #000; transition: transform 0.2s; }
+        .card-guest:hover img { transform: scale(1.1); }
+
+        .card-id-time { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
+        .card-order-id { font-size: 0.75em; color: #555; font-family: monospace; background: #111; padding: 2px 6px; border-radius: 4px; border: 1px solid #222; }
+        .card-time { font-size: 0.8em; color: #777; font-family: monospace; }
+
+        .card-body { display: flex; gap: 12px; align-items: center; margin-top: 2px; }
+        .drag-handle { font-size: 1.5em; color: #444; cursor: grab; padding-right: 4px; transition: color 0.2s; display: flex; align-items: center; justify-content: center; }
+        .drag-handle:hover { color: #888; }
+        .card-img-wrap { position: relative; width: 48px; height: 48px; flex-shrink: 0; }
+        .card-img { width: 100%; height: 100%; border-radius: 8px; object-fit: contain; background: #000; border: 1px solid #333; cursor: zoom-in; transition: transform 0.2s; }
+        .card-img:hover { transform: scale(1.1); box-shadow: 0 4px 10px rgba(0,0,0,0.5); z-index: 10; }
+        .sold-out-overlay { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-15deg); background: rgba(231,76,60,0.9); color: #fff; font-size: 0.55em; font-weight: 900; padding: 2px 4px; border-radius: 4px; border: 1px solid #fff; pointer-events: none; white-space: nowrap; box-shadow: 0 2px 4px rgba(0,0,0,0.5); }
+
+        .card-details { flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center; }
+        .card-drink-name { font-size: 1.25em; font-weight: 900; color: #fff; margin: 0 0 4px 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-shadow: 0 1px 3px rgba(0,0,0,0.8); }
+        .card-notes { font-size: 0.85em; color: #f1c40f; background: rgba(241, 196, 15, 0.1); padding: 4px 8px; border-radius: 4px; border: 1px dashed rgba(241, 196, 15, 0.3); display: inline-block; font-weight: bold; animation: pulseNote 1.5s infinite alternate; align-self: flex-start; }
+        @keyframes pulseNote { from { box-shadow: 0 0 0 rgba(241,196,15,0); } to { box-shadow: 0 0 8px rgba(241,196,15,0.4); } }
+
+        /* Timer Bar */
+        .timer-wrapper { width: 100%; display: none; flex-direction: column; gap: 4px; margin-top: 4px; }
+        .timer-bar-bg { height: 4px; background: #000; border-radius: 2px; overflow: hidden; border: 1px solid #222; }
+        .timer-bar-fill { height: 100%; width: 0%; background: #2ecc71; transition: width 1s linear, background-color 0.5s ease; box-shadow: 0 0 5px rgba(46,204,113,0.5); }
+        .status-making .timer-wrapper { display: flex; }
+        .status-overtime .timer-wrapper { display: flex; }
+
+        .overtime-warning { color: #e74c3c; font-size: 0.8em; font-weight: bold; display: none; align-self: flex-end; animation: flashText 1s infinite alternate; }
+        .status-overtime .overtime-warning { display: block; }
+        .status-overtime { border-color: #e74c3c !important; box-shadow: 0 0 15px rgba(231, 76, 60, 0.2); }
+        @keyframes flashText { from { opacity: 1; text-shadow: 0 0 5px rgba(231,76,60,0.8); } to { opacity: 0.6; text-shadow: none; } }
+
+        /* Actions */
+        .card-actions { display: flex; gap: 8px; margin-top: 2px; }
+        .card-actions button { flex: 1; padding: 8px 0; border: none; border-radius: 6px; font-weight: bold; font-size: 0.9em; cursor: pointer; transition: 0.2s; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+
+        .btn-reject-quick { flex: 0 0 auto !important; width: 36px; background: transparent !important; color: #e74c3c; border: 1px solid #e74c3c !important; box-shadow: none !important; }
+        .btn-reject-quick:hover { background: #e74c3c !important; color: #fff; }
+
+        .btn-make { background: rgba(52, 152, 219, 0.15); color: #3498db; border: 1px solid rgba(52, 152, 219, 0.4); }
+        .btn-make:hover { background: #3498db; color: #fff; box-shadow: 0 4px 10px rgba(52,152,219,0.4); }
+
+        .btn-serve { background: rgba(39, 174, 96, 0.15); color: #2ecc71; border: 1px solid rgba(39, 174, 96, 0.4); }
+        .btn-serve:hover { background: #27ae60; color: #fff; box-shadow: 0 4px 10px rgba(39,174,96,0.4); }
+
+        .btn-revert { background: rgba(149, 165, 166, 0.1); color: #95a5a6; border: 1px solid rgba(149, 165, 166, 0.3); display: none; }
+        .btn-revert:hover { background: #7f8c8d; color: #fff; }
+
+        /* Action Visibility Logic */
+        .status-pending .btn-serve, .status-pending .btn-revert { display: none; }
+        .status-making .btn-make, .status-making .btn-revert, .status-making .btn-reject-quick { display: none; }
+        .status-completed .btn-make, .status-completed .btn-serve, .status-completed .btn-reject-quick { display: none; }
+        .status-rejected .btn-make, .status-rejected .btn-serve, .status-rejected .btn-reject-quick { display: none; }
+        
+        .status-completed .btn-revert, .status-rejected .btn-revert { display: block; }
+        .status-completed:hover, .status-rejected:hover { opacity: 1; filter: grayscale(0); } /* Hover to see details */
+
+        /* Sortable Ghost */
+        .sortable-ghost { opacity: 0.3; background: #222 !important; border: 2px dashed #f39c12 !important; border-radius: 10px; }
+        .sortable-drag { cursor: grabbing !important; opacity: 1 !important; transform: scale(1.03) rotate(1deg); box-shadow: 0 15px 30px rgba(0,0,0,0.6) !important; z-index: 1000; }
+
+        /* Inventory Sidebar */
+        .inventory-sidebar { width: 340px; background: #111; border: 1px solid #2a2a2a; border-radius: 12px; display: flex; flex-direction: column; transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.3s, margin 0.3s, width 0.3s; box-shadow: -4px 0 20px rgba(0,0,0,0.5); flex-shrink: 0; overflow: hidden; }
+        .inventory-sidebar.hidden { transform: translateX(110%); opacity: 0; width: 0; margin-left: -15px; border: none; }
+
+        .inv-header { padding: 15px; background: #161616; border-bottom: 1px solid #222; display: flex; justify-content: space-between; align-items: center; font-weight: bold; font-size: 1.15em; color: #fff; box-shadow: 0 2px 10px rgba(0,0,0,0.2); z-index: 10; }
+        .inv-header-actions { display: flex; gap: 8px; }
+        .inv-header-actions button { background: #333; border: none; color: #fff; padding: 6px 10px; border-radius: 6px; cursor: pointer; transition: 0.2s; font-size: 0.85em; font-weight: bold; }
+        .inv-header-actions button:hover { background: #444; }
+
+        .inv-content { flex: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 15px; }
+        .inv-content::-webkit-scrollbar { width: 6px; }
+        .inv-content::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+
+        /* Bulk Action & Toggles */
+        .inv-tools { background: #161616; padding: 12px; border-radius: 8px; border: 1px solid #2a2a2a; display: flex; flex-direction: column; gap: 10px; }
+        .inv-tools-row { display: flex; gap: 8px; align-items: center; }
+        .inv-search { flex: 1; min-width: 0; padding: 8px 12px; background: #000; border: 1px solid #333; border-radius: 6px; color: #fff; font-size: 0.9em; }
+        .inv-search:focus { border-color: #f39c12; outline: none; }
+
+        .quick-toggles { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 5px; }
+        .quick-toggle-btn { background: #222; color: #ccc; border: 1px solid #444; padding: 6px 12px; border-radius: 20px; font-size: 0.85em; cursor: pointer; transition: 0.2s; display: flex; align-items: center; gap: 4px; font-weight: bold; }
+        .quick-toggle-btn.sold-out { background: rgba(231, 76, 60, 0.15); color: #e74c3c; border-color: rgba(231, 76, 60, 0.3); text-decoration: line-through; }
+        .quick-toggle-btn:hover { filter: brightness(1.2); transform: scale(1.05); }
+
+        .inv-list { display: flex; flex-direction: column; gap: 8px; }
+        .inv-item { display: flex; align-items: center; gap: 12px; background: #1a1a1a; padding: 10px; border-radius: 8px; border: 1px solid #2a2a2a; transition: 0.2s; }
+        .inv-item:hover { border-color: #444; background: #222; }
+        .inv-item.sold-out { opacity: 0.5; border-color: #e74c3c; background: rgba(231, 76, 60, 0.05); filter: grayscale(0.5); }
+        .inv-item img { width: 42px; height: 42px; border-radius: 6px; object-fit: contain; background: #000; border: 1px solid #333; cursor: zoom-in; }
+        .inv-item-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+        .inv-item-name { font-weight: bold; font-size: 1em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #fff; }
+        .inv-item-status { font-size: 0.8em; color: #2ecc71; font-weight: bold; }
+        .inv-item.sold-out .inv-item-status { color: #e74c3c; }
+
+        .inv-item-actions { display: flex; flex-direction: column; gap: 6px; }
+        .inv-action-btn { cursor: pointer; background: #333; color: #fff; border: none; font-size: 0.8em; padding: 6px 10px; border-radius: 6px; transition: 0.2s; text-align: center; font-weight: bold; }
+        .inv-action-btn:hover { background: #444; }
+        .inv-action-btn.toggle-btn { background: rgba(243, 156, 18, 0.2); color: #f39c12; }
+        .inv-action-btn.toggle-btn:hover { background: #f39c12; color: #000; }
+        .inv-item.sold-out .inv-action-btn.toggle-btn { background: rgba(46, 204, 113, 0.2); color: #2ecc71; }
+        .inv-item.sold-out .inv-action-btn.toggle-btn:hover { background: #27ae60; color: #fff; }
+
+        /* Custom Animations for Status Update */
+        @keyframes statusFlashMakingAdmin { 0% { background: #1c1c1c; } 50% { background: rgba(52, 152, 219, 0.4); transform: scale(1.02); box-shadow: 0 0 20px rgba(52, 152, 219, 0.4); } 100% { background: #1c1c1c; transform: scale(1); } }
+        @keyframes statusFlashCompletedAdmin { 0% { background: #1c1c1c; } 50% { background: rgba(39, 174, 96, 0.4); transform: scale(1.02); box-shadow: 0 0 20px rgba(39, 174, 96, 0.4); } 100% { background: #1c1c1c; transform: scale(1); } }
+        .status-updated-flash-making { animation: statusFlashMakingAdmin 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        .status-updated-flash-completed { animation: statusFlashCompletedAdmin 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+
+        /* Toast */
+        #toast { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background: #27ae60; color: white; padding: 12px 24px; border-radius: 30px; display: none; z-index: 100000; box-shadow: 0 4px 15px rgba(0,0,0,0.5); animation: slideDown 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); font-weight: bold; font-size: 1.05em; }
+        @keyframes slideDown { from { transform: translate(-50%, -100%); opacity: 0; } to { transform: translate(-50%, 0); opacity: 1; } }
+
+        /* Audio Unlock Modal */
+        #audio-unlock-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.95); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 999999; color: white; text-align: center; padding: 20px; backdrop-filter: blur(10px); }
+        .unlock-btn { background: linear-gradient(135deg, #2ecc71, #27ae60); color: white; border: none; padding: 20px 40px; border-radius: 15px; font-size: 1.5em; font-weight: bold; cursor: pointer; margin-top: 30px; box-shadow: 0 10px 30px rgba(39, 174, 96, 0.4); transition: transform 0.2s, box-shadow 0.2s; }
+        .unlock-btn:hover { transform: translateY(-5px); box-shadow: 0 15px 40px rgba(39, 174, 96, 0.6); }
+        .unlock-btn:active { transform: translateY(0) scale(0.95); }
+
+        /* Responsive */
+        @media (max-width: 1024px) {
+            .inventory-sidebar { position: absolute; right: 15px; top: 0; height: 100%; z-index: 1000; }
+        }
+        @media (max-width: 768px) {
+            body { padding: 10px; gap: 10px; overflow: auto; } /* Let it scroll on mobile if needed */
+            .pos-header { flex-direction: column; gap: 12px; padding: 15px; }
+            .header-right { width: 100%; justify-content: space-between; flex-wrap: wrap; }
+            .settings-wrap { width: 100%; justify-content: space-between; }
+            .pos-workspace { overflow: visible; flex-direction: column; }
+            .kanban-container { flex-direction: column; overflow: visible; height: auto; }
+            .kanban-col { flex: 0 0 auto; min-height: 400px; overflow: visible; }
+            .inventory-sidebar { width: calc(100% - 20px); right: 10px; position: fixed; top: 10px; height: calc(100vh - 20px); }
+            .kanban-list { overflow: visible; }
+        }
+
+        /* Generic Modals */
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); display: flex; justify-content: center; align-items: center; z-index: 10500; visibility: hidden; opacity: 0; transition: 0.3s; backdrop-filter: blur(5px); }
+        .modal-overlay.visible { visibility: visible; opacity: 1; }
+        .modal-content { background: #161616; padding: 25px; border-radius: 12px; width: 90%; max-width: 500px; color: #fff; position: relative; max-height: 90vh; overflow-y: auto; box-shadow: 0 10px 40px rgba(0,0,0,0.7); border: 1px solid #333; transform: scale(0.9); transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        .modal-overlay.visible .modal-content { transform: scale(1); }
+
+        .modal-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #333; padding-bottom: 15px; margin-bottom: 15px; }
+        .modal-header h2 { margin: 0; color: #f39c12; font-size: 1.4em; }
+        .modal-close { background: none; border: none; color: #aaa; font-size: 1.5em; cursor: pointer; transition: color 0.2s; padding: 0; line-height: 1; }
+        .modal-close:hover { color: #fff; }
+
+        /* Form styles for recipe edit */
+        .edit-form-group { margin-bottom: 15px; text-align: left; }
+        .edit-form-group label { display: block; margin-bottom: 5px; color: #aaa; font-weight: bold; font-size: 0.85em; }
+        .edit-form-group input, .edit-form-group textarea, .edit-form-group select { width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #444; background: #000; color: #fff; box-sizing: border-box; font-size: 0.95em; outline: none; transition: border-color 0.2s; }
+        .edit-form-group input:focus, .edit-form-group textarea:focus, .edit-form-group select:focus { border-color: #f39c12; }
+        .edit-form-group textarea { resize: vertical; min-height: 80px; }
+
+    </style>
+</head>
+<body>
+    <div id="toast"></div>
+    
+    <!-- 音效權限解鎖遮罩 -->
+    <div id="audio-unlock-overlay">
+        <h2 style="color: #f39c12; font-size: 2.5em; margin-bottom: 10px; text-shadow: 0 2px 10px rgba(0,0,0,0.8);">⚠️ 系統提示</h2>
+        <p style="font-size: 1.2em; color: #ddd; line-height: 1.5;">為了在第一時間提醒您接單，<br>請點擊下方按鈕解鎖瀏覽器的音效限制，<br>並保持螢幕常亮。</p>
+        <button class="unlock-btn" onclick="unlockNotifications()">🔊 進入接單看板</button>
+    </div>
+
+    <!-- Header -->
+    <header class="pos-header">
+        <div class="header-left">
+            <h1>📝 吧台接單系統</h1>
+            <div id="digital-clock" class="digital-clock">00:00:00</div>
+        </div>
+        <div class="header-right">
+            <div class="settings-wrap">
+                <label>⏰ 警告線</label>
+                <select id="overtime-threshold" onchange="checkOvertime()">
+                    <option value="10">10 分</option>
+                    <option value="15" selected>15 分</option>
+                    <option value="20">20 分</option>
+                    <option value="30">30 分</option>
+                    <option value="45">45 分</option>
+                    <option value="60">60 分</option>
+                </select>
+            </div>
+            <button onclick="showTodayStats()" class="pos-btn">📊 統計</button>
+            <button onclick="clearFinished()" class="pos-btn">🧹 清理</button>
+            <button onclick="resetAllHistory()" class="pos-btn btn-danger">🔥 清空</button>
+            <button onclick="toggleSidebar()" class="pos-btn btn-primary" id="btn-toggle-inv">📦 庫存</button>
+        </div>
+    </header>
+
+    <!-- Main Workspace -->
+    <div class="pos-workspace">
+
+        <!-- Kanban Board -->
+        <div class="kanban-container" id="kanban-container">
+            <!-- 待接單 Column -->
+            <div class="kanban-col" id="col-pending">
+                <div class="kanban-col-header">
+                    <span>⌛ 待處理 <span id="pending-count" class="pending-badge" style="display:none;">0</span></span>
+                    <span class="kanban-col-count" id="count-pending">0</span>
+                </div>
+                <div class="kanban-list" id="list-pending" data-status="pending"></div>
+            </div>
+
+            <!-- 製作中 Column -->
+            <div class="kanban-col" id="col-making">
+                <div class="kanban-col-header">
+                    <span>👨‍🍳 製作中</span>
+                    <span class="kanban-col-count" id="count-making">0</span>
+                </div>
+                <div class="kanban-list" id="list-making" data-status="making"></div>
+            </div>
+
+            <!-- 已完成 Column -->
+            <div class="kanban-col" id="col-completed">
+                <div class="kanban-col-header">
+                    <span>✅ 已出餐</span>
+                    <span class="kanban-col-count" id="count-completed">0</span>
+                </div>
+                <div class="kanban-list" id="list-completed" data-status="completed"></div>
+            </div>
+        </div>
+
+        <!-- Inventory Sidebar -->
+        <div class="inventory-sidebar hidden" id="inventory-sidebar">
+            <div class="inv-header">
+                <span>📦 庫存與配方管理</span>
+                <div class="inv-header-actions">
+                    <button onclick="openEditRecipeModal()" title="新增配方">➕ 新增</button>
+                    <button onclick="reloadRecipes()" title="重新載入配方庫" style="color: #2ecc71;">🔄 重載</button>
+                    <button onclick="toggleSidebar()" style="background: transparent; color: #aaa; font-size: 1.2em; padding: 0;">✖</button>
+                </div>
+            </div>
+            
+            <div class="inv-content">
+                <div class="inv-tools">
+                    <div style="font-size: 0.85em; color: #888; font-weight: bold; margin-bottom: 4px;">批次操作</div>
+                    <div class="inv-tools-row">
+                        <button class="pos-btn" style="flex:1; border-color: #27ae60; color: #2ecc71;" onclick="setAllInventory(false)">✅ 全上架</button>
+                        <button class="pos-btn" style="flex:1; border-color: #c0392b; color: #e74c3c;" onclick="setAllInventory(true)">🚫 全下架</button>
+                    </div>
+                    <div class="inv-tools-row" style="margin-top: 5px;">
+                        <select id="bulk-ingredient-input" class="inv-search" style="margin-bottom: 0;">
+                            <option value="">選擇材料...</option>
+                        </select>
+                        <button class="pos-btn btn-primary" style="padding: 6px 10px;" onclick="setSoldOutByIngredient()" title="包含此材料的酒款全下架">🔍 缺貨下架</button>
+                    </div>
+                </div>
+
+                <div>
+                    <div style="font-size: 0.85em; color: #888; font-weight: bold; margin-bottom: 8px;">⚡ 常缺貨快捷鍵</div>
+                    <div class="quick-toggles" id="quick-toggle-buttons"></div>
+                </div>
+
+                <div style="height: 1px; background: #333; margin: 5px 0;"></div>
+
+                <div class="inv-list" id="inv-list"></div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- 編輯配方 Modal -->
+    <div id="edit-recipe-modal-overlay" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="edit-modal-title">✏️ 編輯酒單配方</h2>
+                <button class="modal-close" onclick="closeEditRecipeModal()">✖</button>
+            </div>
+
+            <div class="edit-form-group">
+                <label>酒名 (Drink Name) *作為檔案與圖片識別</label>
+                <input type="text" id="edit-recipe-name" placeholder="輸入酒名 (例如：Mojito)">
+            </div>
+
+            <div style="display:flex; gap: 10px;">
+                <div class="edit-form-group" style="flex:1;">
+                    <label>酒精濃度 (%)</label>
+                    <input type="number" id="edit-recipe-abv" placeholder="例如：15">
+                </div>
+                <div class="edit-form-group" style="flex:1;">
+                    <label>酒感 (1-5)</label>
+                    <input type="number" id="edit-recipe-strong" min="1" max="5" placeholder="例如：3">
+                </div>
+                <div class="edit-form-group" style="flex:1;">
+                    <label>酸甜度 (1-5)</label>
+                    <input type="number" id="edit-recipe-sour" min="1" max="5" placeholder="例如：3">
+                </div>
+            </div>
+
+            <div class="edit-form-group">
+                <label>標籤 (Tags) - 以逗號分隔</label>
+                <input type="text" id="edit-recipe-tags" placeholder="例如：琴酒, 有氣泡, 清爽">
+            </div>
+
+            <div class="edit-form-group">
+                <label>圖片上傳 (自動置中裁切為正方形)</label>
+                <input type="file" id="edit-recipe-image" accept="image/jpeg, image/png" onchange="previewCroppedImage(event)">
+                <div id="edit-image-preview-container" style="display: none; margin-top: 10px; text-align: center;">
+                    <img id="edit-image-preview" src="" style="width: 100px; height: 100px; object-fit: cover; border-radius: 8px; border: 2px solid #f39c12;">
+                </div>
+            </div>
+
+            <div class="edit-form-group">
+                <label>描述與配方</label>
+                <div style="display: flex; gap: 5px; margin-bottom: 8px;">
+                    <select id="quick-ingredient-select" style="flex: 1;"><option value="">-- 快速插入現有材料 --</option></select>
+                    <input type="text" id="quick-ingredient-amount" placeholder="份量" style="width: 80px;" onkeypress="if(event.key === 'Enter'){ event.preventDefault(); insertIngredientToDesc(); }">
+                    <button class="pos-btn btn-primary" onclick="insertIngredientToDesc()">➕</button>
+                </div>
+                <textarea id="edit-recipe-description" placeholder="材料：琴酒 45ml, 檸檬汁 15ml, 糖漿 10ml\n技法：Shake\n杯型：馬丁尼杯\n裝飾：檸檬片"></textarea>
+            </div>
+
+            <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 25px;">
+                <button class="pos-btn" onclick="closeEditRecipeModal()">取消</button>
+                <button class="pos-btn btn-primary" onclick="saveRecipe()">💾 儲存配方</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 統計 Modal -->
+    <div id="stats-modal-overlay" class="modal-overlay">
+        <div class="modal-content" style="max-width: 450px;">
+            <div class="modal-header">
+                <h2 style="color: #9b59b6;">📊 今日出杯統計</h2>
+                <button class="modal-close" onclick="closeStatsModal()">✖</button>
+            </div>
+            <div id="stats-modal-body" style="min-height: 150px;"></div>
+            <button class="pos-btn btn-primary" style="width: 100%; margin-top: 20px; justify-content: center; background: #27ae60; border-color: #27ae60; color: #fff;" onclick="exportTodayStats()">📥 複製報表至剪貼簿</button>
+        </div>
+    </div>
+
+    <!-- 歷史點餐 Modal (For specific guest) -->
+    <div id="guest-history-modal-overlay" class="modal-overlay">
+        <div class="modal-content" style="max-width: 600px; display: flex; flex-direction: column; height: 80vh;">
+            <div class="modal-header">
+                <h2 id="guest-history-title" style="display: flex; align-items: center; color: #fff;"></h2>
+                <button class="modal-close" onclick="closeGuestHistoryModal()">✖</button>
+            </div>
+            <div id="guest-history-list" style="flex: 1; overflow-y: auto; padding-right: 5px;"></div>
+        </div>
+    </div>
+
+    <!-- 圖片預覽 Modal -->
+    <div id="image-modal-overlay" class="modal-overlay" style="z-index: 11000; background: rgba(0,0,0,0.9); backdrop-filter: blur(10px);">
+        <div id="image-modal-close-btn" class="modal-close" style="position: absolute; top: 20px; right: 20px; font-size: 2em; background: rgba(0,0,0,0.5); width: 50px; height: 50px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 1px solid #555;">✖</div>
+        <img id="modal-image" src="" style="max-width: 90%; max-height: 90%; object-fit: contain; cursor: zoom-out; transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);">
+    </div>
+
+    <script src="/dashboard.js?v=2"></script>
+</body>
+</html>

@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Home Bar Menu</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🍸</text></svg>">
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+    <link rel="stylesheet" href="/index.css?v=1">
+    <style>
+        /* 點餐按鈕專屬動畫特效 */
+        .btn-order-anim {
+            transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
+            cursor: pointer;
+        }
+        @media (hover: hover) {
+            .btn-order-anim:hover:not(:disabled) {
+                transform: translateY(-3px) scale(1.02);
+                box-shadow: 0 6px 15px rgba(39, 174, 96, 0.4);
+                filter: brightness(1.1);
+            }
+        }
+        .btn-order-anim:active:not(:disabled) {
+            transform: translateY(1px) scale(0.95) !important;
+            box-shadow: inset 0 3px 8px rgba(0, 0, 0, 0.3) !important;
+            filter: brightness(0.9) !important;
+        }
+
+        /* 右上角功能選單樣式 */
+        .top-action-container {
+            position: fixed; top: 15px; right: 15px; z-index: 9800;
+            display: flex; align-items: center; gap: 10px; flex-direction: row-reverse;
+        }
+        .action-menu-items {
+            display: flex; gap: 10px; align-items: center; flex-direction: row-reverse;
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .menu-toggle-btn {
+            display: none; background: rgba(30,30,30,0.7); color: #ccc; border: 1px solid #444;
+            width: 40px; height: 40px; border-radius: 50%; font-size: 1.2em;
+            justify-content: center; align-items: center; cursor: pointer;
+            backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5); transition: all 0.3s ease;
+        }
+        .menu-toggle-btn:hover { color: #fff; transform: scale(1.1); }
+        @media (max-width: 768px) {
+            .top-action-container { flex-direction: column; align-items: flex-end; }
+            .action-menu-items {
+                flex-direction: column; opacity: 0; pointer-events: none;
+                transform: translateY(-20px) scale(0.9); position: absolute; top: 50px; right: 0;
+            }
+            .action-menu-items.expanded {
+                opacity: 1; pointer-events: auto; transform: translateY(0) scale(1);
+            }
+            .menu-toggle-btn { display: flex; }
+        }
+    </style>
+</head>
+<body>
+    <!-- 星空背景畫布 -->
+    <canvas id="starry-sky"></canvas>
+
+    <div id="toast"></div>
+    <!-- 合併後的年齡確認與稱呼輸入視窗 -->
+    <div id="welcome-screen" class="visible">
+        <div id="welcome-content">
+            <h1>🍸 Iverson Bar</h1>
+            <div id="age-warning-section">
+                <h2 style="color: #e74c3c; margin-top: 0; font-size: 1.2em;">⚠️ 未滿 18 歲請勿飲酒</h2>
+                <p style="font-size: 0.9em; line-height: 1.6; margin-bottom: 15px; color: #ccc;">
+                    本網站含有酒精飲品資訊，請確認您已達法定飲酒年齡，並輸入您的專屬稱呼來進入吧台。
+                </p>
+            </div>
+            <input type="text" id="guest-name" placeholder="請輸入您的稱呼" style="width: 100%; box-sizing: border-box; margin-bottom: 15px; text-align: center;">
+            
+            <!-- 新增：設定視窗專屬的主題切換按鈕 -->
+            <div id="theme-toggle-section" style="display: none; justify-content: space-between; align-items: center; margin-bottom: 15px; padding: 10px 15px; background: rgba(255,255,255,0.05); border-radius: 8px; border: 1px solid #444;">
+                <span style="color: #ccc; font-size: 0.95em;">外觀主題設定</span>
+                <button id="theme-toggle-btn" onclick="toggleTheme()" style="background: transparent; border: 1px solid #888; color: #ccc; padding: 6px 16px; border-radius: 20px; cursor: pointer; transition: 0.3s;">🌙 深色模式</button>
+            </div>
+
+            <!-- 新增：設定視窗專屬的音樂切換按鈕 -->
+            <div id="music-toggle-section" style="display: none; justify-content: space-between; align-items: center; margin-bottom: 15px; padding: 10px 15px; background: rgba(255,255,255,0.05); border-radius: 8px; border: 1px solid #444;">
+                <span style="color: #ccc; font-size: 0.95em;">背景音樂</span>
+                <button id="music-toggle-btn" onclick="toggleMusic()" style="background: transparent; border: 1px solid #888; color: #ccc; padding: 6px 16px; border-radius: 20px; cursor: pointer; transition: 0.3s;"><span id="music-icon">🔇</span> 已暫停</button>
+            </div>
+
+            <div id="age-checkbox-section" style="display: flex; justify-content: center; margin-bottom: 20px;">
+                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                    <input type="checkbox" id="age-checkbox" style="width: 18px; height: 18px; margin: 0;">
+                    <span style="color: #ccc; font-size: 0.95em;">我已年滿 18 歲</span>
+                </label>
+            </div>
+            <div style="display: flex; gap: 10px; justify-content: center; flex-direction: column;">
+                <button id="btn-start-order" onclick="saveNameAndConfirmAge()" style="background: #27ae60; color: white; width: 100%;">進入吧台</button>
+                <button id="btn-age-no" onclick="rejectAge()" style="background: transparent; color: #888; border: 1px solid #444; width: 100%;">未滿 18 歲 / 離開</button>
+                <button id="btn-cancel-change" onclick="cancelChangeName()" style="display: none; background: transparent; color: #888; border: 1px solid #444; width: 100%;">取消修改</button>
+            </div>
+            <p id="age-warning-msg" style="color: #e74c3c; font-size: 0.9em; margin-top: 15px; display: none;">未成年請勿飲酒，即將為您離開此頁面...</p>
+        </div>
+    </div>
+
+    <!-- 右上角浮動功能選單 (電腦版橫向，手機版收合) -->
+    <div class="top-action-container">
+        <!-- 手機版展開選單按鈕 -->
+        <button id="menu-toggle-btn" class="menu-toggle-btn" onclick="document.getElementById('action-menu-items').classList.toggle('expanded'); this.innerHTML = this.innerHTML === '⋮' ? '✖' : '⋮';" title="展開功能選單">⋮</button>
+        
+        <div id="action-menu-items" class="action-menu-items">
+            <!-- 右上角設定按鈕 (修改稱呼) -->
+            <button id="settings-btn" onclick="changeName()" style="background: rgba(30,30,30,0.7); color: #ccc; border: 1px solid #444; width: 40px; height: 40px; border-radius: 50%; font-size: 1.2em; display: flex; justify-content: center; align-items: center; cursor: pointer; backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px); transition: all 0.3s ease; box-shadow: 0 4px 10px rgba(0,0,0,0.5);" onmouseover="this.style.transform='rotate(90deg) scale(1.1)'; this.style.color='#fff';" onmouseout="this.style.transform='rotate(0deg) scale(1)'; this.style.color='#ccc';" title="設定 / 修改稱呼">⚙️</button>
+
+            <!-- 右上角音樂快捷按鈕 -->
+            <button id="quick-music-btn" onclick="toggleMusic()" style="background: rgba(30,30,30,0.7); color: #ccc; border: 1px solid #444; width: 40px; height: 40px; border-radius: 50%; font-size: 1.2em; display: flex; justify-content: center; align-items: center; cursor: pointer; backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px); transition: all 0.3s ease; box-shadow: 0 4px 10px rgba(0,0,0,0.5);" onmouseover="this.style.transform='scale(1.1)'; this.style.color='#fff';" onmouseout="this.style.transform='scale(1)'; this.style.color='#ccc';" title="播放 / 暫停音樂">🔇</button>
+
+            <!-- 右上角切歌快捷按鈕 -->
+            <button id="next-music-btn" onclick="playNextSong(true)" style="background: rgba(30,30,30,0.7); color: #ccc; border: 1px solid #444; width: 40px; height: 40px; border-radius: 50%; font-size: 1.2em; display: flex; justify-content: center; align-items: center; cursor: pointer; backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px); transition: all 0.3s ease; box-shadow: 0 4px 10px rgba(0,0,0,0.5);" onmouseover="this.style.transform='scale(1.1)'; this.style.color='#fff';" onmouseout="this.style.transform='scale(1)'; this.style.color='#ccc';" title="切換下一首">⏭️</button>
+        </div>
+    </div>
+
+    <h1 id="main-title">🍸 Iverson Bar</h1>
+
+    <!-- 您的點餐紀錄 (置頂且可收合) -->
+    <div id="history">
+        <div id="history-header" onclick="toggleHistory()">
+            <h3>📜 您的點餐紀錄</h3>
+            <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 8px;">
+                <select id="history-date-filter" onclick="event.stopPropagation()" onchange="loadHistory()" style="padding: 4px 8px; border-radius: 4px; background: #222; color: #fff; border: 1px solid #444; font-size: 0.85em; outline: none;"></select>
+                <button class="clear-all-btn" onclick="clearAllMyHistory(event)">清空紀錄</button>
+                <span class="expand-icon-wrap" id="history-expand-icon" style="margin-left: auto; font-size: 0.9em; color: #aaa; display: flex; align-items: center; gap: 4px;">
+                    <span class="expand-text">收合</span>
+                    <span class="expand-arrow" style="transition: transform 0.3s ease; display: inline-block;">▲</span>
+                </span>
+            </div>
+        </div>
+        <div id="history-content" class="collapsible-wrapper expanded">
+            <div class="collapsible-inner">
+                <div id="history-list"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 排行榜 (今日/歷史) -->
+    <div id="leaderboard-container" style="display: none;">
+        <div class="lb-tabs">
+            <button class="lb-tab active" onclick="switchLeaderboard('today')">🏆 今日排行</button>
+            <button class="lb-tab" onclick="switchLeaderboard('alltime')">👑 歷史總榜</button>
+        </div>
+        <div id="leaderboard-today" class="lb-content active">
+            <div class="lb-list" id="today-leaderboard-list"></div>
+        </div>
+        <div id="leaderboard-alltime" class="lb-content">
+            <div class="lb-list" id="alltime-leaderboard-list"></div>
+        </div>
+    </div>
+
+    <!-- 我的最愛 (可收合) -->
+    <div id="favorites-container" style="display: none;">
+        <div id="favorites-header" onclick="toggleFavorites()">
+            <h3>❤️ 我的最愛</h3>
+            <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 8px;">
+                <button class="clear-all-btn" onclick="clearAllMyFavorites(event)">清空最愛</button>
+                <span class="expand-icon-wrap" id="favorites-expand-icon" style="margin-left: auto; font-size: 0.9em; color: #aaa; display: flex; align-items: center; gap: 4px;">
+                    <span class="expand-text">收合</span>
+                    <span class="expand-arrow" style="transition: transform 0.3s ease; display: inline-block;">▲</span>
+                </span>
+            </div>
+        </div>
+        <div id="favorites-content" class="collapsible-wrapper expanded">
+            <div class="collapsible-inner">
+                <div id="favorites-list"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 搜尋與篩選區域 -->
+    <div id="filter-container">
+        <!-- 手機版抽屜標題列 -->
+        <div class="filter-sheet-header">
+            <span style="font-weight:bold; color:#f39c12; font-size:1.1em;">🔍 搜尋與篩選</span>
+            <button class="filter-sheet-close" onclick="closeFilterSheet()">完成</button>
+        </div>
+
+        <div class="search-bar-wrapper">
+            <div style="position: relative; flex-grow: 1; display: flex; align-items: center;">
+                <input type="text" id="search-input" class="search-box" placeholder="🔍 搜尋酒名或描述..." oninput="applyFilters()" style="padding-right: 40px; width: 100%;">
+                <button id="voice-search-btn" class="voice-search-btn" onclick="startVoiceSearch()" title="語音搜尋">🎙️</button>
+            </div>
+            <!-- 電腦版的隨機按鈕保留在此處 -->
+            <button id="random-btn" class="desktop-random-btn" onclick="recommendRandomDrink()" style="background: #8e44ad; color: white; border: none; padding: 0 12px; margin-left: 8px; margin-right: 8px; border-radius: 8px; cursor: pointer; font-weight: bold; white-space: nowrap; transition: 0.2s;" onmouseover="if(!this.disabled) this.style.background='#9b59b6'" onmouseout="if(!this.disabled) this.style.background='#8e44ad'" title="不知道喝什麼？幫你抽一杯！">🎲 隨機</button>
+            <button id="toggle-filter-btn" class="toggle-filter-btn" onclick="toggleAdvancedFilters()">篩選 ▼</button>
+        </div>
+        
+        <div id="advanced-filters">
+            <!-- 加入提示文字告知使用者篩選可改變抽籤範圍 -->
+            <div style="padding: 10px; background: rgba(142, 68, 173, 0.15); border: 1px dashed #8e44ad; border-radius: 8px; margin-bottom: 15px; margin-top: 15px; color: #e0b0ff; font-size: 0.9em; text-align: center;">
+                💡 <strong>小提示：</strong> 選擇下方的標籤後再點擊「隨機」，就會只從您篩選的結果中抽一杯喔！
+            </div>
+            <!-- 將手機版隨機按鈕放在最上方，提示文字下方 -->
+            <button id="mobile-random-btn" class="filter-drawer-random-btn" onclick="recommendRandomDrink()">🎲 隨機抽一杯</button>
+
+            <div class="filter-group" id="filter-base">
+                <span class="filter-label">基酒:</span>
+                <label><input type="checkbox" class="tag-checkbox" value="琴酒" onchange="applyFilters()"><span class="tag-btn">琴酒</span></label>
+                <label><input type="checkbox" class="tag-checkbox" value="威士忌" onchange="applyFilters()"><span class="tag-btn">威士忌</span></label>
+                <label><input type="checkbox" class="tag-checkbox" value="伏特加" onchange="applyFilters()"><span class="tag-btn">伏特加</span></label>
+                <label><input type="checkbox" class="tag-checkbox" value="蘭姆酒" onchange="applyFilters()"><span class="tag-btn">蘭姆酒</span></label>
+                <label><input type="checkbox" class="tag-checkbox" value="龍舌蘭" onchange="applyFilters()"><span class="tag-btn">龍舌蘭</span></label>
+                <label><input type="checkbox" class="tag-checkbox" value="白蘭地" onchange="applyFilters()"><span class="tag-btn">白蘭地</span></label>
+                <label><input type="checkbox" class="tag-checkbox" value="其他" onchange="applyFilters()"><span class="tag-btn">其他</span></label>
+            </div>
+
+            <div class="filter-group" id="filter-special">
+                <span class="filter-label">特色:</span>
+                <label><input type="checkbox" class="tag-checkbox" value="熱門推薦" onchange="applyFilters()"><span class="tag-btn">熱門推薦</span></label>
+                <label><input type="checkbox" class="tag-checkbox" value="本月特調" onchange="applyFilters()"><span class="tag-btn">本月特調</span></label>
+            </div>
+
+            <div class="filter-group" id="filter-style">
+                <span class="filter-label">類型:</span>
+                <label><input type="checkbox" class="tag-checkbox" value="有氣泡" onchange="applyFilters()"><span class="tag-btn">有氣泡</span></label>
+                <label><input type="checkbox" class="tag-checkbox" value="無氣泡" onchange="applyFilters()"><span class="tag-btn">無氣泡</span></label>
+            </div>
+
+            <div class="filter-group" id="filter-flavor">
+                <span class="filter-label">風味:</span>
+                <label><input type="checkbox" class="tag-checkbox" value="偏酸" onchange="applyFilters()"><span class="tag-btn">偏酸 (酸度重)</span></label>
+                <label><input type="checkbox" class="tag-checkbox" value="偏甜" onchange="applyFilters()"><span class="tag-btn">偏甜 (酸度輕)</span></label>
+                <label><input type="checkbox" class="tag-checkbox" value="酒感重" onchange="applyFilters()"><span class="tag-btn">酒感重</span></label>
+                <label><input type="checkbox" class="tag-checkbox" value="清爽" onchange="applyFilters()"><span class="tag-btn">清爽 (酒感輕)</span></label>
+            </div>
+
+            <div class="filter-group" id="filter-history">
+                <span class="filter-label">紀錄:</span>
+                <label><input type="radio" name="history-filter" class="tag-checkbox" value="all" checked onchange="applyFilters()"><span class="tag-btn">全部</span></label>
+                <label><input type="radio" name="history-filter" class="tag-checkbox" value="ordered" onchange="applyFilters()"><span class="tag-btn">✔️ 已點過</span></label>
+                <label><input type="radio" name="history-filter" class="tag-checkbox" value="unordered" onchange="applyFilters()"><span class="tag-btn">🆕 未點過</span></label>
+            </div>
+
+            <div class="filter-group" id="filter-sort">
+                <span class="filter-label">排序:</span>
+                <label><input type="radio" name="sort" class="tag-checkbox" value="default" checked onchange="applyFilters()"><span class="tag-btn">預設排序</span></label>
+                <label><input type="radio" name="sort" class="tag-checkbox" value="abv-desc" onchange="applyFilters()"><span class="tag-btn">酒精濃度 (高 ➔ 低)</span></label>
+                <label><input type="radio" name="sort" class="tag-checkbox" value="abv-asc" onchange="applyFilters()"><span class="tag-btn">酒精濃度 (低 ➔ 高)</span></label>
+            </div>
+        </div>
+    </div>
+
+    <!-- 自動輪播區 (熱門推薦) -->
+    <div id="carousel-section" style="display: none;">
+         <h3 style="color: #f39c12; margin-top: 5px; margin-bottom: 10px; display: flex; align-items: center; gap: 8px;"><span>🌟</span> 吧台強推 / 本月精選</h3>
+         <div class="carousel-wrapper">
+             <div class="carousel-track" id="carousel-track"></div>
+         </div>
+    </div>
+
+    <div id="menu"></div>
+    
+    <!-- 回到頂部按鈕 -->
+    <button id="back-to-top" onclick="scrollToTop()">▲</button>
+
+    <!-- 背景音樂 (將由 JS 自動隨機挑選爵士樂歌單並播放) -->
+    <audio id="bg-music" preload="none"></audio>
+
+    <!-- 點餐推播通知容器 -->
+    <div id="order-toast-container"></div>
+
+    <!-- 圖片預覽模態視窗 -->
+    <div id="image-modal-overlay">
+        <div id="image-modal-content">
+            <img id="modal-image" src="" alt="Full size image">
+        </div>
+    </div>
+
+    <!-- Custom Confirm Modal -->
+    <div id="custom-confirm-overlay">
+        <div id="custom-confirm-content">
+            <p id="custom-confirm-message"></p>
+            <div id="custom-confirm-buttons">
+                <button id="confirm-yes" onclick="handleCustomConfirmYes()">確定</button>
+                <button id="confirm-no" onclick="handleCustomConfirmNo()">取消</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 備註輸入模態視窗 -->
+    <div id="notes-modal-overlay">
+        <div id="notes-modal-content">
+            <h3 style="color: #f39c12; margin-top: 0;">📝 需不需要客製化？</h3>
+            <p style="font-size: 0.9em; color: #aaa; margin-bottom: 15px;">(例如：去冰、加濃、微甜)</p>
+            <input type="text" id="order-notes-input" placeholder="若無可直接留白送單" onkeypress="if(event.key === 'Enter') submitOrderWithNotes()">
+            <div style="display: flex; flex-direction: column; align-items: center; margin-top: 15px;">
+                <button class="btn-order-anim" onclick="submitOrderWithNotes()" style="background: #27ae60; color: white; width: 100%; padding: 12px; font-size: 1.1em; border-radius: 8px; box-shadow: 0 4px 10px rgba(39, 174, 96, 0.3);">送出訂單 ✓</button>
+                <button onclick="closeNotesModal()" style="background: transparent; color: #888; border: none; padding: 8px; margin-top: 5px; font-size: 0.85em; text-decoration: underline; cursor: pointer; width: auto;">不點了 / 取消</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 大頭貼選擇模態視窗 -->
+    <div id="avatar-modal-overlay" onclick="if(event.target === this) closeAvatarModal()">
+        <div id="avatar-modal-content">
+            <h3 style="color: #f39c12; margin-top: 0;">✨ 挑選專屬風格</h3>
+            <p style="font-size: 0.9em; color: #aaa; margin-bottom: 5px;">點選預覽圖即可立即換裝：</p>
+            
+            <div style="margin: 20px 0; border-bottom: 1px solid #333;"></div>
+            <div class="avatar-upload-section">
+                <label for="avatar-upload-input" class="avatar-upload-btn">
+                    📸 自拍或上傳照片
+                </label>
+                <input type="file" id="avatar-upload-input" accept="image/*" style="display: none;">
+                <p style="font-size: 0.8em; color: #888; margin-top: 8px;">(上傳後將自動裁切為正方形)</p>
+            </div>
+            <div style="margin: 20px 0; border-bottom: 1px solid #333;"></div>
+
+            <div id="avatar-grid" class="avatar-grid"></div>
+            <button onclick="closeAvatarModal()" style="background: transparent; color: #888; border: none; padding: 8px; margin-top: 20px; font-size: 0.9em; text-decoration: underline; cursor: pointer; width: auto;">關閉視窗</button>
+        </div>
+    </div>
+
+    <!-- 老虎機/抽籤動畫模態視窗 -->
+    <div id="slot-machine-overlay" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); display: flex; justify-content: center; align-items: center; z-index: 10500; visibility: hidden; opacity: 0; transition: opacity 0.3s; backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px);">
+        <div id="slot-machine-content" style="background: #1a1a1a; padding: 30px 40px; border-radius: 20px; text-align: center; border: 2px solid #8e44ad; box-shadow: 0 0 30px rgba(142, 68, 173, 0.6); transform: scale(0.8); transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); min-width: 250px; max-width: 90%; width: auto; box-sizing: border-box;">
+            <h3 style="color: #f39c12; margin-top: 0; font-size: 1.5em; letter-spacing: 2px;">🎰 命運的輪盤 🎰</h3>
+            <div style="margin: 20px 0; height: 100px; display: flex; align-items: center; justify-content: center; overflow: hidden; background: #000; border-radius: 12px; border: 2px inset #333; box-shadow: inset 0 0 15px rgba(0,0,0,0.8); padding: 0 15px; width: 100%; box-sizing: border-box;">
+                <!-- 這個 h2 會在 JavaScript 裡快速上下跳動製造殘影 -->
+                <h2 id="slot-machine-text" style="color: #fff; font-size: 1.8em; margin: 0; white-space: normal; word-break: break-word; line-height: 1.2; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; transition: all 0.05s; width: 100%;">準備中...</h2>
+            </div>
+            <p style="color: #aaa; font-size: 0.9em; margin-bottom: 0;">為您挑選最適合的微醺...</p>
+        </div>
+    </div>
+
+    <!-- 底部導航列 (手機版專屬) -->
+    <nav class="bottom-nav">
+        <a href="#" onclick="scrollToTop(); updateBottomNav('home'); return false;" class="nav-item active" id="nav-home">
+            <span class="nav-icon">🏠</span>
+            <span class="nav-label">首頁</span>
+        </a>
+        <a href="#" onclick="openFilterSheet(); updateBottomNav('search'); return false;" class="nav-item" id="nav-search">
+            <span class="nav-icon">🔍</span>
+            <span class="nav-label">篩選/抽一杯</span>
+        </a>
+        <a href="#favorites-container" onclick="openFavorites(); updateBottomNav('fav'); return false;" class="nav-item" id="nav-fav">
+            <span class="nav-icon">❤️</span>
+            <span class="nav-label">最愛</span>
+        </a>
+        <a href="#history" onclick="openHistory(); updateBottomNav('history'); return false;" class="nav-item" id="nav-history">
+            <span class="nav-icon">📜</span>
+            <span class="nav-label">紀錄</span>
+        </a>
+        <a href="#" onclick="changeName(); updateBottomNav('settings'); return false;" class="nav-item" id="nav-settings">
+            <span class="nav-icon">⚙️</span>
+            <span class="nav-label">設定</span>
+        </a>
+    </nav>
+
+    <!-- 製作中懸浮按鈕 (FAB) -->
+    <div id="active-orders-fab" class="fab-container" onclick="openHistory()" style="display: none;">
+        <div class="fab-icon">🍸</div>
+        <span id="active-orders-badge" class="fab-badge">0</span>
+    </div>
+
+    <!-- 底部篩選抽屜遮罩 -->
+    <div id="filter-sheet-overlay" class="bottom-sheet-overlay" onclick="closeFilterSheet()"></div>
+
+    <script src="/index.js?v=1"></script>
+</body>
+</html>

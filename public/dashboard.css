@@ -1,0 +1,278 @@
+body { font-family: sans-serif; background: #0f0f0f; color: #e0e0e0; padding: 20px; }
+.order { background: #1e1e1e; padding: 20px; border-radius: 10px; margin-bottom: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.3); border-left: 8px solid #f39c12; display: flex; justify-content: space-between; align-items: center; }
+.order-info h2 { margin: 0; color: #333; }
+
+/* 新訂單 (待接單) 的持續閃爍發光邊框特效 */
+.order.status-pending { border-left-color: #f1c40f; animation: pendingBreathingGlow 1.5s infinite alternate ease-in-out; }
+@keyframes pendingBreathingGlow {
+    0% { box-shadow: 0 2px 5px rgba(0,0,0,0.3); border-left-color: #f39c12; }
+    100% { box-shadow: 0 0 25px rgba(243, 156, 18, 0.8), 0 0 10px rgba(243, 156, 18, 0.5); border-left-color: #f1c40f; background-color: #2a2215; }
+}
+
+.order.status-making { border-left-color: #e67e22; background-color: #3a2e22; transform: scale(1.01); }
+.order.status-completed { opacity: 0.4; background-color: #222; border-left-color: #27ae60; }
+.order.status-rejected { border-left-color: #e74c3c; background-color: #3a2225; opacity: 0.6; }
+.btn-done, .btn-making, .btn-reject, .btn-undo { background: #27ae60; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 1em; flex-grow: 1; min-width: 100px; transition: 0.2s; }
+.btn-making { background: #f39c12; }
+.btn-reject { background: #e74c3c; }
+.btn-undo { background: #3498db; }
+button:disabled { background: #555 !important; color: #999; cursor: not-allowed; }
+.actions { display: flex; align-items: center; gap: 10px; }
+
+/* 超時警告樣式 */
+.order.status-overtime {
+    border-left-color: #e74c3c;
+    animation: pulse-border 2s infinite;
+}
+.overtime-badge {
+    background: #e74c3c;
+    color: white;
+    padding: 3px 8px;
+    border-radius: 12px;
+    font-size: 0.6em;
+    margin-left: 15px;
+    vertical-align: middle;
+    font-weight: bold;
+}
+@keyframes pulse-border {
+    0% { box-shadow: 0 0 0 0 rgba(231, 76, 60, 0.7); }
+    70% { box-shadow: 0 0 0 10px rgba(231, 76, 60, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(231, 76, 60, 0); }
+}
+
+/* 篩選按鈕樣式 */
+.filter-controls { display: flex; gap: 10px; margin-right: 15px; }
+.filter-btn { background: #555; border: none; padding: 8px 16px; border-radius: 8px; cursor: pointer; font-weight: bold; color: #fff; transition: 0.2s; }
+.filter-btn.active { background: #f39c12; color: #000; }
+.filter-btn:hover:not(.active) { background: #666; }
+
+/* 待處理數量標籤樣式 */
+.pending-badge { background: #e74c3c; color: white; border-radius: 20px; padding: 2px 10px; font-size: 0.5em; vertical-align: middle; margin-left: 10px; display: none; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+
+/* 狀態更新閃爍動畫 (Dashboard) */
+@keyframes statusFlashPendingAdmin {
+    0% { background-color: #1e1e1e; }
+    30% { background-color: #333; } /* 灰色 */
+    100% { background-color: #1e1e1e; }
+}
+@keyframes statusFlashMakingAdmin {
+    0% { background-color: #3a2e22; }
+    30% { background-color: #4a331a; } /* 橘色系 */
+    100% { background-color: #3a2e22; }
+}
+@keyframes statusFlashCompletedAdmin {
+    0% { background-color: #222; }
+    30% { background-color: #2a4a2a; } /* 綠色系 */
+    100% { background-color: #222; }
+}
+@keyframes statusFlashRejectedAdmin {
+    0% { background-color: #3a2225; }
+    30% { background-color: #4a2a2a; } /* 紅色系 */
+    100% { background-color: #3a2225; }
+}
+
+.status-updated-flash-pending {
+    animation: statusFlashPendingAdmin 2s ease;
+}
+.status-updated-flash-making {
+    animation: statusFlashMakingAdmin 2s ease;
+}
+.status-updated-flash-completed {
+    animation: statusFlashCompletedAdmin 2s ease;
+}
+.status-updated-flash-rejected {
+    animation: statusFlashRejectedAdmin 2s ease;
+}
+
+/* 拖曳手把與動畫樣式 */
+.drag-handle { cursor: grab; padding: 0 15px 0 0; color: #888; font-size: 1.5em; user-select: none; display: flex; align-items: center; }
+.drag-handle:active { cursor: grabbing; }
+.sortable-ghost { opacity: 0.3; background-color: #f39c12 !important; border: 2px dashed #f39c12; }
+.order { transition: transform 0.1s; }
+
+/* 庫存管理樣式優化 */
+#inventory-admin { background: #333; color: white; padding: 15px; border-radius: 10px; margin-top: 40px; border: 1px solid #444; }
+#inventory-header { cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
+#inventory-content { display: none; margin-top: 15px; padding-top: 15px; border-top: 1px solid #555; max-height: 40vh; overflow-y: auto; }
+#inventory-content.expanded { display: block; }
+.inventory-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px; }
+.inv-item { padding: 8px; border: 1px solid #555; border-radius: 8px; font-size: 0.85em; display: flex; align-items: center; gap: 10px; }
+.inv-thumb { width: 40px; height: 40px; object-fit: contain; border-radius: 4px; background: #000; }
+.inv-info { flex-grow: 1; display: flex; flex-direction: column; }
+
+/* Toast 提示樣式 */
+#toast { position: fixed; top: 20px; right: 20px; background: #27ae60; color: white; padding: 12px 24px; border-radius: 8px; display: none; z-index: 1000; box-shadow: 0 4px 10px rgba(0,0,0,0.3); animation: fadeIn 0.3s; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
+
+/* 編輯配方模態視窗樣式 */
+#edit-recipe-modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); display: flex; justify-content: center; align-items: center; z-index: 10500; visibility: hidden; opacity: 0; transition: 0.3s; }
+#edit-recipe-modal-overlay.visible { visibility: visible; opacity: 1; }
+.edit-modal-content { background: #1a1a1a; padding: 25px; border-radius: 12px; width: 90%; max-width: 500px; color: #fff; position: relative; max-height: 90vh; overflow-y: auto; box-shadow: 0 4px 20px rgba(0,0,0,0.5); }
+.edit-form-group { margin-bottom: 15px; text-align: left; }
+.edit-form-group label { display: block; margin-bottom: 5px; color: #f39c12; font-weight: bold; font-size: 0.9em; }
+.edit-form-group input, .edit-form-group textarea { width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #444; background: #222; color: #fff; box-sizing: border-box; font-size: 1em; }
+.edit-form-group textarea { resize: vertical; min-height: 80px; }
+.edit-modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; }
+.edit-btn-save { background: #27ae60; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 1em; }
+.edit-btn-cancel { background: #444; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-size: 1em; }
+.order-info h2 { color: #eee; }
+/* 新訂單全螢幕視覺閃爍提醒 */
+@keyframes screenFlash {
+    0% { background-color: #0f0f0f; }
+    20% { background-color: #f39c12; }
+    40% { background-color: #0f0f0f; }
+    60% { background-color: #f39c12; }
+    100% { background-color: #0f0f0f; }
+}
+.flash-screen { animation: screenFlash 1.5s ease-out; }
+
+/* 音效與通知解鎖遮罩 */
+#audio-unlock-overlay {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0, 0, 0, 0.95); display: flex; flex-direction: column;
+    justify-content: center; align-items: center; z-index: 99999;
+    color: white; text-align: center; padding: 20px;
+}
+.unlock-btn {
+    background: #27ae60; color: white; border: none; padding: 20px 40px;
+    border-radius: 12px; font-size: 1.5em; font-weight: bold; cursor: pointer;
+    margin-top: 30px; box-shadow: 0 4px 15px rgba(39, 174, 96, 0.4); transition: transform 0.2s;
+}
+.unlock-btn:active { transform: scale(0.95); }
+
+/* 圖片預覽模態視窗樣式 */
+#image-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.85);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 20000; /* 確保在所有視窗之上 */
+    visibility: hidden;
+    opacity: 0;
+    transition: 0.3s ease;
+}
+#image-modal-overlay.visible { visibility: visible; opacity: 1; }
+#image-modal-content {
+    position: relative; max-width: 90%; max-height: 90%;
+    background-color: #1a1a1a; padding: 20px; border-radius: 10px;
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.7); display: flex;
+    justify-content: center; align-items: center;
+}
+#modal-image { max-width: 100%; max-height: 100%; display: block; object-fit: contain; cursor: zoom-out; }
+
+.zoomable-img { cursor: zoom-in; transition: transform 0.2s; }
+.zoomable-img:hover { transform: scale(1.05); }
+
+/* POS-like Layout for Tablets/Desktops */
+body {
+    padding: 20px; 
+    display: grid;
+    grid-template-columns: 2fr 1fr; 
+    gap: 25px; 
+    min-height: 100vh; 
+    box-sizing: border-box; 
+}
+
+.dashboard-header-controls { /* Header with h1 and clearFinished button */
+    grid-column: 1 / 2;
+    grid-row: 1 / 2;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px; /* Add some space below the header */
+}
+body > #list {
+    grid-column: 1 / 2;
+    grid-row: 2 / 3;
+    overflow-y: auto; /* Allow scrolling for orders if they exceed height */
+    padding-right: 10px; /* Add some padding for scrollbar */
+}
+body > #inventory-admin {
+    grid-column: 2 / 3;
+    grid-row: 1 / 3; /* Inventory spans both header and order list rows */
+    display: flex; /* Use flex for internal layout of inventory-admin */
+    flex-direction: column;
+    margin-top: 0; /* Remove margin-top as it's now part of grid */
+    position: sticky; /* Keep inventory visible when scrolling orders */
+    top: 20px; /* Stick to top with some offset */
+    max-height: calc(100vh - 40px); /* Max height to fit screen, accounting for body padding */
+    overflow-y: auto; /* Allow scrolling within inventory if it's too long */
+}
+
+/* Adjust font sizes for better readability on tablet */
+h1 { font-size: 2.2em; margin-bottom: 0; } /* Adjusted margin */
+h2 { font-size: 1.6em; margin: 0; color: #333; }
+small { font-size: 0.95em; }
+
+/* Order card enhancements */
+.order {
+    padding: 20px;
+    margin-bottom: 15px; /* Increased margin */
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1); /* Stronger shadow */
+    flex-direction: column; /* Stack info and actions vertically */
+    align-items: flex-start; /* Align items to start when stacked */
+    gap: 15px; /* Space between info and actions */
+}
+.order-info { width: 100%; }
+.actions { flex-wrap: wrap; gap: 10px; width: 100%; justify-content: flex-end; }
+
+/* Clear finished button in header */
+.clear-finished-btn { background: #555; color: white; border: none; padding: 12px 20px; border-radius: 8px; cursor: pointer; font-size: 1em; }
+.reset-all-btn { background: #c0392b; color: white; border: none; padding: 12px 20px; border-radius: 8px; cursor: pointer; font-size: 1em; transition: 0.2s; }
+.reset-all-btn:hover { background: #a93226; }
+.header-action-btns { display: flex; gap: 10px; align-items: center; }
+
+/* 數位時鐘樣式 */
+.digital-clock {
+    font-size: 1.5em;
+    font-weight: bold;
+    color: #f39c12;
+    background: #222;
+    padding: 8px 15px;
+    border-radius: 8px;
+    border: 1px solid #444;
+    letter-spacing: 2px;
+    font-family: monospace;
+}
+
+/* Inventory Admin specific styles */
+#inventory-header { padding-bottom: 10px; margin-bottom: 10px; }
+#inventory-content { flex-grow: 1; overflow-y: auto; }
+.inventory-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 15px; }
+.inv-item { padding: 10px; border-radius: 10px; font-size: 0.9em; gap: 15px; }
+.inv-thumb { width: 50px; height: 50px; }
+#inventory-admin button { padding: 8px 12px; font-size: 0.9em; border-radius: 5px; }
+
+/* Media Queries for smaller tablets/mobile */
+@media (max-width: 992px) {
+    body { grid-template-columns: 1fr; grid-template-rows: auto auto 1fr; padding: 15px; gap: 20px; }
+    .dashboard-header-controls { grid-column: 1 / 2; grid-row: 1 / 2; margin-bottom: 0; }
+    body > #inventory-admin { grid-column: 1 / 2; grid-row: 2 / 3; position: static; max-height: none; }
+    body > #list { grid-column: 1 / 2; grid-row: 3 / 4; padding-right: 0; }
+    .order { padding: 15px; align-items: flex-start; }
+    .actions { justify-content: flex-start; }
+    .header-action-btns { width: 100%; flex-wrap: wrap; margin-top: 10px; }
+    .clear-finished-btn, .reset-all-btn { flex: 1; min-width: 150px; }
+    .btn-done, .btn-making, .btn-reject { padding: 15px; width: 100%; min-width: unset; }
+    .inventory-grid { grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); }
+}
+@media (max-width: 768px) {
+    h1 { font-size: 1.8em; }
+    h2 { font-size: 1.4em; }
+    .order { padding: 15px; }
+    .btn-done, .btn-making, .btn-reject { padding: 10px 15px; font-size: 1em; }
+    .clear-finished-btn { padding: 10px 15px; font-size: 0.9em; }
+    .inventory-grid { grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); }
+    .inv-thumb { width: 40px; height: 40px; }
+}
+
+/* 自訂頭像專屬金色邊框與光暈 (自動辨識 Base64 格式的圖片) */
+img[src^="data:image/jpeg"] {
+    border: 2px solid #ffd700 !important;
+    box-shadow: 0 0 12px rgba(255, 215, 0, 0.8) !important;
+}
