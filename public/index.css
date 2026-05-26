@@ -182,22 +182,23 @@ button { background: linear-gradient(135deg, #f39c12, #e67e22); color: #000; bor
 #history { background: #1a1a1a; padding: 15px; border-radius: 12px; margin-bottom: 20px; border: 1px solid #333; }
 #history-header { cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
 #history-header h3 { margin: 0; color: #f39c12; font-size: 1.2em; }
-.history-table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 0.95em; }
-.history-table th, .history-table td { padding: 12px; text-align: left; border-bottom: 1px solid #333; }
-.history-table th { color: #f39c12; font-weight: normal; }
-.history-table tr:last-child td { border-bottom: none; }
-.history-thumb { width: 50px; height: 50px; border-radius: 8px; object-fit: cover; cursor: zoom-in; }
-.status-tag { display: inline-block; padding: 4px 8px; border-radius: 4px; font-size: 0.85em; font-weight: bold; margin-top: 5px; }
-
-@media (max-width: 600px) {
-    .history-table th:nth-child(2), .history-table td:nth-child(2) { display: none; }
-    .history-table th, .history-table td { padding: 8px 5px; }
-    .history-thumb { width: 45px; height: 45px; }
-    .history-img-cell { width: 55px; }
-    .cancel-header, .cancel-btn-cell { width: 60px; padding-left: 0; padding-right: 0; text-align: right; }
-    .btn-cancel { padding: 6px 10px; font-size: 0.85em; }
-    .btn-force-delete { font-size: 1.3em; padding: 5px; }
-}
+.history-cards-container { display: flex; flex-direction: column; gap: 15px; margin-top: 15px; }
+.history-card { background: #222; border-radius: 10px; border: 1px solid #333; display: flex; gap: 15px; padding: 15px; position: relative; overflow: hidden; }
+.history-card-img-wrapper { flex-shrink: 0; width: 80px; height: 80px; border-radius: 8px; overflow: hidden; background: #000; }
+.history-card-img-wrapper img { width: 100%; height: 100%; object-fit: cover; cursor: zoom-in; }
+.history-card-content { flex-grow: 1; display: flex; flex-direction: column; }
+.history-card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; }
+.history-drink-name { font-size: 1.2em; font-weight: bold; color: #fff; }
+.history-status-tag { font-size: 0.8em; font-weight: bold; padding: 3px 8px; border-radius: 12px; white-space: nowrap; }
+.history-time-info { font-size: 0.8em; color: #888; display: flex; flex-direction: column; gap: 4px; margin-bottom: 10px; }
+.history-time-info .time-icon { display: inline-block; width: 1.5em; }
+.history-notes-box { background: rgba(243, 156, 18, 0.1); border: 1px solid rgba(243, 156, 18, 0.2); border-radius: 6px; padding: 8px; font-size: 0.85em; color: #f39c12; margin-bottom: 12px; }
+.history-card-actions { display: flex; gap: 10px; margin-top: auto; }
+.history-btn-reorder { flex-grow: 1; background: #f39c12; color: #000; border: none; padding: 10px; border-radius: 6px; font-weight: bold; }
+.history-btn-cancel { flex-grow: 0; background: #444; color: #aaa; border: none; padding: 10px; border-radius: 6px; }
+.history-btn-delete { position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,0.3); border: 1px solid #444; border-radius: 50%; color: #aaa; font-size: 0.9em; cursor: pointer; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; transition: 0.2s; opacity: 0.6; }
+.history-btn-delete:hover { color: #fff; background: #e74c3c; border-color: #e74c3c; opacity: 1; }
+.history-sold-out-tag { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-15deg); font-size: 0.8em; font-weight: 900; color: #fff; background: rgba(231, 76, 60, 0.85); padding: 3px 8px; border: 2px solid #fff; border-radius: 6px; }
 
 #toast { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background: #27ae60; color: white; padding: 12px 24px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.5); display: none; z-index: 10000; font-weight: bold; text-align: center; font-size: 1em; }
 

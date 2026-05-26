@@ -18,6 +18,7 @@ let favoritesDatabase = {};
 let avatarsDatabase = {};
 
 const ordersPath = path.join(__dirname, 'orders.json');
+const completedOrdersLogPath = path.join(__dirname, 'completed_orders.json'); // 新增已完成訂單的檔案路徑
 const favoritesPath = path.join(__dirname, 'favorites.json');
 const avatarsPath = path.join(__dirname, 'avatars.json');
 
@@ -26,18 +27,42 @@ function loadOrdersData() {
         if (fs.existsSync(ordersPath)) {
             const rawData = fs.readFileSync(ordersPath, 'utf8');
             orders = JSON.parse(rawData);
-            console.log(`成功讀取 orders.json，共載入 ${orders.length} 筆歷史訂單。`);
+            console.log(`成功讀取 orders.json，共載入 ${orders.length} 筆進行中的訂單。`);
+        }
+        // 同時載入已完成的訂單紀錄，用於排行榜和歷史紀錄
+        if (fs.existsSync(completedOrdersLogPath)) {
+            const completedRawData = fs.readFileSync(completedOrdersLogPath, 'utf8');
+            const completedOrders = JSON.parse(completedRawData);
+            // 將已完成的訂單合併到主訂單列表中，以便客戶端正確顯示歷史
+            orders = orders.concat(completedOrders);
+            console.log(`成功載入 ${completedOrders.length} 筆已完成的歷史訂單。`);
         }
     } catch (err) {
-        console.error("讀取 orders.json 失敗，將使用空陣列:", err.message);
+        console.error("讀取訂單資料失敗:", err.message);
     }
 }
 
 function saveOrdersData() {
     try {
-        fs.writeFileSync(ordersPath, JSON.stringify(orders, null, 4), 'utf8');
+        // 只儲存未完成的訂單到 orders.json
+        const pendingOrders = orders.filter(o => o.status !== 'completed' && o.status !== 'rejected');
+        fs.writeFileSync(ordersPath, JSON.stringify(pendingOrders, null, 4), 'utf8');
     } catch (err) {
         console.error("寫入 orders.json 失敗:", err);
+    }
+}
+
+function appendToCompletedLog(order) {
+    try {
+        let completedOrders = [];
+        if (fs.existsSync(completedOrdersLogPath)) {
+            const rawData = fs.readFileSync(completedOrdersLogPath, 'utf8');
+            if(rawData) completedOrders = JSON.parse(rawData);
+        }
+        completedOrders.push(order);
+        fs.writeFileSync(completedOrdersLogPath, JSON.stringify(completedOrders, null, 4), 'utf8');
+    } catch (err) {
+        console.error("寫入 completed_orders.json 失敗:", err);
     }
 }
 
@@ -186,8 +211,11 @@ io.on('connection', (socket) => {
         if (order) {
             order.status = data.status;
             if (data.status === 'making') order.makingTime = new Date().toLocaleTimeString();
-            if (data.status === 'completed') order.completedTime = new Date().toLocaleTimeString();
-            saveOrdersData();
+            if (data.status === 'completed' || data.status === 'rejected') {
+                order.completedTime = new Date().toLocaleTimeString();
+                appendToCompletedLog(order); // 當訂單完成或拒絕時，寫入永久紀錄檔
+            }
+            saveOrdersData(); // 只儲存進行中的訂單
             io.emit('order-status-updated', order);
         }
     });

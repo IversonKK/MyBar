@@ -1097,15 +1097,6 @@ function loadHistory() {
         'rejected': ['#e74c3c', '🚫 已退單']
     };
 
-    // 定義各狀態對應的整行半透明背景顏色
-    const rowBgMap = {
-        'pending': 'transparent',
-        'making': 'rgba(243, 156, 18, 0.1)',   // 製作中：淡淡的橘色
-        'completed': 'rgba(39, 174, 96, 0.1)', // 已完成：淡淡的綠色
-        'completed': 'rgba(39, 174, 96, 0.05)',// 已完成：更淡的綠色 (5%透明度)
-        'rejected': 'rgba(231, 76, 60, 0.1)'   // 已退單：淡淡的紅色
-    };
-
     let myOrders = globalServerOrders.filter(o => o.guest === currentName);
     myOrders.sort((a, b) => parseInt(b.id.split('-')[0]) - parseInt(a.id.split('-')[0]));
 
@@ -1137,37 +1128,16 @@ function loadHistory() {
         return;
     }
 
-    let tableHtml = `
-        <table class="history-table">
-            <thead>
-                <tr>
-                    <th>圖片</th>
-                    <th>訂單號</th>
-                    <th>品項</th>
-                    <th>進度與時間</th>
-                    <th class="cancel-header"></th>
-                    <th></th>
-                </tr>
-            </thead>
-            <tbody>`;
+    let listHtml = `<div class="history-cards-container">`;
 
-    tableHtml += myOrders.map(o => {
+    listHtml += myOrders.map(o => {
         const [color, text] = statusMap[o.status || 'pending'];
-        const rowBg = rowBgMap[o.status || 'pending'];
         const canCancel = (!o.status || o.status === 'pending');
         const isCompletedOrRejected = (o.status === 'completed' || o.status === 'rejected');
         const targetId = o.id;
         
-        let cancelCellHtml = `<div style="display: flex; flex-direction: column; gap: 5px;">`;
-        if (canCancel) cancelCellHtml += `<button class="btn-cancel" onclick="cancelOrder('${targetId}', this)">取消</button>`;
-        cancelCellHtml += `</div>`;
-
-        // 只有已完成或已退單的紀錄，才顯示專屬的垃圾桶刪除按鈕
-        const forceDeleteBtn = isCompletedOrRejected ? `<button class="btn-force-delete" title="移除此紀錄" onclick="forceRemove('${targetId}')" style="background: transparent; border: none; font-size: 1.3em; cursor: pointer; opacity: 0.6; transition: all 0.2s;" onmouseover="this.style.opacity='1'; this.style.transform='scale(1.15)';" onmouseout="this.style.opacity='0.6'; this.style.transform='scale(1)';">🗑️</button>` : '';
-        
         const drinkInfo = allDrinks.find(d => d.name === o.drink);
         const isSoldOut = drinkInfo && drinkInfo.isSoldOut;
-        const abvInfo = drinkInfo ? drinkInfo.abv : '--'; 
         const safeDrinkName = o.drink.replace(/'/g, "\\'");
         
         let imgSrc = '';
@@ -1181,35 +1151,42 @@ function loadHistory() {
         const ts = parseInt(o.id.split('-')[0]);
         const dateDisplay = !isNaN(ts) ? new Date(ts).toLocaleDateString('zh-TW', { month: '2-digit', day: '2-digit' }) : '';
 
-        const timeDetails = `<div style="font-size: 0.85em; color: #aaa; line-height: 1.4;">
-                <div style="color: #888;">📅 ${dateDisplay}</div>
-                <div style="color: #666;">📝 點餐: ${o.time}</div>
-                ${o.makingTime ? `<div style="color: #f39c12;">👨‍🍳 製作: ${o.makingTime}</div>` : ''}
-                ${o.completedTime ? `<div style="color: #27ae60;">🍸 完成: ${o.completedTime}</div>` : ''}
-            </div>`;
-
+        // 卡片式設計的 HTML 結構
         return `
-            <tr id="history-order-${o.id}" style="background-color: ${rowBg}; transition: background-color 0.4s ease;">
-                <td class="history-img-cell">
-                    <div style="position: relative; display: inline-block;">
-                        <img src="${imgSrc}" onerror="handleImgError(this, '${imgSrcPng}')" class="history-thumb" onclick="openImageModal(this.src)" style="aspect-ratio: 1 / 1; object-fit: cover; border-radius: 8px; ${(isSoldOut || o.status === 'rejected') ? 'filter: grayscale(1); opacity: 0.7;' : ''}" loading="lazy" decoding="async">
-                        ${isSoldOut ? '<div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-15deg); font-size: 0.6em; font-weight: 900; color: #fff; background: rgba(231, 76, 60, 0.85); padding: 2px 4px; border: 1.5px solid #fff; border-radius: 4px; pointer-events: none; z-index: 5; box-shadow: 0 2px 5px rgba(0,0,0,0.5); white-space: nowrap;">SOLD OUT</div>' : ''}
+            <div class="history-card ${o.status || 'pending'}" id="history-order-${o.id}">
+                
+                ${isCompletedOrRejected ? `<button class="history-btn-delete" title="移除此紀錄" onclick="forceRemove('${targetId}')">🗑️</button>` : ''}
+                
+                <div class="history-card-img-wrapper">
+                    <img src="${imgSrc}" onerror="handleImgError(this, '${imgSrcPng}')" onclick="openImageModal(this.src)" style="${isSoldOut ? 'filter: grayscale(1); opacity: 0.7;' : ''}" loading="lazy">
+                    ${isSoldOut ? '<div class="history-sold-out-tag">SOLD OUT</div>' : ''}
+                </div>
+
+                <div class="history-card-content">
+                    <div class="history-card-header">
+                        <span class="history-drink-name">${o.drink}</span>
+                        <span class="history-status-tag" style="background: ${color}; color: #000;">${text}</span>
                     </div>
-                </td>
-                <td><small style="color: #888;">#${o.id.split('-')[0]}</small></td>
-                <td>
-                    <strong>${o.drink}</strong>
-                    <button class="btn-reorder" onclick="event.stopPropagation(); order('${safeDrinkName}', this)" ${isSoldOut ? 'disabled style="background:#555;color:#999;cursor:not-allowed;" title="目前售罄"' : ''}>🔄 再點一杯</button>
-                    ${o.notes ? `<div style="font-size: 0.8em; color: #aaa; margin-top: 5px;">備註: ${o.notes}</div>` : ''}
-                    <div style="margin-top:4px;"><span class="abv-badge" style="margin-left:0;">${abvInfo}%</span><span class="status-tag" style="background: ${color}; color: black; margin-left:5px;">${text}</span></div>                            
-                </td>
-                <td>${timeDetails}</td>
-                <td class="cancel-btn-cell">${cancelCellHtml}</td>
-                <td>${forceDeleteBtn}</td>
-            </tr>`;
+
+                    <div class="history-time-info">
+                        <div><span class="time-icon">📅</span> ${dateDisplay}</div>
+                        <div><span class="time-icon">📝</span> 點餐: ${o.time}</div>
+                        ${o.makingTime ? `<div><span class="time-icon">👨‍🍳</span> 製作: ${o.makingTime}</div>` : ''}
+                        ${o.completedTime ? `<div><span class="time-icon">🍸</span> 完成: ${o.completedTime}</div>` : ''}
+                    </div>
+
+                    ${o.notes ? `<div class="history-notes-box">💬 備註: ${o.notes}</div>` : ''}
+
+                    <div class="history-card-actions">
+                        ${canCancel ? `<button class="history-btn-cancel" onclick="cancelOrder('${targetId}', this)">✖ 取消</button>` : ''}
+                        <button class="history-btn-reorder" onclick="event.stopPropagation(); scrollToDrink('${safeDrinkName}')" ${isSoldOut ? 'disabled title="目前售罄"' : ''}>🔄 再點一杯</button>
+                    </div>
+                </div>
+            </div>
+        `;
     }).join('');
-    tableHtml += `</tbody></table>`;
-    list.innerHTML = tableHtml;
+    listHtml += `</div>`;
+    list.innerHTML = listHtml;
 }
 
 let currentOnConfirmCallback = null;
@@ -1739,7 +1716,7 @@ function showOrderToast(guest, drink) {
         toast.style.cursor = 'not-allowed';
     } else {
         // Stop propagation so clicking the button doesn't trigger the toast's main onClick (scrollToDrink)
-        actionHtml = `<button class="btn-reorder" style="margin-left: 10px;" onclick="event.stopPropagation(); order('${safeDrinkName}', this)">🔄 再點一杯</button>`;
+        actionHtml = `<button class="btn-reorder" style="margin-left: 10px;" onclick="event.stopPropagation(); scrollToDrink('${safeDrinkName}')">🔄 再點一杯</button>`;
         toast.onclick = () => { toast.style.display = 'none'; scrollToDrink(drink); };
     }
     
@@ -2136,7 +2113,7 @@ socket.on('connect', () => {
     document.body.style.filter = '';
     showToast('🟢 系統連線成功！');
     
-    // 斷線重連時，主動向伺服器要求最新的最愛清單，確保跨裝置同步
+    // 斷線重連時，主動向伺ervidor要求最新的最愛清單，確保跨裝置同步
     if (currentName) {
         loadFavorites();
     }
@@ -2313,14 +2290,14 @@ function updateHistoryOrderUI(orderData) {
 
     const canCancel = (!orderData.status || orderData.status === 'pending');
 
-    const statusTag = orderElement.querySelector('.status-tag');
+    const statusTag = orderElement.querySelector('.history-status-tag');
     if (statusTag) {
         statusTag.style.background = color;
         statusTag.innerText = text;
     }
 
         // 即時連動：如果訂單狀態變更為退單，或是酒款剛好售罄，則動態加上灰階濾鏡
-        const imgElement = orderElement.querySelector('.history-thumb');
+        const imgElement = orderElement.querySelector('img');
         if (imgElement) {
             const drinkInfo = allDrinks.find(d => d.name === orderData.drink);
             const isSoldOut = drinkInfo && drinkInfo.isSoldOut;
@@ -2335,26 +2312,28 @@ function updateHistoryOrderUI(orderData) {
             }
         }
 
-    const timeDetailsCell = orderElement.querySelector('td:nth-child(4)');
+    const timeDetailsCell = orderElement.querySelector('.history-time-info');
     if (timeDetailsCell) {
         const ts = parseInt(orderData.id.split('-')[0]);
         const dateDisplay = !isNaN(ts) ? new Date(ts).toLocaleDateString('zh-TW', { month: '2-digit', day: '2-digit' }) : '';
-        let newTimeDetailsHTML = `<div style="font-size: 0.85em; color: #aaa; line-height: 1.4;">`;
-        newTimeDetailsHTML += `<div style="color: #888;">📅 ${dateDisplay}</div>`;
-        newTimeDetailsHTML += `<div style="color: #666;">📝 點餐: ${orderData.time}</div>`;
-        if (orderData.makingTime) newTimeDetailsHTML += `<div style="color: #f39c12;">👨‍🍳 製作: ${orderData.makingTime}</div>`;
-        if (orderData.completedTime) newTimeDetailsHTML += `<div style="color: #27ae60;">🍸 完成: ${orderData.completedTime}</div>`;
-        newTimeDetailsHTML += `</div>`;
+        let newTimeDetailsHTML = ``;
+        newTimeDetailsHTML += `<div><span class="time-icon">📅</span> ${dateDisplay}</div>`;
+        newTimeDetailsHTML += `<div><span class="time-icon">📝</span> 點餐: ${orderData.time}</div>`;
+        if (orderData.makingTime) newTimeDetailsHTML += `<div><span class="time-icon">👨‍🍳</span> 製作: ${orderData.makingTime}</div>`;
+        if (orderData.completedTime) newTimeDetailsHTML += `<div><span class="time-icon">🍸</span> 完成: ${orderData.completedTime}</div>`;
         timeDetailsCell.innerHTML = newTimeDetailsHTML;
     }
 
-    const cancelBtnCell = orderElement.querySelector('.cancel-btn-cell'); 
+    const cancelBtnCell = orderElement.querySelector('.history-card-actions'); 
     if (cancelBtnCell) {
-        let cellHtml = `<div style="display: flex; flex-direction: column; gap: 5px;">`;
+        const safeDrinkName = orderData.drink.replace(/'/g, "\\'");
+        const drinkInfo = allDrinks.find(d => d.name === orderData.drink);
+        const isSoldOut = drinkInfo && drinkInfo.isSoldOut;
+        let cellHtml = ``;
         if (canCancel) {
-            cellHtml += `<button class="btn-cancel" onclick="cancelOrder('${orderData.id}', this)">取消</button>`;
+            cellHtml += `<button class="history-btn-cancel" onclick="cancelOrder('${orderData.id}', this)">✖ 取消</button>`;
         }
-        cellHtml += `</div>`;
+        cellHtml += `<button class="history-btn-reorder" onclick="event.stopPropagation(); scrollToDrink('${safeDrinkName}')" ${isSoldOut ? 'disabled title="目前售罄"' : ''}>🔄 再點一杯</button>`;
         cancelBtnCell.innerHTML = cellHtml;
     }
 }
@@ -2573,6 +2552,14 @@ document.addEventListener('DOMContentLoaded', () => {
         
         /* FAB */
         body.light-mode .fab-badge { border-color: #ffffff; }
+        
+        /* 歷史紀錄手機版卡片設計 (淺色模式覆寫) */
+        body.light-mode .history-card { background: #ffffff; border-color: #e2e8f0; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        body.light-mode .history-drink-name { color: #1e293b; }
+        body.light-mode .history-time-info div { color: #64748b; }
+        body.light-mode .history-notes-box { background: #fffbeb; border-color: #fed7aa; color: #b45309; }
+        body.light-mode .history-btn-cancel { background: #fef2f2; color: #ef4444; border-color: #fecaca; }
+        body.light-mode .history-btn-cancel:hover { background: #fee2e2; }
     `;
     document.head.appendChild(lightModeStyle);
 
