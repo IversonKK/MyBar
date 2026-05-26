@@ -16,11 +16,11 @@ body {
 
 h1 { text-align: center; color: #f39c12; margin-bottom: 25px; text-shadow: 0 2px 4px rgba(0,0,0,0.5); }
 #menu { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; }
-.card { background: #1e1e1e; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 8px rgba(0,0,0,0.3); transition: transform 0.2s, box-shadow 0.2s; display: flex; flex-direction: column; position: relative; border: 1px solid #333; }
+.card { background: #1e1e1e; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 8px rgba(0,0,0,0.3); transition: transform 0.2s, box-shadow 0.2s; display: flex; flex-direction: column; position: relative; border: 1px solid #333; padding: 0; }
 .card.sold-out { opacity: 0.8; filter: grayscale(0.2); }
-.img-container { width: 100%; height: 220px; overflow: hidden; position: relative; background: #000; }
-.drink-img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.3s; cursor: pointer; }
-.card-content { padding: 20px; display: flex; flex-direction: column; flex-grow: 1; }
+.img-container { width: 100%; height: 220px; overflow: hidden; position: relative; background: #000; border-radius: 0; }
+.drink-img { width: 100%; height: 100%; object-fit: contain; transition: transform 0.3s; cursor: pointer; }
+.card-content { padding: 10px 20px 20px; display: flex; flex-direction: column; flex-grow: 1; }
 h3 { margin: 0 0 10px 0; color: #fff; font-size: 1.4em; text-shadow: 0 1px 3px rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: space-between; }
 button { background: linear-gradient(135deg, #f39c12, #e67e22); color: #000; border: none; padding: 10px; border-radius: 6px; cursor: pointer; font-weight: bold; width: 100%; margin-top: 15px; font-size: 1em; box-shadow: 0 2px 5px rgba(243, 156, 18, 0.3); letter-spacing: 1px; }
 
@@ -1052,15 +1052,42 @@ img.avatar[src^="data:image/jpeg"] {
     }
 
     .card-content {
-        padding: 15px;
+        padding: 10px;
     }
 
     .card h3 {
         font-size: 1.1em;
+        margin-bottom: 5px;
     }
 
     .img-container {
-        height: 160px;
+        height: 180px; /* 稍微增加高度以確保圖片不被切太多 */
+    }
+
+    .drink-img {
+        object-fit: cover; /* 確保填滿，但可能會裁剪 */
+    }
+
+    /* 調整手機版按鈕和標籤，避免擁擠 */
+    .card button {
+        padding: 8px;
+        font-size: 0.9em;
+        margin-top: 10px;
+    }
+
+    .profile-tags-wrapper {
+        gap: 4px;
+        margin-bottom: 8px;
+    }
+
+    .profile-tag {
+        padding: 2px 6px;
+        font-size: 0.75em;
+    }
+
+    .description-area {
+        padding: 8px;
+        font-size: 0.8em;
     }
 
     .bottom-nav {

@@ -276,3 +276,8 @@ img[src^="data:image/jpeg"] {
     border: 2px solid #ffd700 !important;
     box-shadow: 0 0 12px rgba(255, 215, 0, 0.8) !important;
 }
+
+/* 確保配方文字可以正確換行與滾動 */
+.card-recipe {
+    border-left: 3px solid #3498db;
+}

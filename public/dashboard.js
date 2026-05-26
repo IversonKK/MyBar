@@ -554,6 +554,7 @@ function renderOrder(data) {
             <div class="card-details">
                 <div class="card-drink-name" title="${data.drink}">${data.drink}</div>
                 ${data.notes ? `<div class="card-notes">💬 ${data.notes}</div>` : ''}
+                ${drinkInfo && drinkInfo.description ? `<div class="card-recipe" style="margin-top: 8px; padding: 6px; background: rgba(0,0,0,0.2); border-radius: 4px; font-size: 0.85em; color: #aaa; max-height: 80px; overflow-y: auto; white-space: pre-wrap; font-family: monospace;">${drinkInfo.description}</div>` : ''}
             </div>
         </div>
         
@@ -688,7 +689,7 @@ function initKanbanSortable() {
         new Sortable(list, {
             group: 'kanban', 
             handle: '.drag-handle', 
-            filter: 'button, .card-img, .card-guest', 
+            filter: 'button, .card-img, .card-guest, .card-recipe', 
             preventOnFilter: false,
             animation: 150,
             ghostClass: 'sortable-ghost',
@@ -707,12 +708,18 @@ function initKanbanSortable() {
                 
                 if (newStatus && newStatus !== oldStatus) {
                     updateStatus(orderId, newStatus, itemEl);
-                } else {
-                    // reordering within the same column
+                }
+            },
+            onSort: function(evt) {
+                const itemEl = evt.item; 
+                const toList = evt.to;
+                const fromList = evt.from;
+                const newStatus = toList.dataset.status;
+
+                // 如果是在同一個列表內拖曳，觸發重排序邏輯，而不呼叫 onEnd 中的狀態切換
+                if (fromList === toList && newStatus !== 'completed') {
                     const newOrderIds = Array.from(toList.querySelectorAll('.order-card')).map(el => el.id.replace('order-', ''));
-                    if (newStatus !== 'completed') {
-                        socket.emit('reorder-orders-partial', {status: newStatus, ids: newOrderIds});
-                    }
+                    socket.emit('reorder-orders-partial', {status: newStatus, ids: newOrderIds});
                 }
             }
         });
