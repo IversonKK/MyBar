@@ -1076,6 +1076,17 @@ function toggleFavorites() {
     }
 }
 
+window.toggleTimeDetails = function(iconSpan) {
+    const wrapper = iconSpan.parentElement.nextElementSibling;
+    if (wrapper.style.display === 'none') {
+        wrapper.style.display = 'block';
+        iconSpan.innerText = '▲ 收合';
+    } else {
+        wrapper.style.display = 'none';
+        iconSpan.innerText = '▼ 詳細時間';
+    }
+}
+
 function loadHistory() {
     const list = document.getElementById('history-list');
     const dateFilterSelect = document.getElementById('history-date-filter');
@@ -1155,8 +1166,6 @@ function loadHistory() {
         return `
             <div class="history-card ${o.status || 'pending'}" id="history-order-${o.id}">
                 
-                ${isCompletedOrRejected ? `<button class="history-btn-delete" title="移除此紀錄" onclick="forceRemove('${targetId}')">🗑️</button>` : ''}
-                
                 <div class="history-card-img-wrapper">
                     <img src="${imgSrc}" onerror="handleImgError(this, '${imgSrcPng}')" onclick="openImageModal(this.src)" style="${isSoldOut ? 'filter: grayscale(1); opacity: 0.7;' : ''}" loading="lazy">
                     ${isSoldOut ? '<div class="history-sold-out-tag">SOLD OUT</div>' : ''}
@@ -1169,10 +1178,12 @@ function loadHistory() {
                     </div>
 
                     <div class="history-time-info">
-                        <div><span class="time-icon">📅</span> ${dateDisplay}</div>
-                        <div><span class="time-icon">📝</span> 點餐: ${o.time}</div>
-                        ${o.makingTime ? `<div><span class="time-icon">👨‍🍳</span> 製作: ${o.makingTime}</div>` : ''}
-                        ${o.completedTime ? `<div><span class="time-icon">🍸</span> 完成: ${o.completedTime}</div>` : ''}
+                        <div><span class="time-icon">📅</span> ${dateDisplay} <span onclick="toggleTimeDetails(this)" style="cursor:pointer; font-size: 0.8em; color: #888; margin-left: 5px;">▼ 詳細時間</span></div>
+                        <div class="time-details-wrapper" style="display: none; margin-top: 5px; padding-left: 10px; border-left: 2px solid #333;">
+                            <div><span class="time-icon">📝</span> 點餐: ${o.time}</div>
+                            ${o.makingTime ? `<div><span class="time-icon">👨‍🍳</span> 製作: ${o.makingTime}</div>` : ''}
+                            ${o.completedTime ? `<div><span class="time-icon">🍸</span> 完成: ${o.completedTime}</div>` : ''}
+                        </div>
                     </div>
 
                     ${o.notes ? `<div class="history-notes-box">💬 備註: ${o.notes}</div>` : ''}
@@ -2314,13 +2325,18 @@ function updateHistoryOrderUI(orderData) {
 
     const timeDetailsCell = orderElement.querySelector('.history-time-info');
     if (timeDetailsCell) {
+        const wrapper = timeDetailsCell.querySelector('.time-details-wrapper');
+        const isExpanded = wrapper && wrapper.style.display === 'block';
+
         const ts = parseInt(orderData.id.split('-')[0]);
         const dateDisplay = !isNaN(ts) ? new Date(ts).toLocaleDateString('zh-TW', { month: '2-digit', day: '2-digit' }) : '';
         let newTimeDetailsHTML = ``;
-        newTimeDetailsHTML += `<div><span class="time-icon">📅</span> ${dateDisplay}</div>`;
+        newTimeDetailsHTML += `<div><span class="time-icon">📅</span> ${dateDisplay} <span onclick="toggleTimeDetails(this)" style="cursor:pointer; font-size: 0.8em; color: #888; margin-left: 5px;">${isExpanded ? '▲ 收合' : '▼ 詳細時間'}</span></div>`;
+        newTimeDetailsHTML += `<div class="time-details-wrapper" style="display: ${isExpanded ? 'block' : 'none'}; margin-top: 5px; padding-left: 10px; border-left: 2px solid #333;">`;
         newTimeDetailsHTML += `<div><span class="time-icon">📝</span> 點餐: ${orderData.time}</div>`;
         if (orderData.makingTime) newTimeDetailsHTML += `<div><span class="time-icon">👨‍🍳</span> 製作: ${orderData.makingTime}</div>`;
         if (orderData.completedTime) newTimeDetailsHTML += `<div><span class="time-icon">🍸</span> 完成: ${orderData.completedTime}</div>`;
+        newTimeDetailsHTML += `</div>`;
         timeDetailsCell.innerHTML = newTimeDetailsHTML;
     }
 
