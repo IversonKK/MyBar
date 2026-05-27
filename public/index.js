@@ -601,9 +601,9 @@ function saveNameAndConfirmAge() {
     }
     
     const music = document.getElementById('bg-music');
-    if (music && music.paused) toggleMusic(); // 自動啟動背景音樂
-    if (!isChangingName && music && music.paused) toggleMusic(); // 只有初次進入吧台時才自動啟動背景音樂
-    if (!isChangingName && music && music.paused) { toggleMusic(); } // 只有首次進入吧台時，才自動啟動背景音樂
+    if (!isChangingName && music && music.paused) {
+        toggleMusic(); // 只有首次進入吧台時，才自動啟動背景音樂
+    }
 
     setTimeout(() => { 
         const ws = document.getElementById('welcome-screen');
@@ -704,6 +704,14 @@ function applyFilters() {
 
     // 改由全域伺服器訂單取得目前使用者已點過的酒名清單，供紀錄篩選使用
     const myOrderedNames = globalServerOrders.filter(o => o.guest === currentName).map(o => o.drink);
+    
+    // 計算今日點過的酒名清單
+    const todayStr = new Date().toDateString();
+    const myOrderedNamesToday = globalServerOrders.filter(o => {
+        if (o.guest !== currentName || !o.id) return false;
+        const ts = parseInt(o.id.split('-')[0]);
+        return !isNaN(ts) && new Date(ts).toDateString() === todayStr;
+    }).map(o => o.drink);
 
     // 如果客人正在搜尋或啟用任何篩選，就暫時隱藏輪播以節省畫面空間
     const isFiltering = searchText !== '' || selectedBases.length > 0 || selectedStyles.length > 0 || selectedSpecials.length > 0 || selectedFlavors.length > 0 || historyFilterValue !== 'all' || sortValue !== 'default';
@@ -778,7 +786,10 @@ function applyFilters() {
         // 點餐紀錄過濾
         let matchesHistory = true;
         const isOrdered = myOrderedNames.includes(drinkName);
+        const isOrderedToday = myOrderedNamesToday.includes(drinkName);
+        
         if (historyFilterValue === 'ordered') matchesHistory = isOrdered;
+        if (historyFilterValue === 'ordered-today') matchesHistory = isOrderedToday;
         if (historyFilterValue === 'unordered') matchesHistory = !isOrdered;
 
         // 不同群組間取 AND
@@ -884,9 +895,9 @@ function renderMenu(drinksToRender) {
         const isHot = (d.tags || []).includes('熱門推薦') || top3Drinks.includes(d.name);
         
         return `
-        <div class="card ${d.isSoldOut ? 'sold-out' : ''}" id="drink-card-${d.id}">
+        <div class="card ${d.isSoldOut ? 'sold-out' : ''}" id="drink-card-${d.id}" onclick="this.classList.remove('card-highlighted')">
             <div class="img-container">
-                <img src="${localPath}" onerror="handleImgError(this, '${localPathPng}')" class="drink-img" onclick="openImageModal(this.src)" title="點擊放大圖片" style="aspect-ratio: 1 / 1; object-fit: cover; width: 100%; border-radius: 12px 12px 0 0; ${d.isSoldOut ? 'filter: grayscale(1); opacity: 0.7;' : ''}" loading="lazy" decoding="async">
+                <img src="${localPath}" onerror="handleImgError(this, '${localPathPng}')" class="drink-img" onclick="openImageModal(this.src); event.stopPropagation();" title="點擊放大圖片" style="aspect-ratio: 1 / 1; object-fit: cover; width: 100%; border-radius: 12px 12px 0 0; ${d.isSoldOut ? 'filter: grayscale(1); opacity: 0.7;' : ''}" loading="lazy" decoding="async">
                 ${d.isSoldOut ? '<div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-15deg); font-size: 1.6em; font-weight: 900; color: #fff; background: rgba(231, 76, 60, 0.85); padding: 5px 15px; border: 3px solid #fff; border-radius: 8px; pointer-events: none; z-index: 5; letter-spacing: 2px; box-shadow: 0 4px 10px rgba(0,0,0,0.5); white-space: nowrap;">SOLD OUT</div>' : ''}
                 <div class="badge-stack-left">
                     ${isHot ? `<div class="hot-badge" style="transition: transform 0.3s ease, filter 0.3s ease;" onmouseover="this.style.transform='translateY(-4px)'; this.style.filter='brightness(1.15)'" onmouseout="this.style.transform='translateY(0)'; this.style.filter='brightness(1)'">👑 熱門</div>` : ''}
@@ -907,11 +918,11 @@ function renderMenu(drinksToRender) {
                 
                 ${getFlavorIcons(d)}
 
-                <div class="description-area">${formatDescription(d.description)}</div>
+                <div class="description-area" onclick="event.stopPropagation();">${formatDescription(d.description)}</div>
                 <div class="card-action-area">
                     ${d.isSoldOut 
-                    ? `<button disabled style="flex-grow: 1; background: #333; color: #777; cursor: not-allowed; border: 1px solid #444; border-radius: 8px;">🚫 目前已售罄</button>`
-                    : `<button class="btn-order-anim" onclick="order('${safeName}', this)" style="flex-grow: 1; border-radius: 8px;">點這杯</button>`}
+                    ? `<button disabled style="flex-grow: 1; background: #333; color: #777; cursor: not-allowed; border: 1px solid #444; border-radius: 8px;" onclick="event.stopPropagation();">🚫 目前已售罄</button>`
+                    : `<button class="btn-order-anim" onclick="event.stopPropagation(); order('${safeName}', this)" style="flex-grow: 1; border-radius: 8px;">點這杯</button>`}
                 </div>
             </div>
         </div>
@@ -1993,9 +2004,8 @@ socket.on('sync-orders', (serverOrders) => {
 
 socket.on('order-status-updated', (data) => {
     const globalIndex = globalServerOrders.findIndex(o => o.id === data.id);
-    if (globalIndex !== -1) globalServerOrders[globalIndex] = data;
-    else globalServerOrders.push(data);
     let oldStatus = 'pending';
+
     if (globalIndex !== -1) {
         oldStatus = globalServerOrders[globalIndex].status;
         globalServerOrders[globalIndex] = data;
@@ -2292,7 +2302,6 @@ function updateHistoryOrderUI(orderData) {
     const rowBgMap = {
         'pending': 'transparent',
         'making': 'rgba(243, 156, 18, 0.1)',
-        'completed': 'rgba(39, 174, 96, 0.1)',
         'completed': 'rgba(39, 174, 96, 0.05)',
         'rejected': 'rgba(231, 76, 60, 0.1)'
     };
@@ -2313,8 +2322,8 @@ function updateHistoryOrderUI(orderData) {
             const drinkInfo = allDrinks.find(d => d.name === orderData.drink);
             const isSoldOut = drinkInfo && drinkInfo.isSoldOut;
             if (isSoldOut || orderData.status === 'rejected') {
-        // 訂單被退回或售罄時給予強烈震動提示
-        if ("vibrate" in navigator) { navigator.vibrate([100, 50, 100]); }
+                // 訂單被退回或售罄時給予強烈震動提示
+                if ("vibrate" in navigator) { navigator.vibrate([100, 50, 100]); }
                 imgElement.style.filter = 'grayscale(1)';
                 imgElement.style.opacity = '0.7';
             } else {
@@ -2680,33 +2689,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
     initCarouselSwipe(); // 初始化輪播區滑動與拖曳控制
 
-    // --- 在手機版動態注入獨立搜尋與隨機按鈕 ---
-    if (window.innerWidth <= 768) {
-        const advancedFilters = document.getElementById('advanced-filters');
-        
-        // 1. 建立包含搜尋框的新區域
-        const mobileFilterHeader = document.createElement('div');
-        mobileFilterHeader.innerHTML = `
-            <div class="filter-header-search-wrap">
-                <input type="text" id="mobile-search-input" class="search-box" placeholder="🔍 搜尋酒名或描述..." oninput="applyFilters()">
-                <button class="voice-search-btn" onclick="startVoiceSearch()" title="語音搜尋">🎙️</button>
-            </div>
-        `;
-        
-        // 將它插入到原本的標題之下、篩選標籤之上
-        const sheetHeader = document.querySelector('.filter-sheet-header');
-        if (sheetHeader && advancedFilters) {
-            sheetHeader.insertAdjacentElement('afterend', mobileFilterHeader);
-        }
-        
-        // 綁定手機版搜尋框事件以觸發清除按鈕
-        const mobileSearch = document.getElementById('mobile-search-input');
-        if (mobileSearch) {
-            mobileSearch.addEventListener('input', function() {
-                window.toggleClearBtn(this);
-            });
-        }
-    } else {
+    // 綁定手機版搜尋框事件以觸發清除按鈕
+    const mobileSearch = document.getElementById('mobile-search-input');
+    if (mobileSearch) {
+        mobileSearch.addEventListener('input', function() {
+            window.toggleClearBtn(this);
+        });
+    }
+
+    if (window.innerWidth > 768) {
         // --- 自動將「搜尋與篩選區塊」固定在畫面最上方，並隨捲動隱藏/顯示 ---
         const filterContainer = document.getElementById('filter-container');
         if (filterContainer) {

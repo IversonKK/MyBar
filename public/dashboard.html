@@ -92,6 +92,10 @@
         .card-notes { font-size: 0.85em; color: #f1c40f; background: rgba(241, 196, 15, 0.1); padding: 4px 8px; border-radius: 4px; border: 1px dashed rgba(241, 196, 15, 0.3); display: inline-block; font-weight: bold; animation: pulseNote 1.5s infinite alternate; align-self: flex-start; }
         @keyframes pulseNote { from { box-shadow: 0 0 0 rgba(241,196,15,0); } to { box-shadow: 0 0 8px rgba(241,196,15,0.4); } }
 
+        /* 點列式材料清單樣式 (吧台專用) */
+        .ingredient-tags { list-style: none; padding: 0; margin: 0; display: flex; flex-wrap: wrap; gap: 6px; }
+        .ingredient-tag { background: rgba(52, 152, 219, 0.15); color: #3498db; padding: 3px 8px; border-radius: 6px; font-size: 0.9em; border: 1px solid rgba(52, 152, 219, 0.4); font-weight: bold; }
+
         /* Timer Bar */
         .timer-wrapper { width: 100%; display: none; flex-direction: column; gap: 4px; margin-top: 4px; }
         .timer-bar-bg { height: 4px; background: #000; border-radius: 2px; overflow: hidden; border: 1px solid #222; }

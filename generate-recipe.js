@@ -15,7 +15,7 @@ const builtinDatabase = {
     "琴通寧": { abv: 10, strong: 2, sour: 2, tags: ["琴酒", "有氣泡"], description: "材料：琴酒、通寧水。杯型：高球杯。裝飾：檸檬角。" },
     "金湯力": { abv: 10, strong: 2, sour: 2, tags: ["琴酒", "有氣泡"], description: "材料：琴酒、通寧水。杯型：高球杯。裝飾：檸檬角。" },
     "內格羅尼": { abv: 25, strong: 4, sour: 2, tags: ["琴酒", "無氣泡"], description: "材料：琴酒、金巴利、甜苦艾酒。杯型：古典杯。裝飾：橙皮。" },
-    "曼哈頓": { abv: 30, "strong": 5, sour: 2, tags: ["威士忌", "無氣泡"], description: "材料：裸麥威士忌、甜苦艾酒、安格氏苦精。杯型：馬丁尼杯。裝飾：酒漬櫻桃。" },
+    "曼哈頓": { abv: 30, strong: 5, sour: 2, tags: ["威士忌", "無氣泡"], description: "材料：裸麥威士忌、甜苦艾酒、安格氏苦精。杯型：馬丁尼杯。裝飾：酒漬櫻桃。" },
     "馬丁尼": { abv: 32, strong: 5, sour: 1, tags: ["琴酒", "無氣泡"], description: "材料：琴酒、不甜苦艾酒。杯型：馬丁尼杯。裝飾：橄欖或檸檬皮。" },
     "莫斯科騾子": { abv: 12, strong: 2, sour: 3, tags: ["伏特加", "有氣泡"], description: "材料：伏特加、薑汁啤酒、萊姆汁。杯型：銅杯。裝飾：萊姆角。" },
     "側車": { abv: 25, strong: 4, sour: 3, tags: ["白蘭地", "無氣泡"], description: "材料：干邑白蘭地、君度橙酒、檸檬汁。杯型：馬丁尼杯。裝飾：糖口(選用)、橙皮。" },

@@ -493,6 +493,30 @@ socket.on('order-deleted', (orderId) => {
     }
 });
 
+// 格式化酒保畫面的配方顯示 (保留完整資訊並加上材料標籤特效)
+function formatDashboardRecipe(desc) {
+    if (!desc) return "";
+    const parts = desc.split(/\n/);
+    let finalHtml = "";
+
+    parts.forEach(p => {
+        let text = p.trim();
+        if (!text) return;
+
+        if (text.startsWith("材料：") || text.startsWith("材料:")) {
+            const items = text.replace(/材料[：:]/, "").split(/[、，,。]/).map(i => i.trim()).filter(i => i);
+            let ingredientsHtml = `<ul class="ingredient-tags">` + 
+                items.map(i => `<li class="ingredient-tag">${i}</li>`).join('') + 
+                `</ul>`;
+            finalHtml += `<div style="margin-bottom: 6px;">${ingredientsHtml}</div>`;
+        } else {
+            // 其他如作法、杯型等，保持純文字但稍微加上顏色區分
+            finalHtml += `<div style="margin-bottom: 4px; color: #bbb;">${text}</div>`;
+        }
+    });
+    return finalHtml;
+}
+
 function renderOrder(data) {
     if (data.hiddenFromDashboard || localHiddenOrders.has(data.id)) return;
     const targetList = getListByStatus(data.status);
@@ -554,7 +578,7 @@ function renderOrder(data) {
             <div class="card-details">
                 <div class="card-drink-name" title="${data.drink}">${data.drink}</div>
                 ${data.notes ? `<div class="card-notes">💬 ${data.notes}</div>` : ''}
-                ${drinkInfo && drinkInfo.description ? `<div class="card-recipe" style="margin-top: 8px; padding: 6px; background: rgba(0,0,0,0.2); border-radius: 4px; font-size: 0.85em; color: #aaa; max-height: 80px; overflow-y: auto; white-space: pre-wrap; font-family: monospace;">${drinkInfo.description}</div>` : ''}
+                ${drinkInfo && drinkInfo.description ? `<div class="card-recipe" style="margin-top: 8px; padding: 10px; background: rgba(0,0,0,0.3); border-radius: 6px; font-size: 0.9em; max-height: 120px; overflow-y: auto; font-family: -apple-system, sans-serif;">${formatDashboardRecipe(drinkInfo.description)}</div>` : ''}
             </div>
         </div>
         

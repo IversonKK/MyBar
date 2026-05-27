@@ -56,6 +56,35 @@
             }
             .menu-toggle-btn { display: flex; }
         }
+
+        /* 手機版篩選抽屜新樣式 */
+        .mobile-sheet-top-bar, .mobile-search-area, .mobile-random-area, .mobile-sheet-bottom-bar { display: none; }
+        .desktop-random-hint { display: block; }
+
+        @media (max-width: 768px) {
+            .mobile-sheet-top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+            .mobile-close-btn { background: rgba(255,255,255,0.1); border: none; color: #aaa; width: 32px; height: 32px; border-radius: 50%; font-size: 1.2em; display: flex; justify-content: center; align-items: center; padding: 0; cursor: pointer; transition: background 0.2s; }
+            .mobile-close-btn:active { background: rgba(255,255,255,0.2); }
+
+            .mobile-search-area { display: flex; position: relative; margin-bottom: 20px; }
+            .mobile-random-area { display: block; margin: 20px 0 40px 0; padding-bottom: 25px; border-bottom: 1px dashed #444; }
+
+            /* Sticky Bottom Bar */
+            .mobile-sheet-bottom-bar { display: block; position: sticky; bottom: -20px; left: 0; width: 100%; background: #1a1a1a; padding: 15px 0; border-top: 1px solid #333; margin-top: 20px; z-index: 100; }
+            .view-results-btn { width: 100%; background: #27ae60; color: white; font-size: 1.1em; font-weight: bold; padding: 12px; border-radius: 8px; border: none; box-shadow: 0 4px 15px rgba(39, 174, 96, 0.4); cursor: pointer; transition: 0.2s; }
+            .view-results-btn:active { transform: scale(0.98); }
+
+            .desktop-random-hint { display: none !important; }
+
+            .filter-drawer-random-btn { width: 100%; padding: 18px; font-size: 1.3em; border-radius: 16px; font-weight: bold; border: 2px solid rgba(255,255,255,0.15); transition: 0.2s; }
+            .filter-drawer-random-btn:active { transform: scale(0.98); }
+            .random-hint { text-align: center; color: #aaa; font-size: 0.9em; margin-top: 12px; }
+
+            /* 淺色模式覆寫 */
+            body.light-mode .mobile-sheet-bottom-bar { background: #ffffff; border-color: #e2e8f0; }
+            body.light-mode .mobile-close-btn { background: #f1f5f9; color: #64748b; }
+            body.light-mode .mobile-close-btn:active { background: #e2e8f0; }
+        }
     </style>
 </head>
 <body>
@@ -121,17 +150,19 @@
 
     <h1 id="main-title">🍸 Iverson Bar</h1>
 
-    <!-- 您的點餐紀錄 (置頂且可收合) -->
+    <!-- 點餐紀錄 (置頂且可收合) -->
     <div id="history">
-        <div id="history-header" onclick="toggleHistory()">
-            <h3>📜 您的點餐紀錄</h3>
-            <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 8px;">
-                <select id="history-date-filter" onclick="event.stopPropagation()" onchange="loadHistory()" style="padding: 4px 8px; border-radius: 4px; background: #222; color: #fff; border: 1px solid #444; font-size: 0.85em; outline: none;"></select>
-                <button class="clear-all-btn" onclick="clearAllMyHistory(event)">清空紀錄</button>
-                <span class="expand-icon-wrap" id="history-expand-icon" style="margin-left: auto; font-size: 0.9em; color: #aaa; display: flex; align-items: center; gap: 4px;">
+        <div id="history-header" onclick="toggleHistory()" style="flex-direction: column; align-items: stretch; gap: 10px;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <h3 style="margin: 0; color: #f39c12; font-size: 1.2em;">📜 點餐紀錄</h3>
+                <span class="expand-icon-wrap" id="history-expand-icon" style="font-size: 0.9em; color: #aaa; display: flex; align-items: center; gap: 4px;">
                     <span class="expand-text">收合</span>
                     <span class="expand-arrow" style="transition: transform 0.3s ease; display: inline-block;">▲</span>
                 </span>
+            </div>
+            <div style="display: flex; gap: 8px; align-items: center;">
+                <select id="history-date-filter" onclick="event.stopPropagation()" onchange="loadHistory()" style="flex: 1; padding: 6px 8px; border-radius: 6px; background: #222; color: #fff; border: 1px solid #444; font-size: 0.9em; outline: none;"></select>
+                <button class="clear-all-btn" onclick="clearAllMyHistory(event)" style="padding: 6px 12px; font-size: 0.9em; white-space: nowrap;">清空紀錄</button>
             </div>
         </div>
         <div id="history-content" class="collapsible-wrapper expanded">
@@ -157,14 +188,16 @@
 
     <!-- 我的最愛 (可收合) -->
     <div id="favorites-container" style="display: none;">
-        <div id="favorites-header" onclick="toggleFavorites()">
-            <h3>❤️ 我的最愛</h3>
-            <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 8px;">
-                <button class="clear-all-btn" onclick="clearAllMyFavorites(event)">清空最愛</button>
-                <span class="expand-icon-wrap" id="favorites-expand-icon" style="margin-left: auto; font-size: 0.9em; color: #aaa; display: flex; align-items: center; gap: 4px;">
+        <div id="favorites-header" onclick="toggleFavorites()" style="flex-direction: column; align-items: stretch; gap: 10px;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <h3 style="margin: 0; color: #e74c3c; font-size: 1.2em;">❤️ 我的最愛</h3>
+                <span class="expand-icon-wrap" id="favorites-expand-icon" style="font-size: 0.9em; color: #aaa; display: flex; align-items: center; gap: 4px;">
                     <span class="expand-text">收合</span>
                     <span class="expand-arrow" style="transition: transform 0.3s ease; display: inline-block;">▲</span>
                 </span>
+            </div>
+            <div style="display: flex; justify-content: flex-end;">
+                <button class="clear-all-btn" onclick="clearAllMyFavorites(event)" style="padding: 6px 12px; font-size: 0.9em; white-space: nowrap;">清空最愛</button>
             </div>
         </div>
         <div id="favorites-content" class="collapsible-wrapper expanded">
@@ -176,12 +209,6 @@
 
     <!-- 搜尋與篩選區域 -->
     <div id="filter-container">
-        <!-- 手機版抽屜標題列 -->
-        <div class="filter-sheet-header">
-            <span style="font-weight:bold; color:#f39c12; font-size:1.1em;">🔍 搜尋與篩選</span>
-            <button class="filter-sheet-close" onclick="closeFilterSheet()">完成</button>
-        </div>
-
         <div class="search-bar-wrapper">
             <div style="position: relative; flex-grow: 1; display: flex; align-items: center;">
                 <input type="text" id="search-input" class="search-box" placeholder="🔍 搜尋酒名或描述..." oninput="applyFilters()" style="padding-right: 40px; width: 100%;">
@@ -193,12 +220,28 @@
         </div>
         
         <div id="advanced-filters">
-            <!-- 加入提示文字告知使用者篩選可改變抽籤範圍 -->
-            <div style="padding: 10px; background: rgba(142, 68, 173, 0.15); border: 1px dashed #8e44ad; border-radius: 8px; margin-bottom: 15px; margin-top: 15px; color: #e0b0ff; font-size: 0.9em; text-align: center;">
+            <!-- 手機版專屬：頂部把手與關閉按鈕 -->
+            <div class="mobile-sheet-top-bar">
+                <h3 style="margin: 0; font-size: 1.3em; color: #f39c12;">🔍 搜尋與篩選</h3>
+                <button onclick="closeFilterSheet()" class="mobile-close-btn" title="關閉">✖</button>
+            </div>
+
+            <!-- 手機版專屬：搜尋框 -->
+            <div class="mobile-search-area">
+                <input type="text" id="mobile-search-input" class="search-box" placeholder="🔍 輸入酒名或材料搜尋..." oninput="applyFilters()" style="width: 100%; box-sizing: border-box; padding-right: 40px;">
+                <button class="voice-search-btn" onclick="startVoiceSearch()">🎙️</button>
+            </div>
+
+            <!-- 手機版專屬：醒目的隨機抽籤按鈕 -->
+            <div class="mobile-random-area">
+                <button id="mobile-random-btn" class="filter-drawer-random-btn" onclick="recommendRandomDrink()" style="background: linear-gradient(135deg, #8e44ad, #9b59b6); color: white; box-shadow: 0 6px 20px rgba(142, 68, 173, 0.5);">🎰 幫我隨機抽一杯</button>
+                <div class="random-hint">💡 勾選下方標籤後再點擊，會自動從篩選結果中抽籤喔！</div>
+            </div>
+
+            <!-- 原有的電腦版提示 (在手機版隱藏) -->
+            <div class="desktop-random-hint" style="padding: 10px; background: rgba(142, 68, 173, 0.15); border: 1px dashed #8e44ad; border-radius: 8px; margin-bottom: 15px; margin-top: 15px; color: #e0b0ff; font-size: 0.9em; text-align: center;">
                 💡 <strong>小提示：</strong> 選擇下方的標籤後再點擊「隨機」，就會只從您篩選的結果中抽一杯喔！
             </div>
-            <!-- 將手機版隨機按鈕放在最上方，提示文字下方 -->
-            <button id="mobile-random-btn" class="filter-drawer-random-btn" onclick="recommendRandomDrink()">🎲 隨機抽一杯</button>
 
             <div class="filter-group" id="filter-base">
                 <span class="filter-label">基酒:</span>
@@ -234,7 +277,8 @@
             <div class="filter-group" id="filter-history">
                 <span class="filter-label">紀錄:</span>
                 <label><input type="radio" name="history-filter" class="tag-checkbox" value="all" checked onchange="applyFilters()"><span class="tag-btn">全部</span></label>
-                <label><input type="radio" name="history-filter" class="tag-checkbox" value="ordered" onchange="applyFilters()"><span class="tag-btn">✔️ 已點過</span></label>
+                <label><input type="radio" name="history-filter" class="tag-checkbox" value="ordered" onchange="applyFilters()"><span class="tag-btn">✔️ 曾經點過</span></label>
+                <label><input type="radio" name="history-filter" class="tag-checkbox" value="ordered-today" onchange="applyFilters()"><span class="tag-btn">📅 今日已點過</span></label>
                 <label><input type="radio" name="history-filter" class="tag-checkbox" value="unordered" onchange="applyFilters()"><span class="tag-btn">🆕 未點過</span></label>
             </div>
 
@@ -243,6 +287,10 @@
                 <label><input type="radio" name="sort" class="tag-checkbox" value="default" checked onchange="applyFilters()"><span class="tag-btn">預設排序</span></label>
                 <label><input type="radio" name="sort" class="tag-checkbox" value="abv-desc" onchange="applyFilters()"><span class="tag-btn">酒精濃度 (高 ➔ 低)</span></label>
                 <label><input type="radio" name="sort" class="tag-checkbox" value="abv-asc" onchange="applyFilters()"><span class="tag-btn">酒精濃度 (低 ➔ 高)</span></label>
+            </div>
+
+            <div class="mobile-sheet-bottom-bar">
+                <button class="view-results-btn" onclick="closeFilterSheet()">查看篩選結果</button>
             </div>
         </div>
     </div>
