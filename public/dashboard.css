@@ -96,9 +96,32 @@ button:disabled { background: #555 !important; color: #999; cursor: not-allowed;
 #inventory-content { display: none; margin-top: 15px; padding-top: 15px; border-top: 1px solid #555; max-height: 40vh; overflow-y: auto; }
 #inventory-content.expanded { display: block; }
 .inventory-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px; }
-.inv-item { padding: 8px; border: 1px solid #555; border-radius: 8px; font-size: 0.85em; display: flex; align-items: center; gap: 10px; }
-.inv-thumb { width: 40px; height: 40px; object-fit: contain; border-radius: 4px; background: #000; }
-.inv-info { flex-grow: 1; display: flex; flex-direction: column; }
+.inv-item {
+    position: relative;
+    padding: 8px;
+    padding-bottom: 45px; /* 增加底部空間給絕對定位的按鈕 */
+    border: 1px solid #555;
+    border-radius: 8px;
+    font-size: 0.85em;
+    display: flex;
+    align-items: flex-start; /* 改為頂部對齊 */
+    gap: 10px;
+}
+.inv-thumb { width: 40px; height: 40px; object-fit: contain; border-radius: 4px; background: #000; flex-shrink: 0; }
+.inv-info {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+.inv-item-actions {
+    position: absolute;
+    bottom: 8px; /* 距離底部 8px */
+    right: 8px;  /* 距離右側 8px */
+    display: flex;
+    gap: 5px;
+}
+
 
 /* Toast 提示樣式 */
 #toast { position: fixed; top: 20px; right: 20px; background: #27ae60; color: white; padding: 12px 24px; border-radius: 8px; display: none; z-index: 1000; box-shadow: 0 4px 10px rgba(0,0,0,0.3); animation: fadeIn 0.3s; }
