@@ -15,7 +15,7 @@ body {
 }
 
 h1 { text-align: center; color: #f39c12; margin-bottom: 25px; text-shadow: 0 2px 4px rgba(0,0,0,0.5); }
-#menu { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; }
+#menu { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; border-top: 1px dashed #444; padding-top: 20px; }
 .card { background: #1e1e1e; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 8px rgba(0,0,0,0.3); transition: transform 0.2s, box-shadow 0.2s; display: flex; flex-direction: column; position: relative; border: 1px solid #333; padding: 0; }
 .card.sold-out { opacity: 0.8; filter: grayscale(0.2); }
 .img-container { width: 100%; height: 220px; overflow: hidden; position: relative; background: #000; border-radius: 0; }
@@ -25,7 +25,7 @@ h3 { margin: 0 0 10px 0; color: #fff; font-size: 1.4em; text-shadow: 0 1px 3px r
 button { background: linear-gradient(135deg, #f39c12, #e67e22); color: #000; border: none; padding: 10px; border-radius: 6px; cursor: pointer; font-weight: bold; width: 100%; margin-top: 15px; font-size: 1em; box-shadow: 0 2px 5px rgba(243, 156, 18, 0.3); letter-spacing: 1px; }
 
 /* 搜尋與篩選區域 */
-#filter-container { background: #1a1a1a; padding: 15px; border-radius: 12px; margin-bottom: 20px; border: 1px solid #333; box-shadow: 0 4px 10px rgba(0,0,0,0.2); }
+#filter-container { background: #1a1a1a; padding: 15px; border-radius: 12px; margin-bottom: 20px; border: 1px solid #333; box-shadow: 0 4px 10px rgba(0,0,0,0.2); border-bottom: 1px dashed #444; padding-bottom: 20px; }
 .search-bar-wrapper { display: flex; gap: 10px; width: 100%; align-items: center; }
 .search-box { flex-grow: 1; padding: 12px 15px; border-radius: 8px; border: 1px solid #444; background: #222; color: #fff; font-size: 1em; outline: none; transition: 0.3s; }
 .search-box:focus { border-color: #f39c12; box-shadow: 0 0 8px rgba(243, 156, 18, 0.3); }
@@ -128,6 +128,7 @@ button { background: linear-gradient(135deg, #f39c12, #e67e22); color: #000; bor
     border-radius: 12px;
     margin-bottom: 20px;
     border: 1px solid #333;
+    border-bottom: 1px dashed #444; padding-bottom: 20px;
 }
 #favorites-header {
     cursor: pointer;
@@ -179,7 +180,7 @@ button { background: linear-gradient(135deg, #f39c12, #e67e22); color: #000; bor
 }
 
 /* 歷史紀錄外觀微調 */
-#history { background: #1a1a1a; padding: 15px; border-radius: 12px; margin-bottom: 20px; border: 1px solid #333; }
+#history { background: #1a1a1a; padding: 15px; border-radius: 12px; margin-bottom: 20px; border: 1px solid #333; border-bottom: 1px dashed #444; padding-bottom: 20px; }
 #history-header { cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
 #history-header h3 { margin: 0; color: #f39c12; font-size: 1.2em; }
 .history-cards-container { display: flex; flex-direction: column; gap: 15px; margin-top: 15px; }
@@ -340,7 +341,7 @@ button { background: linear-gradient(135deg, #f39c12, #e67e22); color: #000; bor
 .avatar-upload-btn:hover { background: #2ecc71; }
 
 /* 今日酒豪榜樣式 */
-#leaderboard-container { background: #1a1a1a; padding: 15px; border-radius: 12px; margin-bottom: 20px; border: 1px solid #333; }
+#leaderboard-container { background: #1a1a1a; padding: 15px; border-radius: 12px; margin-bottom: 20px; border: 1px solid #333; border-bottom: 1px dashed #444; padding-bottom: 20px;}
 .lb-title { color: #f39c12; margin-top: 0; text-align: center; font-size: 1.2em; margin-bottom: 15px; }
 
 /* 排行榜切換標籤 */
@@ -648,6 +649,9 @@ img.avatar[src^="data:image/jpeg"] {
 }
 
 /* 自動輪播區樣式 */
+#carousel-section {
+    border-bottom: 1px dashed #444; padding-bottom: 20px; margin-bottom: 20px;
+}
 .carousel-wrapper {
     width: 100%;
     overflow-x: auto; /* 開放原生橫向滑動，讓客人可以自己滑 */
@@ -1190,11 +1194,13 @@ img.avatar[src^="data:image/jpeg"] {
 
     .filter-sheet-close { background: transparent; color: #f39c12; border: 1px solid #f39c12; border-radius: 20px; padding: 5px 15px; cursor: pointer; }
 
-    /* 隱藏 PC 版的元素 */
-    #filter-container { background: transparent; padding: 0; border: none; box-shadow: none; position: static !important; }
-    .search-bar-wrapper { display: none; }
+    /* 隱藏 PC 版的元素，但保留搜尋框 */
+    #filter-container { background: transparent; padding: 0; border: none; box-shadow: none; position: static !important; margin-bottom: 20px; }
     #random-btn { display: none; }
     .desktop-random-btn { display: none !important; }
+    .toggle-filter-btn { display: none; } /* 手機版使用底部導航列開啟篩選，隱藏此按鈕 */
+
+    .search-box { box-shadow: 0 4px 10px rgba(0,0,0,0.3); border: 1px solid #333; padding-right: 70px !important; } /* 增加右側 padding 以容納叉叉與語音按鈕 */
 
     .filter-drawer-random-btn {
         display: block;

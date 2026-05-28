@@ -426,12 +426,13 @@ if (SpeechRecognition) {
     
     recognition.onresult = function(event) {
         const transcript = event.results[0][0].transcript;
-        const searchInputs = document.querySelectorAll('.search-box');
-        searchInputs.forEach(input => {
-            if(input) input.value = transcript.replace(/[。，,.]/g, ''); // 移除句號結尾
-        });
-        showToast(`辨識結果: ${transcript.replace(/[。，,.]/g, '')}`, false);
-        applyFilters(); // 觸發搜尋過濾
+        const searchInput = document.getElementById('search-input');
+        if (searchInput) {
+            searchInput.value = transcript.replace(/[。，,.]/g, ''); // 移除句號結尾
+            showToast(`辨識結果: ${transcript.replace(/[。，,.]/g, '')}`, false);
+            applyFilters(); // 觸發搜尋過濾
+            if (window.toggleClearBtn) window.toggleClearBtn(searchInput);
+        }
     };
     
     recognition.onerror = function(event) {
@@ -484,14 +485,6 @@ function toggleAdvancedFilters() {
 
 // 開啟底部篩選抽屜 (手機版)
 function openFilterSheet() {
-    // 確保搜尋框內容同步
-    const desktopSearch = document.getElementById('search-input');
-    const mobileSearch = document.getElementById('mobile-search-input');
-    if(desktopSearch && mobileSearch) mobileSearch.value = desktopSearch.value;
-    
-    // Toggle UI Clear Button if needed based on value
-    if (mobileSearch && window.toggleClearBtn) window.toggleClearBtn(mobileSearch);
-
     const overlay = document.getElementById('filter-sheet-overlay');
     const panel = document.getElementById('advanced-filters');
     overlay.classList.add('visible');
@@ -677,18 +670,8 @@ fetch(`/api/drinks?t=${Date.now()}`).then(r => r.json()).then(drinks => {
 });
 
 function applyFilters() {
-    // 判斷是從哪個搜尋框觸發的，並同步兩者的值
-    const desktopSearch = document.getElementById('search-input');
-    const mobileSearch = document.getElementById('mobile-search-input');
-    let searchText = '';
-    
-    if (window.innerWidth <= 768 && mobileSearch) {
-        searchText = mobileSearch.value.toLowerCase();
-        if(desktopSearch) desktopSearch.value = mobileSearch.value;
-    } else {
-        if(desktopSearch) searchText = desktopSearch.value.toLowerCase();
-        if(mobileSearch && desktopSearch) mobileSearch.value = desktopSearch.value;
-    }
+    const searchInput = document.getElementById('search-input');
+    let searchText = searchInput ? searchInput.value.trim().toLowerCase() : '';
 
     const sortValue = document.querySelector('input[name="sort"]:checked').value;
 
@@ -713,22 +696,27 @@ function applyFilters() {
         return !isNaN(ts) && new Date(ts).toDateString() === todayStr;
     }).map(o => o.drink);
 
-    // 如果客人正在搜尋或啟用任何篩選，就暫時隱藏輪播以節省畫面空間
-    const isFiltering = searchText !== '' || selectedBases.length > 0 || selectedStyles.length > 0 || selectedSpecials.length > 0 || selectedFlavors.length > 0 || historyFilterValue !== 'all' || sortValue !== 'default';
     const hasAvailableDrinks = allDrinks.some(d => !d.isSoldOut);
     const carouselSec = document.getElementById('carousel-section');
-    if (carouselSec) carouselSec.style.display = (isFiltering || !hasAvailableDrinks) ? 'none' : 'block';
+    
+    if (carouselSec) {
+        if (!hasAvailableDrinks) {
+            carouselSec.style.display = 'none';
+        } else {
+            carouselSec.style.display = 'block';
+        }
+    }
     
     // --- 動態更新隨機按鈕文字與樣式 ---
     const mobileRandomBtn = document.getElementById('mobile-random-btn');
     const desktopRandomBtn = document.getElementById('random-btn');
-    const hasFilterTags = selectedBases.length > 0 || selectedStyles.length > 0 || selectedSpecials.length > 0 || selectedFlavors.length > 0 || historyFilterValue !== 'all';
+    const hasFilterTags = selectedBases.length > 0 || selectedStyles.length > 0 || selectedSpecials.length > 0 || selectedFlavors.length > 0 || historyFilterValue !== 'all' || searchText !== '';
     
     if (hasFilterTags) {
         if(mobileRandomBtn) {
-            mobileRandomBtn.innerHTML = '🎲 從篩選結果中為您抽一杯';
+            mobileRandomBtn.innerHTML = '🎰 從篩選結果中為您抽一杯';
             mobileRandomBtn.style.background = 'linear-gradient(135deg, #f39c12, #e67e22)';
-            mobileRandomBtn.style.boxShadow = '0 4px 15px rgba(243, 156, 18, 0.4)';
+            mobileRandomBtn.style.boxShadow = '0 6px 20px rgba(243, 156, 18, 0.4)';
         }
         if(desktopRandomBtn) {
             desktopRandomBtn.innerHTML = '🎲 篩選隨機';
@@ -736,9 +724,9 @@ function applyFilters() {
         }
     } else {
         if(mobileRandomBtn) {
-            mobileRandomBtn.innerHTML = '🎲 隨機抽一杯';
+            mobileRandomBtn.innerHTML = '🎰 幫我隨機抽一杯';
             mobileRandomBtn.style.background = 'linear-gradient(135deg, #8e44ad, #9b59b6)';
-            mobileRandomBtn.style.boxShadow = '0 4px 10px rgba(142, 68, 173, 0.4)';
+            mobileRandomBtn.style.boxShadow = '0 6px 20px rgba(142, 68, 173, 0.5)';
         }
         if(desktopRandomBtn) {
             desktopRandomBtn.innerHTML = '🎲 隨機';
@@ -846,15 +834,8 @@ function levenshteinDistance(a, b) {
 
 function renderMenu(drinksToRender) {
     const menu = document.getElementById('menu');
-    // 使用哪一個搜尋框的文字作為防呆判斷
-    const desktopSearch = document.getElementById('search-input');
-    const mobileSearch = document.getElementById('mobile-search-input');
-    let searchText = '';
-    if (window.innerWidth <= 768 && mobileSearch) {
-        searchText = mobileSearch.value.trim().toLowerCase();
-    } else if (desktopSearch) {
-        searchText = desktopSearch.value.trim().toLowerCase();
-    }
+    const searchInput = document.getElementById('search-input');
+    let searchText = searchInput ? searchInput.value.trim().toLowerCase() : '';
     
     if (drinksToRender.length === 0) {
         let suggestionHtml = '';
@@ -874,7 +855,7 @@ function renderMenu(drinksToRender) {
             
             // 設定容錯門檻：最多容許 3 個字元拼寫錯誤
             if (closestDrink && minDistance <= 3 && minDistance < Math.max(searchText.length, closestDrink.length)) {
-                suggestionHtml = `<div style="margin-top: 20px; font-size: 1.1em; color: #aaa;">您是不是想找：<br><a href="#" onclick="if(document.getElementById('search-input')) document.getElementById('search-input').value='${closestDrink}'; if(document.getElementById('mobile-search-input')) document.getElementById('mobile-search-input').value='${closestDrink}'; applyFilters(); return false;" style="color: #f39c12; font-weight: bold; text-decoration: underline; font-size: 1.2em; display: inline-block; margin-top: 10px; background: #222; padding: 8px 15px; border-radius: 8px; border: 1px solid #f39c12;">🔍 ${closestDrink}</a></div>`;
+                suggestionHtml = `<div style="margin-top: 20px; font-size: 1.1em; color: #aaa;">您是不是想找：<br><a href="#" onclick="const si=document.getElementById('search-input'); if(si){si.value='${closestDrink}'; applyFilters(); window.toggleClearBtn(si);} return false;" style="color: #f39c12; font-weight: bold; text-decoration: underline; font-size: 1.2em; display: inline-block; margin-top: 10px; background: #222; padding: 8px 15px; border-radius: 8px; border: 1px solid #f39c12;">🔍 ${closestDrink}</a></div>`;
             }
         }
 
@@ -1414,16 +1395,11 @@ function order(name, btn) {
 }
 
 function scrollToDrink(drinkName) {
-    const desktopSearch = document.getElementById('search-input');
-    const mobileSearch = document.getElementById('mobile-search-input');
+    const searchInput = document.getElementById('search-input');
+    if (searchInput) searchInput.value = '';
     
-    if(desktopSearch) desktopSearch.value = '';
-    if(mobileSearch) mobileSearch.value = '';
-    
-    // 同步清除按鈕狀態
-    if (window.toggleClearBtn) {
-        if(desktopSearch) window.toggleClearBtn(desktopSearch);
-        if(mobileSearch) window.toggleClearBtn(mobileSearch);
+    if (window.toggleClearBtn && searchInput) {
+        window.toggleClearBtn(searchInput);
     }
     
     document.querySelectorAll('.tag-checkbox').forEach(cb => cb.checked = false);
@@ -1474,9 +1450,8 @@ function recommendRandomDrink() {
     const activeCheckboxes = Array.from(document.querySelectorAll('.tag-checkbox:checked')).filter(cb => cb.value !== 'all' && cb.value !== 'default');
     
     // 檢查桌面版或手機版搜尋框是否有值
-    const desktopSearch = document.getElementById('search-input');
-    const mobileSearch = document.getElementById('mobile-search-input');
-    const searchVal = (desktopSearch && desktopSearch.value.trim() !== '') || (mobileSearch && mobileSearch.value.trim() !== '');
+    const searchInput = document.getElementById('search-input');
+    const searchVal = searchInput && searchInput.value.trim() !== '';
     
     const hasFilters = activeCheckboxes.length > 0 || searchVal;
     
@@ -1507,7 +1482,7 @@ function recommendRandomDrink() {
     }
     
     // --- 給予即時的按鈕視覺回饋 ---
-    const randBtns = [document.getElementById('random-btn'), document.getElementById('mobile-random-btn'), document.getElementById('mobile-random-btn-top')];
+    const randBtns = [document.getElementById('random-btn'), document.getElementById('mobile-random-btn')];
     randBtns.forEach(btn => {
         if (btn) {
             // 暫存原本的文字以便恢復
@@ -2447,7 +2422,7 @@ function playNextSong(isManual = false) {
 
 // --- 獨立函式：切換清除按鈕的顯示狀態 ---
 window.toggleClearBtn = function(inputEl) {
-    const btnId = inputEl.id === 'mobile-search-input' ? 'mobile-clear-btn' : 'desktop-clear-btn';
+    const btnId = 'desktop-clear-btn';
     let clearBtn = document.getElementById(btnId);
     
     // 若按鈕不存在則動態建立
@@ -2459,14 +2434,6 @@ window.toggleClearBtn = function(inputEl) {
         clearBtn.title = "清除搜尋";
         clearBtn.onclick = function() {
             inputEl.value = ''; // 清空對應的輸入框
-            // 同時清空另一個輸入框以保持同步
-            if (inputEl.id === 'mobile-search-input') {
-                const desktopSearch = document.getElementById('search-input');
-                if(desktopSearch) desktopSearch.value = '';
-            } else {
-                const mobileSearch = document.getElementById('mobile-search-input');
-                if(mobileSearch) mobileSearch.value = '';
-            }
             this.style.display = 'none'; // 隱藏按鈕
             applyFilters(); // 重新觸發過濾，顯示全部酒款
             inputEl.focus(); // 保持焦點
@@ -2486,12 +2453,11 @@ document.addEventListener('DOMContentLoaded', () => {
     initStarrySky(); // 啟動星空特效
     
     // 綁定輸入框事件以觸發清除按鈕
-    const desktopSearch = document.getElementById('search-input');
-    if (desktopSearch) {
-        desktopSearch.addEventListener('input', function() {
+    document.querySelectorAll('.search-box').forEach(input => {
+        input.addEventListener('input', function() {
             window.toggleClearBtn(this);
         });
-    }
+    });
     
     // 動態注入淺色模式 (Light Mode) 的專屬 CSS 覆寫樣式
     const lightModeStyle = document.createElement('style');
@@ -2688,14 +2654,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     initCarouselSwipe(); // 初始化輪播區滑動與拖曳控制
-
-    // 綁定手機版搜尋框事件以觸發清除按鈕
-    const mobileSearch = document.getElementById('mobile-search-input');
-    if (mobileSearch) {
-        mobileSearch.addEventListener('input', function() {
-            window.toggleClearBtn(this);
-        });
-    }
 
     if (window.innerWidth > 768) {
         // --- 自動將「搜尋與篩選區塊」固定在畫面最上方，並隨捲動隱藏/顯示 ---

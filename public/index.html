@@ -57,8 +57,8 @@
             .menu-toggle-btn { display: flex; }
         }
 
-        /* 手機版篩選抽屜新樣式 */
-        .mobile-sheet-top-bar, .mobile-search-area, .mobile-random-area, .mobile-sheet-bottom-bar { display: none; }
+        /* 手機版篩選抽屜與搜尋框樣式 */
+        .mobile-sheet-top-bar, .mobile-random-area, .mobile-sheet-bottom-bar { display: none; }
         .desktop-random-hint { display: block; }
 
         @media (max-width: 768px) {
@@ -66,7 +66,6 @@
             .mobile-close-btn { background: rgba(255,255,255,0.1); border: none; color: #aaa; width: 32px; height: 32px; border-radius: 50%; font-size: 1.2em; display: flex; justify-content: center; align-items: center; padding: 0; cursor: pointer; transition: background 0.2s; }
             .mobile-close-btn:active { background: rgba(255,255,255,0.2); }
 
-            .mobile-search-area { display: flex; position: relative; margin-bottom: 20px; }
             .mobile-random-area { display: block; margin: 20px 0 40px 0; padding-bottom: 25px; border-bottom: 1px dashed #444; }
 
             /* Sticky Bottom Bar */
@@ -207,6 +206,14 @@
         </div>
     </div>
 
+    <!-- 自動輪播區 (熱門推薦) -->
+    <div id="carousel-section" style="display: none;">
+         <h3 style="color: #f39c12; margin-top: 5px; margin-bottom: 10px; display: flex; align-items: center; gap: 8px;"><span>🌟</span> 吧台強推 / 本月精選</h3>
+         <div class="carousel-wrapper">
+             <div class="carousel-track" id="carousel-track"></div>
+         </div>
+    </div>
+
     <!-- 搜尋與篩選區域 -->
     <div id="filter-container">
         <div class="search-bar-wrapper">
@@ -224,12 +231,6 @@
             <div class="mobile-sheet-top-bar">
                 <h3 style="margin: 0; font-size: 1.3em; color: #f39c12;">🔍 搜尋與篩選</h3>
                 <button onclick="closeFilterSheet()" class="mobile-close-btn" title="關閉">✖</button>
-            </div>
-
-            <!-- 手機版專屬：搜尋框 -->
-            <div class="mobile-search-area">
-                <input type="text" id="mobile-search-input" class="search-box" placeholder="🔍 輸入酒名或材料搜尋..." oninput="applyFilters()" style="width: 100%; box-sizing: border-box; padding-right: 40px;">
-                <button class="voice-search-btn" onclick="startVoiceSearch()">🎙️</button>
             </div>
 
             <!-- 手機版專屬：醒目的隨機抽籤按鈕 -->
@@ -293,14 +294,6 @@
                 <button class="view-results-btn" onclick="closeFilterSheet()">查看篩選結果</button>
             </div>
         </div>
-    </div>
-
-    <!-- 自動輪播區 (熱門推薦) -->
-    <div id="carousel-section" style="display: none;">
-         <h3 style="color: #f39c12; margin-top: 5px; margin-bottom: 10px; display: flex; align-items: center; gap: 8px;"><span>🌟</span> 吧台強推 / 本月精選</h3>
-         <div class="carousel-wrapper">
-             <div class="carousel-track" id="carousel-track"></div>
-         </div>
     </div>
 
     <div id="menu"></div>

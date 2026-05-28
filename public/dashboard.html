@@ -321,18 +321,8 @@
             </div>
             
             <div class="inv-content">
-                <div class="inv-tools">
-                    <div style="font-size: 0.85em; color: #888; font-weight: bold; margin-bottom: 4px;">批次操作</div>
-                    <div class="inv-tools-row">
-                        <button class="pos-btn" style="flex:1; border-color: #27ae60; color: #2ecc71;" onclick="setAllInventory(false)">✅ 全上架</button>
-                        <button class="pos-btn" style="flex:1; border-color: #c0392b; color: #e74c3c;" onclick="setAllInventory(true)">🚫 全下架</button>
-                    </div>
-                    <div class="inv-tools-row" style="margin-top: 5px;">
-                        <select id="bulk-ingredient-input" class="inv-search" style="margin-bottom: 0;">
-                            <option value="">選擇材料...</option>
-                        </select>
-                        <button class="pos-btn btn-primary" style="padding: 6px 10px;" onclick="setSoldOutByIngredient()" title="包含此材料的酒款全下架">🔍 缺貨下架</button>
-                    </div>
+                <div class="inv-tools-row" style="margin-bottom: 10px;">
+                    <input type="text" id="inventory-search-input" class="inv-search" placeholder="🔍 搜尋酒名、材料、標籤...">
                 </div>
 
                 <div>

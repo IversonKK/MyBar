@@ -233,51 +233,9 @@ function updateCountsAndTitle() {
     }
 }
 
-// 自動解析配方並建立下拉選單
-function updateIngredientSelect() {
-    let selectEl = document.getElementById('bulk-ingredient-input');
-    if (!selectEl) return;
-
-    let allIngredients = new Set();
-    allDrinks.forEach(drink => {
-        if (!drink.description) return;
-        const lines = drink.description.split(/\n/);
-        let ingredientsLine = lines.find(l => l.trim().startsWith('材料：') || l.trim().startsWith('材料:'));
-        if (!ingredientsLine) return;
-
-        const itemsRaw = ingredientsLine.replace(/材料[：:]/, '').split(/[、，,。]/).map(i => i.trim()).filter(i => i);
-        itemsRaw.forEach(item => {
-            let cleanItem = item.replace(/((?:\d+\s+)?\d+\/\d+|\d+(?:\.\d+)?)\s*(ml|oz|dash|滴|份|cc|c\.c\.|g|克|片|塊|吧匙|tsp)/gi, '').trim();
-            cleanItem = cleanItem.replace(/\d+/g, '').trim();
-            cleanItem = cleanItem.replace(/(適量|少許|微量|半顆|半個|一顆|一片)/g, '').trim();
-            cleanItem = cleanItem.replace(/^[^\w\u4e00-\u9fa5]+|[^\w\u4e00-\u9fa5]+$/g, '').trim();
-            
-            const isNotIngredient = /杯|技法|作法|方法|裝飾|攪拌|搖盪|倒入|shake|stir|冰塊|過濾|裝點|加入|至滿|均勻|冰鎮|洗出|濾掉|碎冰|搖|勻|後|然後|接著|混合|擠|點燃|表面|就算|也要|名為|醉漢|紳士|的|了|是|我|你|他|將|把|就|讓|在|以|這|那|嗎|呢|吧|啊|點火|火烤|燃燒/i.test(cleanItem);
-            const chineseLength = (cleanItem.match(/[\u4e00-\u9fa5]/g) || []).length;
-            
-            if (cleanItem && !isNotIngredient && chineseLength <= 8) {
-                allIngredients.add(cleanItem);
-            }
-        });
-    });
-
-    const sortedIngredients = Array.from(allIngredients).sort((a, b) => a.localeCompare(b, 'zh-TW'));
-    const currentVal = selectEl.value;
-    selectEl.innerHTML = '<option value="">選擇缺貨材料...</option>' + 
-        sortedIngredients.map(ing => `<option value="${ing}">${ing}</option>`).join('');
-    if (currentVal && sortedIngredients.includes(currentVal)) selectEl.value = currentVal;
-
-    const quickSelect = document.getElementById('quick-ingredient-select');
-    if (quickSelect) {
-        quickSelect.innerHTML = '<option value="">-- 快速插入現有材料 --</option>' + 
-            sortedIngredients.map(ing => `<option value="${ing}">${ing}</option>`).join('');
-    }
-}
-
 fetch(`/api/drinks?t=${Date.now()}`).then(r => r.json()).then(drinks => {
     allDrinks = drinks.map(estimateDrinkProfile);
     renderInventory();
-    updateIngredientSelect(); 
     if (globalServerOrders.length > 0) renderAllOrders();
     initKanbanSortable(); 
 });
@@ -286,7 +244,6 @@ socket.on('recipes-updated', () => {
     fetch(`/api/drinks?t=${Date.now()}`).then(r => r.json()).then(drinks => {
         allDrinks = drinks.map(estimateDrinkProfile);
         renderInventory();
-        updateIngredientSelect(); 
         if (globalServerOrders.length > 0) {
             document.getElementById('list-pending').innerHTML = '';
             document.getElementById('list-making').innerHTML = '';
@@ -326,10 +283,22 @@ function renderQuickToggles() {
     }).join('');
 }
 
-function renderInventory() {
-    renderQuickToggles(); 
+function renderInventory(fullRender = true) {
+    if (fullRender) {
+        renderQuickToggles();
+    }
     const list = document.getElementById('inv-list');
-    list.innerHTML = allDrinks.map(d => {
+    const searchInput = document.getElementById('inventory-search-input');
+    const searchTerm = searchInput ? searchInput.value.toLowerCase() : '';
+
+    const drinksToRender = searchTerm ? allDrinks.filter(d => {
+        const nameMatch = d.name.toLowerCase().includes(searchTerm);
+        const descMatch = d.description && d.description.toLowerCase().includes(searchTerm);
+        const tagsMatch = d.tags && d.tags.join(',').toLowerCase().includes(searchTerm);
+        return nameMatch || descMatch || tagsMatch;
+    }) : allDrinks;
+
+    list.innerHTML = drinksToRender.map(d => {
         const safeName = d.name.replace(/'/g, "\\'"); 
         const encodedName = encodeURIComponent(d.name);
         const t = Date.now(); 
@@ -354,57 +323,6 @@ function renderInventory() {
 }
 
 function toggleSoldOut(id) { socket.emit('toggle-sold-out', id); }
-
-function setAllInventory(makeSoldOut) {
-    const actionText = makeSoldOut ? '下架' : '上架';
-    if (!confirm(`確定要將「庫存內所有的酒款」設為 ${actionText} 嗎？`)) return;
-    let count = 0;
-    allDrinks.forEach(d => {
-        if (Boolean(d.isSoldOut) !== makeSoldOut) {
-            socket.emit('toggle-sold-out', d.id);
-            count++;
-        }
-    });
-    if (count > 0) {
-        showToast(`已發送 ${count} 筆酒款的${actionText}更新！`);
-        socket.emit('admin-broadcast', `📢 吧台已將「所有庫存」整批 ${actionText}！`);
-    } else {
-        showToast(`目前所有酒款已經是${actionText}狀態了。`);
-    }
-}
-
-function setSoldOutByIngredient(makeSoldOut = true) {
-    const ingredient = document.getElementById('bulk-ingredient-input').value.trim();
-    const actionText = makeSoldOut ? '下架' : '上架';
-
-    if (!ingredient) { showToast(`⚠️ 請先選擇要${actionText}的材料名稱！`); return; }
-
-    let affectedDrinks = [];
-    allDrinks.forEach(d => {
-        if (Boolean(d.isSoldOut) !== makeSoldOut && ((d.description && d.description.includes(ingredient)) || d.name.includes(ingredient))) {
-            affectedDrinks.push(d);
-        }
-    });
-
-    if (affectedDrinks.length === 0) {
-        showToast(`找不到包含「${ingredient}」且可以${actionText}的酒款。`);
-        return;
-    }
-
-    const drinkNames = affectedDrinks.map(d => d.name);
-    const sample = drinkNames.slice(0, 5).join('、');
-    const suffix = drinkNames.length > 5 ? `... 等共 ${drinkNames.length} 杯` : ` 共 ${drinkNames.length} 杯`;
-
-    if (!confirm(`確定要將以下包含「${ingredient}」的酒款設為「${actionText}」嗎？\n\n👉 ${sample}${suffix}`)) return;
-
-    affectedDrinks.forEach(d => {
-        socket.emit('toggle-sold-out', d.id);
-    });
-
-    showToast(`✅ 已自動${actionText} ${drinkNames.length} 杯酒款！`);
-    socket.emit('admin-broadcast', `📢 吧台已將包含「${ingredient}」的酒款整批 ${actionText}！`);
-    document.getElementById('bulk-ingredient-input').value = ''; 
-}
 
 function toggleSoldOutByKeyword(keyword) {
     const targetDrinks = allDrinks.filter(d => d.name.includes(keyword) || (d.description && d.description.includes(keyword)));
@@ -907,6 +825,11 @@ function exportTodayStats() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+    const searchInput = document.getElementById('inventory-search-input');
+    if (searchInput) {
+        searchInput.addEventListener('input', () => renderInventory(false));
+    }
+
     // 讓所有 Modal 都支援點擊背景黑幕關閉
     const overlays = ['.modal-overlay'];
     overlays.forEach(selector => {
