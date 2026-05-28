@@ -218,8 +218,8 @@
     <div id="filter-container">
         <div class="search-bar-wrapper" style="position: relative; display: flex; align-items: center; flex-grow: 1;">
             <input type="text" id="search-input" class="search-box" placeholder="🔍 搜尋酒名或描述..." oninput="applyFilters()" style="padding-right: 70px; width: 100%;">
-            <span id="clear-search-btn" class="clear-search-btn" onclick="clearSearch()" style="display: none; position: absolute; right: 45px; cursor: pointer; color: #e74c3c; font-size: 1.2em; padding: 5px;">✖</span>
-            <button id="voice-search-btn" class="voice-search-btn" onclick="startVoiceSearch()" title="語音搜尋" style="position: absolute; right: 5px;">🎙️</button>
+            <span id="clear-search-btn" class="clear-search-btn" onclick="clearSearch()" style="display: none; position: absolute; right: 5px; cursor: pointer; color: #e74c3c; font-size: 1.2em; padding: 5px;">✖</span>
+            <button id="voice-search-btn" class="voice-search-btn" onclick="startVoiceSearch()" title="語音搜尋" style="position: absolute; right: 35px;">🎙️</button>
             <!-- 電腦版的隨機按鈕保留在此處 -->
             <button id="random-btn" class="desktop-random-btn" onclick="recommendRandomDrink()" style="background: #8e44ad; color: white; border: none; padding: 0 12px; margin-left: 8px; margin-right: 8px; border-radius: 8px; cursor: pointer; font-weight: bold; white-space: nowrap; transition: 0.2s; position: relative;" onmouseover="if(!this.disabled) this.style.background='#9b59b6'" onmouseout="if(!this.disabled) this.style.background='#8e44ad'" title="不知道喝什麼？幫你抽一杯！">🎲 隨機</button>
             <button id="toggle-filter-btn" class="toggle-filter-btn" onclick="toggleAdvancedFilters()" style="position: relative;">篩選 ▼</button>
