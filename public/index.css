@@ -26,8 +26,8 @@ button { background: linear-gradient(135deg, #f39c12, #e67e22); color: #000; bor
 
 /* 搜尋與篩選區域 */
 #filter-container { background: #1a1a1a; padding: 15px; border-radius: 12px; margin-bottom: 20px; border: 1px solid #333; box-shadow: 0 4px 10px rgba(0,0,0,0.2); border-bottom: 1px dashed #444; padding-bottom: 20px; }
-.search-bar-wrapper { display: flex; gap: 10px; width: 100%; align-items: center; }
-.search-box { flex-grow: 1; padding: 12px 15px; border-radius: 8px; border: 1px solid #444; background: #222; color: #fff; font-size: 1em; outline: none; transition: 0.3s; }
+.search-bar-wrapper { display: flex; gap: 10px; width: 100%; align-items: center; position: relative; }
+.search-box { flex-grow: 1; padding: 12px 15px; border-radius: 8px; border: 1px solid #444; background: #222; color: #fff; font-size: 1em; outline: none; transition: 0.3s; padding-right: 70px; }
 .search-box:focus { border-color: #f39c12; box-shadow: 0 0 8px rgba(243, 156, 18, 0.3); }
 
 /* 語音搜尋按鈕 */

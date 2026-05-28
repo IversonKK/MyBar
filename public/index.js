@@ -431,7 +431,6 @@ if (SpeechRecognition) {
             searchInput.value = transcript.replace(/[。，,.]/g, ''); // 移除句號結尾
             showToast(`辨識結果: ${transcript.replace(/[。，,.]/g, '')}`, false);
             applyFilters(); // 觸發搜尋過濾
-            if (window.toggleClearBtn) window.toggleClearBtn(searchInput);
         }
     };
     
@@ -673,6 +672,11 @@ function applyFilters() {
     const searchInput = document.getElementById('search-input');
     let searchText = searchInput ? searchInput.value.trim().toLowerCase() : '';
 
+    const clearBtn = document.getElementById('clear-search-btn');
+    if (clearBtn) {
+        clearBtn.style.display = searchText.length > 0 ? 'flex' : 'none';
+    }
+
     const sortValue = document.querySelector('input[name="sort"]:checked').value;
 
     // 獲取選中的標籤陣列，加上 .trim() 確保字串匹配無誤
@@ -855,7 +859,7 @@ function renderMenu(drinksToRender) {
             
             // 設定容錯門檻：最多容許 3 個字元拼寫錯誤
             if (closestDrink && minDistance <= 3 && minDistance < Math.max(searchText.length, closestDrink.length)) {
-                suggestionHtml = `<div style="margin-top: 20px; font-size: 1.1em; color: #aaa;">您是不是想找：<br><a href="#" onclick="const si=document.getElementById('search-input'); if(si){si.value='${closestDrink}'; applyFilters(); window.toggleClearBtn(si);} return false;" style="color: #f39c12; font-weight: bold; text-decoration: underline; font-size: 1.2em; display: inline-block; margin-top: 10px; background: #222; padding: 8px 15px; border-radius: 8px; border: 1px solid #f39c12;">🔍 ${closestDrink}</a></div>`;
+                suggestionHtml = `<div style="margin-top: 20px; font-size: 1.1em; color: #aaa;">您是不是想找：<br><a href="#" onclick="const si=document.getElementById('search-input'); if(si){si.value='${closestDrink}'; applyFilters();} return false;" style="color: #f39c12; font-weight: bold; text-decoration: underline; font-size: 1.2em; display: inline-block; margin-top: 10px; background: #222; padding: 8px 15px; border-radius: 8px; border: 1px solid #f39c12;">🔍 ${closestDrink}</a></div>`;
             }
         }
 
@@ -1397,10 +1401,6 @@ function order(name, btn) {
 function scrollToDrink(drinkName) {
     const searchInput = document.getElementById('search-input');
     if (searchInput) searchInput.value = '';
-    
-    if (window.toggleClearBtn && searchInput) {
-        window.toggleClearBtn(searchInput);
-    }
     
     document.querySelectorAll('.tag-checkbox').forEach(cb => cb.checked = false);
     document.querySelector('input[name="sort"][value="default"]').checked = true;
@@ -2420,44 +2420,28 @@ function playNextSong(isManual = false) {
     }).catch(e => console.log('自動播放下一首失敗', e));
 }
 
-// --- 獨立函式：切換清除按鈕的顯示狀態 ---
-window.toggleClearBtn = function(inputEl) {
-    const btnId = 'desktop-clear-btn';
-    let clearBtn = document.getElementById(btnId);
-    
-    // 若按鈕不存在則動態建立
-    if (!clearBtn) {
-        clearBtn = document.createElement('button');
-        clearBtn.id = btnId;
-        clearBtn.innerHTML = '✖';
-        clearBtn.style.cssText = 'position: absolute; right: 40px; top: 50%; transform: translateY(-50%); background: transparent; border: none; color: #e74c3c; font-size: 1.1em; cursor: pointer; padding: 4px; display: none; z-index: 10;';
-        clearBtn.title = "清除搜尋";
-        clearBtn.onclick = function() {
-            inputEl.value = ''; // 清空對應的輸入框
-            this.style.display = 'none'; // 隱藏按鈕
-            applyFilters(); // 重新觸發過濾，顯示全部酒款
-            inputEl.focus(); // 保持焦點
-        };
-        inputEl.parentNode.insertBefore(clearBtn, inputEl.nextSibling);
+// 清除搜尋框內容
+function clearSearch() {
+    const searchInput = document.getElementById('search-input');
+    if (searchInput) {
+        searchInput.value = '';
+        applyFilters(); // 重新觸發過濾，顯示全部酒款
+        searchInput.focus(); // 保持焦點
+        document.getElementById('clear-search-btn').style.display = 'none'; // 隱藏按鈕
     }
-    
-    // 根據輸入框是否有值來決定是否顯示清除按鈕
-    if (inputEl.value.trim().length > 0) {
-        clearBtn.style.display = 'block';
-    } else {
-        clearBtn.style.display = 'none';
-    }
-};
+}
 
 document.addEventListener('DOMContentLoaded', () => {
     initStarrySky(); // 啟動星空特效
     
-    // 綁定輸入框事件以觸發清除按鈕
-    document.querySelectorAll('.search-box').forEach(input => {
-        input.addEventListener('input', function() {
-            window.toggleClearBtn(this);
+    // 綁定輸入框事件以觸發清除按鈕顯示/隱藏
+    const searchInput = document.getElementById('search-input');
+    const clearBtn = document.getElementById('clear-search-btn');
+    if (searchInput && clearBtn) {
+        searchInput.addEventListener('input', function() {
+            clearBtn.style.display = this.value.trim().length > 0 ? 'flex' : 'none';
         });
-    });
+    }
     
     // 動態注入淺色模式 (Light Mode) 的專屬 CSS 覆寫樣式
     const lightModeStyle = document.createElement('style');
