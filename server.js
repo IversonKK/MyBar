@@ -17,8 +17,14 @@ let orders = [];
 let favoritesDatabase = {};
 let avatarsDatabase = {};
 
+const defaultAvatarStyles = [
+    "adventurer", "avataaars", "big-ears", "big-smile", "bottts", "croodles",
+    "fun-emoji", "icons", "identicon", "initials", "lorelei", "micah",
+    "miniavs", "open-peeps", "personas", "pixel-art", "rings", "shapes", "thumbs"
+];
+
 const ordersPath = path.join(__dirname, 'orders.json');
-const completedOrdersLogPath = path.join(__dirname, 'completed_orders.json'); // 新增已完成訂單的檔案路徑
+const completedOrdersLogPath = path.join(__dirname, 'completed_orders.json');
 const favoritesPath = path.join(__dirname, 'favorites.json');
 const avatarsPath = path.join(__dirname, 'avatars.json');
 
@@ -29,11 +35,9 @@ function loadOrdersData() {
             orders = JSON.parse(rawData);
             console.log(`成功讀取 orders.json，共載入 ${orders.length} 筆進行中的訂單。`);
         }
-        // 同時載入已完成的訂單紀錄，用於排行榜和歷史紀錄
         if (fs.existsSync(completedOrdersLogPath)) {
             const completedRawData = fs.readFileSync(completedOrdersLogPath, 'utf8');
             const completedOrders = JSON.parse(completedRawData);
-            // 將已完成的訂單合併到主訂單列表中，以便客戶端正確顯示歷史
             orders = orders.concat(completedOrders);
             console.log(`成功載入 ${completedOrders.length} 筆已完成的歷史訂單。`);
         }
@@ -44,7 +48,6 @@ function loadOrdersData() {
 
 function saveOrdersData() {
     try {
-        // 只儲存未完成的訂單到 orders.json
         const pendingOrders = orders.filter(o => o.status !== 'completed' && o.status !== 'rejected');
         fs.writeFileSync(ordersPath, JSON.stringify(pendingOrders, null, 4), 'utf8');
     } catch (err) {
@@ -105,11 +108,9 @@ function saveAvatarsData() {
 }
 
 function loadDrinksData() {
-    // 記住目前的售罄狀態，避免重載配方後被洗掉
     const oldSoldOutNames = allDrinks.filter(d => d.isSoldOut).map(d => d.name);
     allDrinks = [];
     
-    // 1. 讀取獨立的 recipe.json 檔案
     const recipePath = path.join(__dirname, 'recipe.json');
     try {
         if (fs.existsSync(recipePath)) {
@@ -121,7 +122,6 @@ function loadDrinksData() {
         console.error("讀取 recipe.json 失敗，將使用預設配方:", err.message);
     }
 
-    // 2. 指定圖片所在的資料夾路徑
     const imagesDir = path.join(__dirname, 'public', 'images');
 
     try {
@@ -129,7 +129,6 @@ function loadDrinksData() {
             fs.mkdirSync(imagesDir, { recursive: true });
         }
         
-        // 3. 掃描資料夾內的所有檔案
         const files = fs.readdirSync(imagesDir);
         let idCounter = 1;
         
@@ -138,16 +137,13 @@ function loadDrinksData() {
                 const rawDrinkName = file.replace(/\.(jpg|png)$/i, '');
                 let recipeKey = rawDrinkName;
                 
-                // --- 智慧模糊比對：讓圖片檔名與 recipe.json 完美配對 ---
                 if (!recipeDatabase[recipeKey]) {
                     const normalize = (str) => str.toLowerCase().replace(/[^a-z0-9\u4e00-\u9fa5]/g, '');
                     const normRaw = normalize(rawDrinkName);
                     const knownKeys = Object.keys(recipeDatabase);
                     
-                    // 1. 完全忽略符號與大小寫
                     let match = knownKeys.find(k => normalize(k) === normRaw);
                     
-                    // 2. 互相包含比對 (容錯)
                     if (!match && normRaw.length >= 2) {
                         match = knownKeys.find(k => normalize(k).includes(normRaw) || normRaw.includes(normalize(k)));
                     }
@@ -155,7 +151,6 @@ function loadDrinksData() {
                 }
 
                 const isMissingRecipe = !recipeDatabase[recipeKey];
-                // 4. 從 recipeDatabase 尋找配方，若找不到則套用預設值
                 const recipeInfo = recipeDatabase[recipeKey] || {
                     abv: 15,
                     strong: 3,
@@ -166,14 +161,14 @@ function loadDrinksData() {
                 
                 allDrinks.push({
                     id: idCounter++,
-                    name: rawDrinkName, // 保持原本的圖片名稱作為前端抓圖依據
+                    name: rawDrinkName,
                     abv: recipeInfo.abv,
                     strong: recipeInfo.strong,
                     sour: recipeInfo.sour,
                     tags: recipeInfo.tags,
                     description: recipeInfo.description,
-                    isSoldOut: oldSoldOutNames.includes(rawDrinkName), // 恢復先前的售罄狀態
-                    comingSoon: isMissingRecipe // 新增標記判斷是否缺少配方
+                    isSoldOut: oldSoldOutNames.includes(rawDrinkName),
+                    comingSoon: isMissingRecipe
                 });
             }
         });
@@ -183,23 +178,38 @@ function loadDrinksData() {
     }
 }
 
-// 啟動時自動載入一次
 loadDrinksData();
 loadOrdersData();
 loadFavoritesData();
 loadAvatarsData();
 
-// 提供 API 給前端抓取酒單
 app.get('/api/drinks', (req, res) => {
     res.json(allDrinks);
 });
 
-// 處理所有 Socket.io 連線與事件
+app.get('/api/music', (req, res) => {
+    const musicDir = path.join(__dirname, 'public', 'music');
+    fs.readdir(musicDir, (err, files) => {
+        if (err) {
+            console.error("讀取音樂資料夾失敗:", err);
+            return res.status(500).json({ error: "無法讀取音樂資料夾" });
+        }
+        const musicFiles = files.filter(file => file.toLowerCase().endsWith('.mp3'));
+        res.json(musicFiles);
+    });
+});
+
 io.on('connection', (socket) => {
     socket.emit('sync-orders', orders);
     socket.emit('sync-avatars', avatarsDatabase);
 
     socket.on('new-order', (orderData) => {
+        if (!avatarsDatabase[orderData.guest]) {
+            const randomStyle = defaultAvatarStyles[Math.floor(Math.random() * defaultAvatarStyles.length)];
+            avatarsDatabase[orderData.guest] = randomStyle;
+            saveAvatarsData();
+            io.emit('sync-avatars', avatarsDatabase);
+        }
         orders.push(orderData);
         saveOrdersData();
         io.emit('admin-notification', orderData);
@@ -213,9 +223,9 @@ io.on('connection', (socket) => {
             if (data.status === 'making') order.makingTime = new Date().toLocaleTimeString();
             if (data.status === 'completed' || data.status === 'rejected') {
                 order.completedTime = new Date().toLocaleTimeString();
-                appendToCompletedLog(order); // 當訂單完成或拒絕時，寫入永久紀錄檔
+                appendToCompletedLog(order);
             }
-            saveOrdersData(); // 只儲存進行中的訂單
+            saveOrdersData();
             io.emit('order-status-updated', order);
         }
     });
@@ -238,14 +248,12 @@ io.on('connection', (socket) => {
         socket.broadcast.emit('sync-orders', orders);
     });
 
-    // 永久清除特定客人的紀錄
     socket.on('clear-guest-history', (guestName) => {
         orders = orders.filter(o => o.guest !== guestName);
         saveOrdersData();
         io.emit('sync-orders', orders);
     });
 
-    // 將已結束的訂單從酒保畫面隱藏 (但保留給客人看)
     socket.on('clear-finished-from-dashboard', (callback) => {
         orders.forEach(o => {
             if (o.status === 'completed' || o.status === 'rejected') {
@@ -254,7 +262,7 @@ io.on('connection', (socket) => {
         });
         saveOrdersData();
         io.emit('sync-orders', orders);
-        if (typeof callback === 'function') callback(); // 告訴前端已確實存檔
+        if (typeof callback === 'function') callback();
     });
 
     socket.on('toggle-sold-out', (id) => {
@@ -265,26 +273,22 @@ io.on('connection', (socket) => {
         }
     });
 
-    // 監聽重新載入配方的請求
     socket.on('reload-recipes', () => {
         console.log('收到重載配方請求，正在重新讀取 recipe.json...');
         loadDrinksData();
-        io.emit('recipes-updated'); // 廣播給所有客戶端重新抓取酒單
+        io.emit('recipes-updated');
     });
 
-    // --- 儲存或更新配方 ---
     socket.on('save-recipe', (recipeData) => {
         const recipePath = path.join(__dirname, 'recipe.json');
         try {
             let currentRecipes = {};
             
-            // 1. 如果檔案已經存在，先讀取現有的配方庫
             if (fs.existsSync(recipePath)) {
                 const rawData = fs.readFileSync(recipePath, 'utf8');
                 currentRecipes = JSON.parse(rawData);
             }
 
-            // 2. 更新或新增該酒名的配方內容
             currentRecipes[recipeData.name] = {
                 abv: recipeData.abv,
                 strong: recipeData.strong,
@@ -293,7 +297,6 @@ io.on('connection', (socket) => {
                 description: recipeData.description
             };
 
-            // 如果前端有傳送圖片資料，則還原存入 images 資料夾
             if (recipeData.imageData) {
                 const base64Data = recipeData.imageData.replace(/^data:image\/\w+;base64,/, "");
                 const ext = recipeData.imageExtension === 'png' ? 'png' : 'jpg';
@@ -302,14 +305,11 @@ io.on('connection', (socket) => {
                 console.log(`成功儲存圖片: ${recipeData.name}.${ext}`);
             }
 
-            // 3. 將更新後的物件轉回 JSON 字串，寫入檔案
             fs.writeFileSync(recipePath, JSON.stringify(currentRecipes, null, 4), 'utf8');
             console.log(`成功儲存配方並寫入檔案: ${recipeData.name}`);
 
-            // 4. 呼叫載入函式，更新記憶體中的酒單陣列
             loadDrinksData(); 
 
-            // 5. 廣播給所有連線的裝置 (包含酒保與客人)，通知他們重新抓取最新酒單
             io.emit('recipes-updated'); 
             
         } catch (err) {
@@ -317,7 +317,6 @@ io.on('connection', (socket) => {
         }
     });
 
-    // --- 客戶端最愛與頭像的同步邏輯 ---
     socket.on('update-avatar', (data) => {
         avatarsDatabase[data.guest] = data.style;
         saveAvatarsData();

@@ -1,1208 +1,1693 @@
 body {
-    font-family: Arial, sans-serif;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     background-color: #121212;
     color: #e0e0e0;
     margin: 0;
     padding: 20px;
-    transition: background-color 0.3s ease, color 0.3s ease;
+    padding-bottom: 80px; /* 留出底部導航列空間 */
+    max-width: 1200px;
+    margin-left: auto;
+    margin-right: auto;
 }
 
-/* 星空背景畫布 */
-#starry-sky {
-    position: fixed;
-    top: 0; left: 0; width: 100vw; height: 100vh;
-    z-index: -100; pointer-events: none;
+h1 {
+    text-align: center;
+    color: #f39c12;
+    margin-bottom: 20px;
+    font-size: 2.5em;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+    margin-top: 10px; /* 為右上角按鈕預留空間 */
 }
 
-h1 { text-align: center; color: #f39c12; margin-bottom: 25px; text-shadow: 0 2px 4px rgba(0,0,0,0.5); }
-#menu { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; border-top: 1px dashed #444; padding-top: 20px; }
-.card { background: #1e1e1e; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 8px rgba(0,0,0,0.3); transition: transform 0.2s, box-shadow 0.2s; display: flex; flex-direction: column; position: relative; border: 1px solid #333; padding: 0; }
-.card.sold-out { opacity: 0.8; filter: grayscale(0.2); }
-.img-container { width: 100%; height: 220px; overflow: hidden; position: relative; background: #000; border-radius: 0; }
-.drink-img { width: 100%; height: 100%; object-fit: contain; transition: transform 0.3s; cursor: pointer; }
-.card-content { padding: 10px 20px 20px; display: flex; flex-direction: column; flex-grow: 1; }
-h3 { margin: 0 0 10px 0; color: #fff; font-size: 1.4em; text-shadow: 0 1px 3px rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: space-between; }
-button { background: linear-gradient(135deg, #f39c12, #e67e22); color: #000; border: none; padding: 10px; border-radius: 6px; cursor: pointer; font-weight: bold; width: 100%; margin-top: 15px; font-size: 1em; box-shadow: 0 2px 5px rgba(243, 156, 18, 0.3); letter-spacing: 1px; }
-
-/* 搜尋與篩選區域 */
-#filter-container { background: #1a1a1a; padding: 15px; border-radius: 12px; margin-bottom: 20px; border: 1px solid #333; box-shadow: 0 4px 10px rgba(0,0,0,0.2); border-bottom: 1px dashed #444; padding-bottom: 20px; }
-.search-bar-wrapper { display: flex; gap: 10px; width: 100%; align-items: center; position: relative; }
-.search-box { flex-grow: 1; padding: 12px 15px; border-radius: 8px; border: 1px solid #444; background: #222; color: #fff; font-size: 1em; outline: none; transition: 0.3s; padding-right: 70px; }
-.search-box:focus { border-color: #f39c12; box-shadow: 0 0 8px rgba(243, 156, 18, 0.3); }
-
-/* 語音搜尋按鈕 */
-.voice-search-btn {
-    position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
-    background: transparent; border: none; font-size: 1.2em; padding: 5px; cursor: pointer;
-    border-radius: 50%; width: 32px; height: 32px; display: flex; justify-content: center; align-items: center;
-    box-shadow: none; margin: 0; transition: background 0.2s; z-index: 5;
-}
-.voice-search-btn.mic-recording { background: rgba(231, 76, 60, 0.2); animation: pulse 1s infinite; }
-@keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(231, 76, 60, 0.4); } 70% { box-shadow: 0 0 0 10px rgba(231, 76, 60, 0); } 100% { box-shadow: 0 0 0 0 rgba(231, 76, 60, 0); } }
-
-.toggle-filter-btn { background: transparent; color: #ccc; border: 1px solid #555; padding: 0 15px; height: 40px; margin: 0; width: auto; font-weight: normal; }
-.toggle-filter-btn.active { background: #333; color: #fff; border-color: #f39c12; }
-
-#advanced-filters { max-height: 0; overflow: hidden; transition: max-height 0.4s ease-in-out; }
-#advanced-filters.expanded { max-height: 1000px; margin-top: 15px; overflow-y: auto; } /* 讓展開後的內容可以滾動 */
-
-.filter-group { margin-bottom: 12px; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
-.filter-label { color: #aaa; font-size: 0.9em; min-width: 50px; }
-.tag-checkbox { display: none; }
-.tag-btn { background: #222; color: #888; border: 1px solid #444; padding: 6px 12px; border-radius: 20px; font-size: 0.85em; cursor: pointer; user-select: none; transition: 0.2s; display: inline-block; }
-.tag-checkbox:checked + .tag-btn { background: #f39c12; color: #000; border-color: #f39c12; font-weight: bold; box-shadow: 0 2px 8px rgba(243, 156, 18, 0.3); }
-
-.description-area { font-size: 0.9em; line-height: 1.5; color: #bbb; background: #222; padding: 12px; border-radius: 8px; border-left: 3px solid #555; max-height: 120px; overflow-y: auto; scrollbar-width: thin; scrollbar-color: #555 #222; }
-.description-area::-webkit-scrollbar { width: 6px; }
-.description-area::-webkit-scrollbar-track { background: #222; border-radius: 8px; }
-.description-area::-webkit-scrollbar-thumb { background-color: #555; border-radius: 8px; }
-
-/* 點列式材料清單樣式 */
-.ingredient-tags { list-style: none; padding: 0; margin: 0; display: flex; flex-wrap: wrap; gap: 6px; }
-.ingredient-tag { background: #333; color: #eee; padding: 4px 8px; border-radius: 6px; font-size: 0.9em; border: 1px solid #444; }
-
-.card-action-area { margin-top: auto; padding-top: 15px; display: flex; gap: 10px; align-items: stretch; }
-
-/* 最愛按鈕疊加在圖片上 */
-.favorite-btn {
-    position: absolute;
-    top: 10px;
-    right: 10px;
-    width: 36px;
-    height: 36px;
-    border-radius: 50%;
-    background: rgba(0, 0, 0, 0.6);
-    color: #fff;
-    font-size: 20px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    cursor: pointer;
-    margin: 0;
-    padding: 0;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.5);
-    backdrop-filter: blur(3px);
-    -webkit-backdrop-filter: blur(3px);
-    z-index: 10;
-}
-.favorite-btn.active { color: #e74c3c; background: rgba(0, 0, 0, 0.8); }
-
-/* 左上角徽章堆疊區 */
-.badge-stack-left {
-    position: absolute;
-    top: 10px;
-    left: -5px;
+/* 篩選器與搜尋列整合 */
+#filter-container {
     display: flex;
     flex-direction: column;
-    gap: 8px;
-    z-index: 10;
-    align-items: flex-start;
-}
-.hot-badge {
-    background: linear-gradient(135deg, #e74c3c, #c0392b);
-    color: white;
-    padding: 4px 12px;
-    font-size: 0.85em;
-    font-weight: bold;
-    border-radius: 0 15px 15px 0;
-    box-shadow: 2px 2px 6px rgba(0,0,0,0.5);
-    border: 1px solid rgba(255,255,255,0.2);
-    border-left: none;
-}
-.ordered-badge-img {
-    background: rgba(46, 204, 113, 0.9);
-    color: #fff;
-    padding: 4px 12px;
-    font-size: 0.85em;
-    font-weight: bold;
-    border-radius: 0 15px 15px 0;
-    box-shadow: 2px 2px 6px rgba(0,0,0,0.5);
-    backdrop-filter: blur(2px);
-    -webkit-backdrop-filter: blur(2px);
+    gap: 15px;
+    background: rgba(30, 30, 30, 0.9);
+    padding: 15px 20px;
+    border-radius: 12px;
+    margin-bottom: 30px;
+    border: 1px solid #333;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.3);
 }
 
-/* 我的最愛區塊樣式 */
-#favorites-container {
-    background: #1a1a1a;
-    padding: 15px;
-    border-radius: 12px;
-    margin-bottom: 20px;
-    border: 1px solid #333;
-    border-bottom: 1px dashed #444; padding-bottom: 20px;
-}
-#favorites-header {
-    cursor: pointer;
+.search-bar-wrapper {
     display: flex;
-    justify-content: space-between;
     align-items: center;
+    gap: 10px;
 }
-#favorites-header h3 {
-    margin: 0;
-    color: #e74c3c;
-    font-size: 1.2em;
+
+.search-box {
+    flex-grow: 1;
+    padding: 12px 15px;
+    font-size: 1.1em;
+    border: 1px solid #444;
+    border-radius: 8px;
+    background: #222;
+    color: #fff;
+    outline: none;
+    transition: all 0.3s ease;
 }
-#favorites-list {
+
+.search-box:focus {
+    border-color: #f39c12;
+    box-shadow: 0 0 8px rgba(243, 156, 18, 0.3);
+}
+
+.toggle-filter-btn {
+    padding: 12px 20px;
+    background: #333;
+    color: #ccc;
+    border: 1px solid #555;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 1em;
+    font-weight: bold;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+}
+
+.toggle-filter-btn:hover {
+    background: #444;
+    color: #fff;
+}
+
+.toggle-filter-btn.active {
+    background: #f39c12;
+    color: #fff;
+    border-color: #f39c12;
+}
+
+#advanced-filters {
+    display: none;
+    flex-direction: column;
+    gap: 15px;
+    margin-top: 5px;
+    padding-top: 15px;
+    border-top: 1px dashed #444;
+}
+
+#advanced-filters.expanded {
+    display: flex;
+}
+
+.filter-group {
     display: flex;
     flex-wrap: wrap;
     gap: 10px;
-    margin-top: 15px;
-}
-.favorite-item {
-    display: flex;
     align-items: center;
-    gap: 10px;
-    background: #222;
-    padding: 8px 12px;
-    border-radius: 8px;
-    border: 1px solid #444;
-    font-size: 0.9em;
-    user-select: none; /* 防止拖曳時反白文字 */
-    touch-action: pan-y; /* 確保手機上下滑動順暢，不受拖曳干擾 */
-}
-.favorite-item img {
-    width: 35px;
-    height: 35px;
-    border-radius: 6px;
-    object-fit: cover;
 }
 
-/* 收合通用外掛樣式 */
+.filter-label {
+    font-weight: bold;
+    color: #f39c12;
+    margin-right: 5px;
+    min-width: 45px;
+}
+
+.tag-checkbox {
+    display: none;
+}
+
+.tag-btn {
+    display: inline-block;
+    padding: 6px 12px;
+    background-color: #222;
+    border: 1px solid #444;
+    border-radius: 20px;
+    cursor: pointer;
+    font-size: 0.9em;
+    color: #bbb;
+    transition: all 0.2s ease;
+    user-select: none;
+}
+
+.tag-btn:hover {
+    background-color: #333;
+    color: #fff;
+}
+
+.tag-checkbox:checked + .tag-btn {
+    background-color: #f39c12;
+    color: #fff;
+    border-color: #f39c12;
+    box-shadow: 0 2px 8px rgba(243, 156, 18, 0.4);
+}
+
+#menu {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 25px;
+}
+
+.card {
+    background: #1e1e1e;
+    border: 1px solid #333;
+    border-radius: 12px;
+    padding: 0;
+    text-align: left;
+    box-shadow: 0 6px 15px rgba(0,0,0,0.4);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    position: relative; /* 為了讓愛心絕對定位 */
+}
+
+/* --- 高光閃爍動畫 (用於搜尋導航或狀態更新) --- */
+@keyframes highlightFlash {
+    0% { box-shadow: 0 0 0 0 rgba(243, 156, 18, 0.8); border-color: #f39c12; transform: scale(1.02); }
+    50% { box-shadow: 0 0 20px 10px rgba(243, 156, 18, 0.4); border-color: #f39c12; transform: scale(1.02); }
+    100% { box-shadow: 0 6px 15px rgba(0,0,0,0.4); border-color: #333; transform: scale(1); }
+}
+
+.card-highlighted {
+    animation: highlightFlash 2s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+/* ------------------------------------------- */
+
+.card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(0,0,0,0.6);
+    border-color: #555;
+}
+
+/* 圖片容器與愛心按鈕 */
+.img-container {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    overflow: hidden;
+}
+
+/* 愛心按鈕設計 */
+.favorite-btn {
+    position: absolute;
+    bottom: 10px;
+    right: 10px;
+    background: rgba(0, 0, 0, 0.6);
+    border: none;
+    color: #fff;
+    font-size: 1.5em;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    backdrop-filter: blur(3px);
+    -webkit-backdrop-filter: blur(3px);
+    transition: all 0.2s ease;
+    z-index: 10;
+}
+
+.favorite-btn:hover {
+    background: rgba(0, 0, 0, 0.8);
+    transform: scale(1.1);
+}
+
+.favorite-btn.active {
+    color: #e74c3c;
+    text-shadow: 0 0 5px rgba(231, 76, 60, 0.5);
+}
+
+/* 左側徽章堆疊容器 */
+.badge-stack-left {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    align-items: flex-start;
+    z-index: 10;
+}
+
+/* 徽章共用樣式 */
+.hot-badge, .ordered-badge-img {
+    padding: 4px 8px;
+    border-radius: 6px;
+    font-size: 0.8em;
+    font-weight: bold;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.5);
+    white-space: nowrap;
+}
+
+/* 👑 熱門推薦徽章 */
+.hot-badge {
+    background: linear-gradient(135deg, #f39c12, #d35400);
+    color: #fff;
+    border: 1px solid rgba(255,255,255,0.2);
+}
+
+/* ✔️ 已點過徽章 (圖片上) */
+.ordered-badge-img {
+    background: rgba(39, 174, 96, 0.9);
+    color: #fff;
+    border: 1px solid rgba(255,255,255,0.2);
+    backdrop-filter: blur(2px);
+}
+
+.drink-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    transition: transform 0.3s ease;
+    cursor: zoom-in;
+}
+
+.card:hover .drink-img {
+    transform: scale(1.05);
+}
+
+.card-content {
+    padding: 15px;
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+}
+
+.card h3 {
+    margin: 0 0 10px 0;
+    color: #fff;
+    font-size: 1.4em;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+/* 優雅的數值膠囊設計 (Pill Tags) */
+.profile-tags-wrapper {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+}
+
+.profile-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 0.85em;
+    font-weight: normal;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.1);
+}
+
+.tag-sour { background: rgba(39, 174, 96, 0.1); border-color: rgba(39, 174, 96, 0.3); }
+.tag-sour strong { color: #2ecc71; text-shadow: 0 0 5px rgba(46, 204, 113, 0.3); font-weight: bold; }
+
+.tag-strong { background: rgba(231, 76, 60, 0.1); border-color: rgba(231, 76, 60, 0.3); }
+.tag-strong strong { color: #e74c3c; text-shadow: 0 0 5px rgba(231, 76, 60, 0.3); font-weight: bold; }
+
+.tag-abv { background: rgba(52, 152, 219, 0.1); border-color: rgba(52, 152, 219, 0.3); }
+.tag-abv strong { color: #3498db; text-shadow: 0 0 5px rgba(52, 152, 219, 0.3); font-weight: bold; }
+
+
+/* 點餐紀錄的已點過標籤 (隱藏不用了) */
+.ordered-badge {
+    display: none;
+}
+
+
+/* 材料標籤設計 */
+.ingredient-tags {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 10px 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.ingredient-tag {
+    background: rgba(243, 156, 18, 0.15);
+    color: #f39c12;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 0.85em;
+    border: 1px solid rgba(243, 156, 18, 0.3);
+}
+
+.description-area {
+    color: #bbb;
+    font-size: 0.95em;
+    line-height: 1.5;
+    margin-bottom: 15px;
+    flex-grow: 1;
+}
+
+.card-action-area {
+    display: flex;
+    gap: 10px;
+    margin-top: auto;
+}
+
+button {
+    background-color: #f39c12;
+    color: #121212;
+    border: none;
+    padding: 10px 15px;
+    cursor: pointer;
+    font-size: 1.1em;
+    border-radius: 8px;
+    font-weight: bold;
+    transition: all 0.2s ease;
+}
+
+button:hover {
+    background-color: #e67e22;
+}
+
+.btn-loading {
+    position: relative;
+    pointer-events: none;
+    color: transparent !important;
+}
+
+.btn-loading::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 20px;
+    height: 20px;
+    margin-top: -10px;
+    margin-left: -10px;
+    border: 2px solid rgba(255, 255, 255, 0.5);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* 新版點餐紀錄設計 (卡片式) */
+#history, #favorites-container {
+    background: #1e1e1e;
+    padding: 15px;
+    border-radius: 12px;
+    margin-bottom: 25px;
+    border: 1px solid #333;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+}
+
+#history-header, #favorites-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+    user-select: none;
+}
+
 .collapsible-wrapper {
     display: grid;
     grid-template-rows: 0fr;
-    transition: grid-template-rows 0.4s ease-out;
+    transition: grid-template-rows 0.3s ease-out;
 }
+
 .collapsible-wrapper.expanded {
     grid-template-rows: 1fr;
 }
+
 .collapsible-inner {
     overflow: hidden;
 }
 
-/* 歷史紀錄外觀微調 */
-#history { background: #1a1a1a; padding: 15px; border-radius: 12px; margin-bottom: 20px; border: 1px solid #333; border-bottom: 1px dashed #444; padding-bottom: 20px; }
-#history-header { cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
-#history-header h3 { margin: 0; color: #f39c12; font-size: 1.2em; }
-.history-cards-container { display: flex; flex-direction: column; gap: 15px; margin-top: 15px; }
-.history-card { background: #222; border-radius: 10px; border: 1px solid #333; display: flex; gap: 15px; padding: 15px; position: relative; overflow: hidden; }
-.history-card-img-wrapper { flex-shrink: 0; width: 80px; height: 80px; border-radius: 8px; overflow: hidden; background: #000; }
-.history-card-img-wrapper img { width: 100%; height: 100%; object-fit: cover; cursor: zoom-in; }
-.history-card-content { flex-grow: 1; display: flex; flex-direction: column; }
-.history-card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; }
-.history-drink-name { font-size: 1.2em; font-weight: bold; color: #fff; }
-.history-status-tag { font-size: 0.8em; font-weight: bold; padding: 3px 8px; border-radius: 12px; white-space: nowrap; }
-.history-time-info { font-size: 0.8em; color: #888; display: flex; flex-direction: column; gap: 4px; margin-bottom: 10px; }
-.history-time-info .time-icon { display: inline-block; width: 1.5em; }
-.history-notes-box { background: rgba(243, 156, 18, 0.1); border: 1px solid rgba(243, 156, 18, 0.2); border-radius: 6px; padding: 8px; font-size: 0.85em; color: #f39c12; margin-bottom: 12px; }
-.history-card-actions { display: flex; gap: 10px; margin-top: auto; }
-.history-btn-reorder { flex-grow: 1; background: #f39c12; color: #000; border: none; padding: 10px; border-radius: 6px; font-weight: bold; }
-.history-btn-cancel { flex-grow: 0; background: #444; color: #aaa; border: none; padding: 10px; border-radius: 6px; }
-.history-btn-delete { position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,0.3); border: 1px solid #444; border-radius: 50%; color: #aaa; font-size: 0.9em; cursor: pointer; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; transition: 0.2s; opacity: 0.6; }
-.history-btn-delete:hover { color: #fff; background: #e74c3c; border-color: #e74c3c; opacity: 1; }
-.history-sold-out-tag { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-15deg); font-size: 0.8em; font-weight: 900; color: #fff; background: rgba(231, 76, 60, 0.85); padding: 3px 8px; border: 2px solid #fff; border-radius: 6px; }
-
-#toast { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background: #27ae60; color: white; padding: 12px 24px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.5); display: none; z-index: 10000; font-weight: bold; text-align: center; font-size: 1em; }
-
-/* 歡迎視窗樣式 */
-#welcome-screen {
-    position: fixed;
-    top: 0; left: 0; width: 100%; height: 100%;
-    background: rgba(0,0,0,0.9); /* 更深的遮罩以突出內容 */
-    backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
-    display: flex; justify-content: center; align-items: center;
-    z-index: 9999;
-    visibility: hidden; opacity: 0; transition: opacity 0.4s ease;
+#history-list, #favorites-list {
+    margin-top: 15px;
 }
-#welcome-screen.visible { visibility: visible; opacity: 1; }
-#welcome-content {
-    background: #1a1a1a;
-    padding: 30px; border-radius: 12px; text-align: center;
-    width: 90%; max-width: 400px;
-    box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+
+.expand-icon-wrap {
+    background: #333;
+    padding: 4px 10px;
+    border-radius: 15px;
+    transition: background 0.2s ease;
+}
+
+.expand-icon-wrap:hover {
+    background: #444;
+}
+
+.expand-arrow {
+    display: inline-block;
+    transition: transform 0.3s ease;
+}
+
+.expand-icon-wrap.expanded-state .expand-arrow {
+    transform: rotate(180deg);
+}
+
+.clear-all-btn {
+    background: transparent;
+    color: #e74c3c;
+    border: 1px solid #e74c3c;
+    padding: 4px 10px;
+    font-size: 0.8em;
+    border-radius: 6px;
+}
+
+.clear-all-btn:hover {
+    background: rgba(231, 76, 60, 0.1);
+}
+
+/* 歷史卡片容器 */
+.history-cards-container {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+/* 單張歷史紀錄卡片 */
+.history-card {
+    background: #252525;
+    border-radius: 10px;
     border: 1px solid #333;
-    animation: welcomePop 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    display: flex;
+    overflow: hidden;
+    position: relative;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}
 
-    /* 為了配合年齡警告加入的紅色呼吸光暈 */
-    box-shadow: 0 0 20px rgba(231, 76, 60, 0.2), 0 0 0px rgba(231, 76, 60, 0);
-    animation: welcomePop 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275), warningBreathingGlow 3s infinite alternate;
-}
-#welcome-content.changing-name {
-    animation: welcomePop 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); /* 修改名字時不顯示紅光閃爍 */
-    box-shadow: 0 10px 40px rgba(0,0,0,0.5);
-}
-@keyframes welcomePop {
-    0% { transform: scale(0.8); opacity: 0; }
-    100% { transform: scale(1); opacity: 1; }
-}
-#welcome-content input {
-    width: 100%; padding: 12px; margin-bottom: 20px;
-    border-radius: 8px; border: 1px solid #444; background: #222; color: #fff; font-size: 1.1em; outline: none;
-    box-sizing: border-box; /* 防止 padding 撐破外框 */
-}
-#welcome-content input:focus { border-color: #f39c12; }
+/* 狀態左側邊線標示 */
+.history-card.pending { border-left: 4px solid #888; }
+.history-card.making { border-left: 4px solid #f39c12; }
+.history-card.completed { border-left: 4px solid #27ae60; }
+.history-card.rejected { border-left: 4px solid #e74c3c; }
 
-/* Custom Confirm Modal Styles */
-#custom-confirm-overlay {
+/* 狀態更新閃爍動畫 (歷史紀錄專用) */
+@keyframes historyFlashPending { 0% { background-color: rgba(136, 136, 136, 0.4); } 100% { background-color: transparent; } }
+@keyframes historyFlashMaking { 0% { background-color: rgba(243, 156, 18, 0.4); } 100% { background-color: rgba(243, 156, 18, 0.1); } }
+@keyframes historyFlashCompleted { 0% { background-color: rgba(39, 174, 96, 0.4); } 100% { background-color: rgba(39, 174, 96, 0.05); } }
+@keyframes historyFlashRejected { 0% { background-color: rgba(231, 76, 60, 0.4); } 100% { background-color: rgba(231, 76, 60, 0.1); } }
+
+.status-updated-flash-pending { animation: historyFlashPending 1.5s ease-out; }
+.status-updated-flash-making { animation: historyFlashMaking 1.5s ease-out; }
+.status-updated-flash-completed { animation: historyFlashCompleted 1.5s ease-out; }
+.status-updated-flash-rejected { animation: historyFlashRejected 1.5s ease-out; }
+
+/* 圖片區塊 */
+.history-card-img-wrapper {
+    width: 80px;
+    min-width: 80px;
+    position: relative;
+    background: #111;
+}
+
+.history-card-img-wrapper img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    cursor: zoom-in;
+}
+
+.history-sold-out-tag {
+    position: absolute;
+    bottom: 5px;
+    left: 5px;
+    background: rgba(231, 76, 60, 0.9);
+    color: white;
+    font-size: 0.6em;
+    font-weight: bold;
+    padding: 2px 4px;
+    border-radius: 4px;
+}
+
+/* 內容區塊 */
+.history-card-content {
+    padding: 10px;
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.history-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+}
+
+.history-drink-name {
+    font-size: 1.1em;
+    font-weight: bold;
+    color: #fff;
+}
+
+.history-status-tag {
+    font-size: 0.8em;
+    font-weight: bold;
+    padding: 3px 8px;
+    border-radius: 12px;
+}
+
+.history-time-info {
+    font-size: 0.85em;
+    color: #aaa;
+    margin-bottom: 6px;
+}
+
+.time-icon {
+    display: inline-block;
+    width: 16px;
+    text-align: center;
+}
+
+.history-notes-box {
+    background: rgba(243, 156, 18, 0.1);
+    border: 1px dashed #f39c12;
+    padding: 6px 8px;
+    border-radius: 6px;
+    font-size: 0.85em;
+    color: #f39c12;
+    margin-bottom: 8px;
+}
+
+/* 操作按鈕 */
+.history-card-actions {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+    margin-top: 5px;
+}
+
+.history-btn-cancel {
+    background: transparent;
+    color: #e74c3c;
+    border: 1px solid #e74c3c;
+    padding: 4px 10px;
+    font-size: 0.85em;
+    border-radius: 6px;
+}
+
+.history-btn-cancel:hover {
+    background: rgba(231, 76, 60, 0.1);
+}
+
+.history-btn-reorder {
+    background: #3498db;
+    color: white;
+    padding: 4px 10px;
+    font-size: 0.85em;
+    border: none;
+    border-radius: 6px;
+}
+
+.history-btn-reorder:hover {
+    background: #2980b9;
+}
+
+/* 禁用狀態的重點按鈕 */
+.history-btn-reorder:disabled {
+    background: #555;
+    color: #888;
+    cursor: not-allowed;
+}
+
+/* 排行榜設計 */
+#leaderboard-container {
+    background: #1e1e1e;
+    padding: 15px;
+    border-radius: 12px;
+    margin-bottom: 25px;
+    border: 1px solid #333;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+}
+
+.lb-tabs {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 15px;
+    border-bottom: 1px solid #333;
+    padding-bottom: 10px;
+}
+
+.lb-tab {
+    background: transparent;
+    color: #888;
+    border: none;
+    font-size: 1em;
+    padding: 5px 10px;
+    cursor: pointer;
+    font-weight: normal;
+}
+
+.lb-tab.active {
+    color: #f39c12;
+    font-weight: bold;
+    border-bottom: 2px solid #f39c12;
+}
+
+.lb-content {
+    display: none;
+}
+
+.lb-content.active {
+    display: block;
+}
+
+.lb-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px;
+    background: #252525;
+    border-radius: 8px;
+    margin-bottom: 8px;
+    border: 1px solid #333;
+}
+
+.lb-rank {
+    font-weight: bold;
+    font-size: 1.1em;
+    width: 30px;
+    color: #f39c12;
+}
+
+.lb-name {
+    flex-grow: 1;
+    color: #fff;
+    font-weight: bold;
+}
+
+.lb-count {
+    color: #3498db;
+    font-weight: bold;
+}
+
+
+/* 我的最愛列表 */
+.favorite-item {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    background: #252525;
+    padding: 10px;
+    border-radius: 8px;
+    margin-bottom: 10px;
+    border: 1px solid #333;
+    transition: background 0.2s;
+}
+
+.favorite-item:hover {
+    background: #333;
+}
+
+.favorite-item img {
+    width: 50px;
+    height: 50px;
+    object-fit: cover;
+    border-radius: 6px;
+    background: #111;
+}
+
+.favorite-item span {
+    font-size: 1.1em;
+    font-weight: bold;
+    color: #fff;
+}
+
+#toast {
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: #27ae60;
+    color: white;
+    padding: 15px 25px;
+    border-radius: 8px;
+    display: none;
+    z-index: 10000;
+    font-size: 1.1em;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+    white-space: nowrap;
+}
+
+/* 合併後的年齡確認與稱呼輸入視窗 (全螢幕覆蓋) */
+#welcome-screen {
     position: fixed;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
-    background-color: rgba(0, 0, 0, 0.85);
+    background: rgba(0,0,0,0.85);
     display: flex;
     justify-content: center;
     align-items: center;
-    z-index: 10000;
+    z-index: 9999;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
     visibility: hidden;
     opacity: 0;
-    transition: opacity 0.3s ease;
-    backdrop-filter: blur(5px);
-    -webkit-backdrop-filter: blur(5px);
+    transition: opacity 0.4s ease, visibility 0.4s;
 }
-#custom-confirm-overlay.visible {
+
+#welcome-screen.visible {
     visibility: visible;
     opacity: 1;
 }
-#custom-confirm-content {
-    background-color: #1a1a1a;
-    color: #e0e0e0;
+
+#welcome-content {
+    background: #1a1a1a;
     padding: 30px;
-    border-radius: 10px;
-    box-shadow: 0 0 25px rgba(0, 0, 0, 0.7);
-    width: 90%;
-    max-width: 400px;
+    border-radius: 12px;
     text-align: center;
-    box-sizing: border-box;
-}
-#custom-confirm-message {
-    margin-bottom: 20px;
-    font-size: 1.1em;
-    line-height: 1.5;
-    white-space: pre-wrap; /* 確保換行符號能正確顯示 */
-}
-#custom-confirm-buttons {
-    display: flex;
-    gap: 15px;
-    justify-content: center;
-}
-#custom-confirm-buttons button {
-    width: 120px;
-    padding: 10px 15px;
-    border-radius: 8px;
-    font-weight: bold;
-    cursor: pointer;
-    transition: background-color 0.2s ease;
-    border: none; /* Ensure no default button border */
-}
-#custom-confirm-buttons #confirm-yes {
-    background-color: #f39c12;
-    color: #000;
-}
-#custom-confirm-buttons #confirm-yes:hover {
-    background-color: #e67e22;
-}
-#custom-confirm-buttons #confirm-no {
-    background-color: #444;
-    color: #e0e0e0;
-}
-#custom-confirm-buttons #confirm-no:hover {
-    background-color: #555;
-}
-
-/* 備註輸入模態視窗樣式 */
-#notes-modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); display: flex; justify-content: center; align-items: center; z-index: 10000; visibility: hidden; opacity: 0; transition: 0.3s; }
-#notes-modal-overlay.visible { visibility: visible; opacity: 1; }
-#notes-modal-content { background: #1a1a1a; padding: 25px; border-radius: 12px; width: 90%; max-width: 400px; text-align: center; border: 1px solid #333; box-shadow: 0 4px 20px rgba(0,0,0,0.5); }
-#notes-modal-content input { width: 100%; max-width: 100%; }
-
-/* 大頭貼風格選擇模態視窗樣式 */
-#avatar-modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); display: flex; justify-content: center; align-items: center; z-index: 10000; visibility: hidden; opacity: 0; transition: 0.3s; }
-#avatar-modal-overlay.visible { visibility: visible; opacity: 1; }
-#avatar-modal-content { background: #1a1a1a; padding: 25px; border-radius: 12px; width: 90%; max-width: 450px; text-align: center; border: 1px solid #333; box-shadow: 0 4px 20px rgba(0,0,0,0.5); max-height: 85vh; overflow-y: auto; }
-.avatar-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-top: 20px; }
-.avatar-option { cursor: pointer; border-radius: 10px; padding: 10px; border: 2px solid transparent; transition: 0.2s; background: #222; }
-.avatar-option:hover { background: #333; transform: translateY(-3px); }
-.avatar-option.selected { border-color: #f39c12; background: #3d2a0e; box-shadow: 0 0 10px rgba(243, 156, 18, 0.3); }
-.avatar-option img { width: 60px; height: 60px; border-radius: 50%; background: #000; margin-bottom: 8px; border: 1px solid #555; }
-.avatar-option span { display: block; font-size: 0.85em; color: #ccc; }
-@media (max-width: 400px) { .avatar-grid { grid-template-columns: repeat(2, 1fr); } }
-
-/* 自拍上傳按鈕樣式 */
-.avatar-upload-btn {
-    display: inline-block;
-    background: #27ae60;
-    color: white;
-    padding: 12px 25px;
-    border-radius: 8px;
-    font-weight: bold;
-    cursor: pointer;
-    transition: 0.2s;
-}
-.avatar-upload-btn:hover { background: #2ecc71; }
-
-/* 今日酒豪榜樣式 */
-#leaderboard-container { background: #1a1a1a; padding: 15px; border-radius: 12px; margin-bottom: 20px; border: 1px solid #333; border-bottom: 1px dashed #444; padding-bottom: 20px;}
-.lb-title { color: #f39c12; margin-top: 0; text-align: center; font-size: 1.2em; margin-bottom: 15px; }
-
-/* 排行榜切換標籤 */
-.lb-tabs { display: flex; gap: 10px; margin-bottom: 15px; }
-.lb-tab { background: #222; color: #888; border: 1px solid #444; border-radius: 8px; font-weight: bold; flex: 1; padding: 8px 5px; cursor: pointer; transition: 0.3s; font-size: 0.95em; }
-.lb-tab.active { background: #f39c12; color: #000; border-color: #f39c12; }
-.lb-content { display: none; }
-.lb-content.active { display: block; }
-
-.lb-list { display: flex; flex-direction: column; gap: 8px; }
-.lb-item { display: flex; justify-content: space-between; align-items: center; background: #222; padding: 10px 15px; border-radius: 8px; font-size: 0.9em; transition: 0.3s; }
-.lb-rank { font-weight: bold; width: 30px; font-size: 1.1em; }
-.lb-name { flex-grow: 1; text-align: left; color: #eee; font-weight: bold; }
-/* 新增：前三名專屬顏色與光暈 */
-.lb-item-container:nth-child(1) .lb-name { color: #ffd700; text-shadow: 0 0 8px rgba(255, 215, 0, 0.4); } /* 金色 */
-.lb-item-container:nth-child(2) .lb-name { color: #e0e0e0; text-shadow: 0 0 8px rgba(224, 224, 224, 0.4); } /* 銀色 */
-.lb-item-container:nth-child(3) .lb-name { color: #cd7f32; text-shadow: 0 0 8px rgba(205, 127, 50, 0.4); } /* 銅色 */
-.lb-count { font-weight: bold; color: #f39c12; font-size: 1.1em; }
-
-/* 冠軍火焰特效 */
-.fire-effect {
-    margin-left: 8px;
-    font-size: 1.2em;
-    display: inline-block;
-    cursor: pointer;
-    animation: burn 1s infinite alternate ease-in-out;
-}
-@keyframes burn {
-    0% { transform: scale(1) translateY(0) rotate(-5deg); filter: drop-shadow(0 0 2px #e74c3c); }
-    50% { transform: scale(1.1) translateY(-2px) rotate(5deg); filter: drop-shadow(0 0 5px #f39c12); }
-    100% { transform: scale(1.2) translateY(-4px) rotate(-5deg); filter: drop-shadow(0 0 8px #f1c40f); }
-}
-
-/* 新版簡約數值標籤 (Pill Tags) */
-.profile-tags-wrapper {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    margin-bottom: 12px;
-}
-.profile-tag {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    background: rgba(0, 0, 0, 0.5);
     border: 1px solid #333;
-    padding: 4px 10px;
-    border-radius: 20px;
-    font-size: 0.85em;
-    color: #ccc;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+    max-width: 90%;
+    width: 350px;
+    transform: scale(0.9);
+    opacity: 0;
+    transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.4s ease;
 }
-.profile-tag strong {
+
+#welcome-screen.visible #welcome-content {
+    transform: scale(1);
+    opacity: 1;
+}
+
+#welcome-content input {
+    padding: 12px;
+    font-size: 1.1em;
+    border-radius: 8px;
+    border: 1px solid #555;
+    background: #222;
     color: #fff;
-    font-weight: 900;
-}
-.tag-sour { border-color: rgba(46, 204, 113, 0.4); }
-.tag-sour strong { color: #2ecc71; text-shadow: 0 0 4px rgba(46, 204, 113, 0.3); }
-
-.tag-strong { border-color: rgba(231, 76, 60, 0.4); }
-.tag-strong strong { color: #e74c3c; text-shadow: 0 0 4px rgba(231, 76, 60, 0.3); }
-
-/* 修正：不使用 margin-left: auto 來避免在手機版折行或跑位 */
-.tag-abv { border-color: rgba(52, 152, 219, 0.4); background: rgba(52, 152, 219, 0.1); }
-.tag-abv strong { color: #3498db; text-shadow: 0 0 4px rgba(52, 152, 219, 0.4); font-size: 1.1em; }
-
-
-.btn-cancel { background: #e74c3c; color: white; border: none; padding: 8px 14px; border-radius: 6px; font-size: 0.9em; cursor: pointer; font-weight: bold; }
-.btn-cancel:hover { background: #c0392b; }
-.btn-force-delete { background: transparent; color: #555; border: none; font-size: 1.5em; cursor: pointer; padding: 5px 10px; }
-.btn-force-delete:hover { color: #e74c3c; }
-.change-name-btn { background: transparent; color: #888; border: 1px solid #444; width: auto; padding: 5px 15px; margin-bottom: 20px; font-size: 0.8em; }
-.clear-all-btn { background: transparent; color: #888; border: 1px solid #444; border-radius: 4px; padding: 4px 8px; font-size: 0.8em; cursor: pointer; margin: 0; transition: 0.2s; }
-.clear-all-btn:hover { background: #333; color: #fff; }
-
-/* +1 跟單實體按鈕美化 */
-.btn-reorder {
-    display: inline-block;
-    background: linear-gradient(135deg, #f39c12, #e67e22);
-    color: #000;
-    padding: 4px 12px;
-    border-radius: 15px;
-    font-size: 0.75em;
-    font-weight: bold;
-    margin-left: 8px;
-    box-shadow: 0 2px 8px rgba(243, 156, 18, 0.4);
-    letter-spacing: 0.5px;
-    vertical-align: middle;
+    width: 100%;
+    outline: none;
 }
 
-/* 卡片高亮特效 */
-@keyframes highlightCard {
-    0% {
-        box-shadow: 0 0 0 0 rgba(243, 156, 18, 0), 0 0 0 0 rgba(0,0,0,0);
-        transform: scale(1);
-        background-color: #1e1e1e;
-        border-color: #333;
-    }
-    10% {
-        box-shadow: 0 0 60px 20px rgba(243, 156, 18, 0.9), 0 0 0 9999px rgba(0,0,0,0.85);
-        transform: scale(1.08);
-        background-color: #3d2a0e;
-        border-color: #f39c12;
-    }
-    85% {
-        box-shadow: 0 0 60px 20px rgba(243, 156, 18, 0.9), 0 0 0 9999px rgba(0,0,0,0.85);
-        transform: scale(1.08);
-        background-color: #3d2a0e;
-        border-color: #f39c12;
-    }
-    100% {
-        box-shadow: 0 0 0 0 rgba(243, 156, 18, 0), 0 0 0 0 rgba(0,0,0,0);
-        transform: scale(1);
-        background-color: #1e1e1e;
-        border-color: #333;
-    }
-}
-.card-highlighted {
-    animation: highlightCard 6s ease-in-out forwards;
-    position: relative;
-    z-index: 10500 !important; /* 確保能蓋過大部分 UI 元素 */
+#welcome-content input:focus {
+    border-color: #f39c12;
 }
 
-/* 客人專屬稱呼流光特效 */
-.greeting-name {
-    background: linear-gradient(90deg, #f39c12, #f1c40f, #e74c3c, #f39c12);
-    background-size: 200% auto;
-    color: transparent;
-    -webkit-background-clip: text;
-    background-clip: text;
-    animation: shineText 3s linear infinite;
+/* 玻璃碎裂動畫 */
+@keyframes shatter {
+    0% { transform: scale(1) rotate(0deg); opacity: 1; filter: blur(0); }
+    20% { transform: scale(1.1) rotate(-2deg); opacity: 0.8; filter: blur(2px); }
+    100% { transform: scale(0.5) translateY(200px) rotate(10deg); opacity: 0; filter: blur(10px); }
 }
-@keyframes shineText { to { background-position: 200% center; } }
 
-/* 加載動畫樣式 */
-.btn-loading {
-    position: relative;
-    color: transparent !important; /* 隱藏原本文字 */
+.shatter-out {
+    animation: shatter 0.6s ease-in forwards !important;
+}
+
+/* 背景星星畫布 */
+#starry-sky {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: -1;
     pointer-events: none;
 }
-.btn-loading::after {
-    content: "";
-    position: absolute;
-    width: 18px;
-    height: 18px;
-    top: calc(50% - 9px);
-    left: calc(50% - 9px);
-    border: 2px solid rgba(0,0,0,0.2);
+
+.avatar {
+    width: 30px;
+    height: 30px;
     border-radius: 50%;
-    border-top-color: #000;
-    animation: spin 0.8s linear infinite;
-}
-@keyframes spin {
-    to { transform: rotate(360deg); }
+    object-fit: cover;
+    background-color: #222;
+    border: 1px solid #444;
 }
 
-/* 回到頂部按鈕樣式 */
-#back-to-top {
-    position: fixed;
-    bottom: 25px;
-    right: 20px;
-    width: 45px;
-    height: 45px;
-    background: #f39c12;
-    color: #000;
-    border-radius: 50%;
-    display: none; /* 預設隱藏 */
-    justify-content: center;
-    align-items: center;
-    font-size: 20px;
+.title-avatar {
+    width: 40px;
+    height: 40px;
+    margin-right: 10px;
+    border: 2px solid #f39c12;
+}
+
+.btn-reorder {
+    background: transparent;
+    color: #3498db;
+    border: 1px solid #3498db;
+    padding: 2px 8px;
+    font-size: 0.85em;
+    border-radius: 12px;
     cursor: pointer;
-    z-index: 900;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.6);
-    border: none;
+    margin-left: 10px;
+    white-space: nowrap;
+}
+.btn-reorder:hover {
+    background: rgba(52, 152, 219, 0.1);
 }
 
-/* 背景音樂按鈕狀態樣式 */
-@keyframes spinIcon { to { transform: rotate(360deg); } }
-#music-toggle-btn.music-playing {
-    background: rgba(243, 156, 18, 0.15) !important;
-    border-color: #f39c12 !important;
-    color: #f39c12 !important;
-}
-
-/* 點餐推播通知樣式 */
-#order-toast-container {
-    position: fixed;
-    bottom: 85px; /* 避開回到頂部的按鈕 */
-    right: 20px;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    z-index: 9999;
-    pointer-events: none; /* 確保不會阻擋點擊 */
-}
-.order-toast {
-    background: rgba(30, 30, 30, 0.95);
-    color: #fff;
-    padding: 12px 20px;
-    border-radius: 8px;
-    border-left: 4px solid #f39c12;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.5);
-    font-size: 0.9em;
-    animation: slideInRight 0.3s ease forwards, fadeOut 0.5s ease 3.5s forwards;
-    pointer-events: auto; /* 恢復單個提示框的可點擊狀態 */
-    cursor: pointer;
-    transition: filter 0.2s ease;
-}
-.order-toast:hover { filter: brightness(1.2); } /* 滑鼠移入時稍微提亮 */
-.order-toast .guest-name { color: #f39c12; font-weight: bold; }
-.order-toast .drink-name { color: #27ae60; font-weight: bold; }
-
-/* 狀態更新閃爍動畫 */
-@keyframes statusFlashPending {
-    0% { background-color: #1a1a1a; }
-    30% { background-color: #333; } /* 灰色 */
-    100% { background-color: #1a1a1a; }
-}
-@keyframes statusFlashMaking {
-    0% { background-color: #1a1a1a; }
-    30% { background-color: #4a331a; } /* 橘色系 */
-    100% { background-color: #1a1a1a; }
-}
-@keyframes statusFlashCompleted {
-    0% { background-color: #1a1a1a; }
-    30% { background-color: #2a4a2a; } /* 綠色系 */
-    100% { background-color: #1a1a1a; }
-}
-@keyframes statusFlashRejected {
-    0% { background-color: #1a1a1a; }
-    30% { background-color: #4a2a2a; } /* 紅色系 */
-    100% { background-color: #1a1a1a; }
-}
-
-.status-updated-flash-pending {
-    animation: statusFlashPending 2s ease;
-}
-.status-updated-flash-making {
-    animation: statusFlashMaking 2s ease;
-}
-.status-updated-flash-completed {
-    animation: statusFlashCompleted 2s ease;
-}
-.status-updated-flash-rejected {
-    animation: statusFlashRejected 2s ease;
-}
-
-/* 大頭貼樣式 */
-.avatar { width: 28px; height: 28px; border-radius: 50%; vertical-align: middle; background: #333; border: 1px solid #555; object-fit: cover; }
-.title-avatar { width: 45px; height: 45px; border: 2px solid #f39c12; margin-right: 10px; box-shadow: 0 0 15px rgba(243, 156, 18, 0.4); }
-
-/* 自訂頭像專屬金色邊框與光暈 (自動辨識 Base64 格式的圖片) */
-img.avatar[src^="data:image/jpeg"] {
-    border: 2px solid #ffd700 !important;
-    box-shadow: 0 0 12px rgba(255, 215, 0, 0.8) !important;
-}
-
-@keyframes slideInRight {
-    from { transform: translateX(120%); opacity: 0; }
-    to { transform: translateX(0); opacity: 1; }
-}
-@keyframes fadeOut {
-    from { opacity: 1; }
-    to { opacity: 0; }
-}
-
-/* Image Modal Styles */
+/* 大圖片預覽模態視窗 */
 #image-modal-overlay {
     position: fixed;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
-    background-color: rgba(0, 0, 0, 0.8);
+    background: rgba(0, 0, 0, 0.9);
     display: flex;
     justify-content: center;
     align-items: center;
-    z-index: 10000; /* 確保它在所有內容之上 */
-    visibility: hidden; /* 預設隱藏 */
+    z-index: 10000;
+    visibility: hidden;
     opacity: 0;
-    transition: visibility 0s, opacity 0.3s ease;
+    transition: opacity 0.3s ease, visibility 0.3s;
 }
+
 #image-modal-overlay.visible {
     visibility: visible;
     opacity: 1;
 }
+
 #image-modal-content {
-    position: relative;
     max-width: 90%;
     max-height: 90%;
-    background-color: #1a1a1a; /* 模態內容的深色背景 */
-    padding: 20px;
-    border-radius: 10px;
-    box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
     display: flex;
     justify-content: center;
     align-items: center;
 }
+
 #modal-image {
     max-width: 100%;
-    max-height: 100%;
-    display: block; /* 移除圖片下方多餘的空間 */
-    object-fit: contain; /* 確保圖片完整顯示不被裁切 */
-    cursor: zoom-out; /* 提示點擊可縮小/關閉 */
-}
-
-/* 自動輪播區樣式 */
-#carousel-section {
-    border-bottom: 1px dashed #444; padding-bottom: 20px; margin-bottom: 20px;
-}
-.carousel-wrapper {
-    width: 100%;
-    overflow-x: auto; /* 開放原生橫向滑動，讓客人可以自己滑 */
-    overflow-y: hidden;
-    position: relative;
-    padding: 10px 0;
-    -webkit-overflow-scrolling: touch; /* 讓手機端 (特別是 iOS) 滑動帶有順暢的物理慣性 */
-    scrollbar-width: none; /* 隱藏 Firefox 的捲軸，保持畫面高級感 */
-}
-.carousel-wrapper::-webkit-scrollbar {
-    display: none; /* 隱藏 Chrome / Safari / Edge 的捲軸 */
-}
-.carousel-track {
-    display: flex;
-    gap: 12px;
-    width: max-content;
-    animation: scrollCarousel 60s linear infinite; /* 再次調慢速度，改成 60s 的極慢速悠閒輪播 */
-}
-.carousel-track:hover, .carousel-track:active {
-    animation-play-state: paused; /* 滑鼠移入或手機手指按住時暫停輪播，方便客人瀏覽與點選 */
-}
-@keyframes scrollCarousel {
-    0% { transform: translateX(0); }
-    100% { transform: translateX(calc(-50% - 6px)); }
-}
-.carousel-item {
-    background: #1e1e1e;
+    max-height: 90vh;
     border-radius: 12px;
-    border: 1px solid #333;
-    width: 140px;
-    flex-shrink: 0;
-    cursor: pointer;
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-    transition: transform 0.2s, box-shadow 0.2s;
-}
-.carousel-item:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 4px 10px rgba(0,0,0,0.5);
-}
-.carousel-item:active {
-    transform: scale(0.95); /* 手機點擊時卡片微幅內縮，給予按壓的物理回饋感 */
-}
-.carousel-img-wrap {
-    width: 100%;
-    height: 160px;
-    background: #000;
-    overflow: hidden;
-    position: relative;
-}
-.carousel-img-wrap img {
-    width: 100%;
-    height: 100%;
-    object-fit: contain; /* 改為 contain，確保圖片永遠完整顯示不被裁切 */
+    box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+    transform: scale(0.9);
     transition: transform 0.3s ease;
-    position: relative;
-    z-index: 1; /* 確保清晰的主圖浮在毛玻璃背景之上 */
-}
-.carousel-item:hover .carousel-img-wrap img {
-    transform: scale(1.1); /* 滑鼠移入卡片時圖片微微放大 */
-}
-/* === 跑馬燈專屬：毛玻璃同款背景圖 === */
-.carousel-img-wrap .carousel-blur-bg {
-    position: absolute;
-    top: 0; left: 0;
-    object-fit: cover; /* 強制背景圖填滿框架的空白處 */
-    filter: blur(15px) brightness(0.5); /* 加上 15px 的高斯模糊，並把亮度調暗 50% 來襯托主圖 */
-    transform: scale(1.2); /* 稍微放大，避免邊緣出現模糊漏光的白邊 */
-    z-index: 0; /* 墊在最底層 */
-    pointer-events: none; /* 避免干擾點擊事件 */
-}
-.carousel-item:hover .carousel-img-wrap .carousel-blur-bg {
-    transform: scale(1.3); /* 滑鼠移入時也跟著放大，保持跟主圖一致的物理動態感 */
 }
 
-/* 優雅的高級感酒名疊層 */
-.carousel-name-overlay {
-    position: absolute;
-    top: 0; left: 0; width: 100%;
-    padding: 4px 8px 25px; /* 上方留白縮減至 4px，讓文字更貼近卡片頂部邊緣 */
-    background: linear-gradient(to bottom, rgba(0,0,0,0.75) 0%, transparent 100%); /* 降低起始的黑色濃度，並更快過渡到透明 */
-    color: #f39c12 !important; /* 強制預設為質感金色 */
-    font-size: 0.8em; /* 字體再微微縮小，減少垂直佔用空間 */
-    text-align: center;
-    letter-spacing: 2px; /* 拉開字距增加高級感 */
-    font-family: 'Playfair Display', 'Noto Serif TC', 'Songti TC', 'MingLiU', serif; /* 帶有文青風格的襯線字體 */
-    box-sizing: border-box;
-    white-space: normal; /* 允許文字換行 */
-    overflow-wrap: break-word; /* 允許過長的英文單字自然斷行 */
-    line-height: 1.2; /* 縮小行距，讓折成兩行的酒名排版更緊湊 */
-    text-shadow: 0 0 5px rgba(243, 156, 18, 0.8), 0 0 10px rgba(243, 156, 18, 0.4), 0 2px 5px rgba(0,0,0,0.9) !important; /* 多層次堆疊：霓虹微發光特效 + 黑色保底陰影 */
-    overflow: hidden;
-    z-index: 2;
-    pointer-events: none; /* 確保不會干擾點擊圖片 */
-    transition: color 0.15s ease, text-shadow 0.15s ease; /* 加入極短的過渡時間，模擬通電瞬間的真實感 */
+#image-modal-overlay.visible #modal-image {
+    transform: scale(1);
 }
 
-/* 滑鼠移入卡片時：霓虹燈通電高光特效 */
-.carousel-item:hover .carousel-name-overlay {
-    color: #fff !important; /* 霓虹燈管核心因高溫發亮變白 */
-    text-shadow: 0 0 8px rgba(243, 156, 18, 1), 0 0 20px rgba(243, 156, 18, 0.8), 0 0 35px rgba(243, 156, 18, 0.6), 0 2px 5px rgba(0,0,0,0.9) !important; /* 增強且擴大外圍的金色光暈 */
-}
-
-/* =========================================
-   今日店長特調專區 (大卡片設計)
-========================================= */
-#todays-special-container {
-    margin-bottom: 25px;
-    width: 100%;
-    /* 華麗的從天而降進場動畫 */
-    opacity: 0; /* 動畫開始前先隱藏 */
-    animation: specialCardEnter 1.2s 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
-}
-
-@keyframes specialCardEnter {
-    0% {
-        opacity: 0;
-        transform: translateY(-100px) rotateX(-30deg) scale(0.9);
-    }
-    100% {
-        opacity: 1;
-        transform: translateY(0) rotateX(0) scale(1);
-    }
-}
-.special-card {
-    background: linear-gradient(135deg, #2a1e0f 0%, #120d05 100%); /* 暗金色漸層底 */
-    border: 1px solid rgba(243, 156, 18, 0.4); /* 微弱的金色邊框 */
-    border-radius: 16px;
+/* 點餐推播通知容器 */
+#order-toast-container {
+    position: fixed;
+    bottom: 90px;
+    left: 20px;
     display: flex;
-    position: relative;
-    box-shadow: 0 4px 20px rgba(243, 156, 18, 0.15); /* 金色光暈 */
-    transition: transform 0.3s ease, box-shadow 0.3s ease;
-    transform-style: preserve-3d; /* 啟用 3D 空間 */
-    animation: specialBreathingGlow 3s infinite alternate ease-in-out; /* 呼吸光暈動畫 */
-}
-.special-card:hover {
-    transform: perspective(1000px) translateY(-5px) rotateX(2deg) rotateY(-2deg); /* 預設的微幅 3D 傾斜 */
-    box-shadow: 0 10px 40px rgba(243, 156, 18, 0.6), 0 0 20px rgba(243, 156, 18, 0.4) !important; /* 懸停時加強並擴大光暈 */
-    animation-play-state: paused; /* 滑鼠懸停/手指按住時暫停呼吸，讓光芒保持在最亮狀態 */
-}
-/* 呼吸光暈的動畫關鍵影格 */
-@keyframes specialBreathingGlow {
-    0% { box-shadow: 0 4px 20px rgba(243, 156, 18, 0.15), 0 0 0px rgba(243, 156, 18, 0); }
-    100% { box-shadow: 0 4px 30px rgba(243, 156, 18, 0.4), 0 0 20px rgba(243, 156, 18, 0.2); }
-}
-/* 3D 傾斜時的光澤反光層 (Glare) */
-.special-card::after {
-    content: "";
-    position: absolute;
-    top: 0; left: 0; width: 100%; height: 100%;
-    border-radius: 16px;
-    background: linear-gradient(105deg, transparent 20%, rgba(255, 255, 255, 0.25) 25%, transparent 30%);
-    background-size: 200% 200%;
-    background-position: 100% 100%;
-    pointer-events: none; /* 確保不影響點擊 */
-    z-index: 15; /* 確保反光在最上層 */
-    transition: background-position 0.6s ease-out, opacity 0.3s ease;
-    opacity: 0;
-}
-.special-card:hover::after, .special-card:active::after {
-    opacity: 1;
-    background-position: 0% 0%; /* 反光像玻璃一樣掃過卡片 */
-}
-/* === 尊榮特調專屬：動態金砂星光特效 === */
-.special-card::before {
-    content: "";
-    position: absolute;
-    top: 0; left: 0; width: 100%; height: 100%;
-    border-radius: 16px; /* 貼合卡片圓角 */
+    flex-direction: column-reverse;
+    gap: 10px;
+    z-index: 9900;
     pointer-events: none;
-    z-index: 1; /* 放於背景之上，內容之下 */
-    background-image:
-        radial-gradient(1px 1px at 15px 25px, rgba(243, 156, 18, 0.9), transparent),
-        radial-gradient(2px 2px at 50px 70px, rgba(255, 255, 255, 0.7), transparent),
-        radial-gradient(1.5px 1.5px at 120px 40px, rgba(241, 196, 15, 0.8), transparent),
-        radial-gradient(2px 2px at 80px 110px, rgba(230, 126, 34, 0.6), transparent),
-        radial-gradient(1px 1px at 160px 140px, rgba(255, 255, 255, 0.5), transparent);
-    background-size: 200px 200px;
-    animation: goldDustDrift 20s linear infinite;
-    opacity: 0.6;
-    mix-blend-mode: screen; /* 讓金屬粒子有發光融合的感覺 */
 }
-@keyframes goldDustDrift {
-    from { background-position: 0 0; }
-    to { background-position: 200px 200px; }
-}
-/* 左上角立體緞帶標籤 */
-.special-badge {
-    position: absolute;
-    top: 15px;
-    left: -8px;
-    background: linear-gradient(90deg, #e74c3c, #c0392b);
-    color: white;
-    padding: 6px 16px;
-    font-weight: bold;
+
+.order-toast {
+    background: rgba(30, 30, 30, 0.9);
+    color: #ccc;
+    padding: 10px 15px;
+    border-radius: 8px;
+    border-left: 4px solid #f39c12;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.5);
     font-size: 0.9em;
-    letter-spacing: 1px;
-    box-shadow: 2px 2px 8px rgba(0,0,0,0.5);
-    z-index: 10;
-    border-top-right-radius: 20px;
-    border-bottom-right-radius: 20px;
-    transform-origin: left center; /* 將動畫的旋轉軸心固定在左側邊緣 */
-    animation: ribbonFlutter 4s infinite ease-in-out; /* 套用飄動動畫 */
-}
-/* 緞帶微幅飄動動畫 */
-@keyframes ribbonFlutter {
-    0%, 100% { transform: rotate(0deg) translateY(0); }
-    50% { transform: rotate(-3deg) translateY(-2px); } /* 向左上方微幅揚起 */
-}
-/* 緞帶的折角陰影細節 */
-.special-badge::after {
-    content: '';
-    position: absolute;
-    bottom: -6px;
-    left: 0;
-    border-top: 6px solid #8e281f;
-    border-left: 6px solid transparent;
-}
-.special-img-wrap {
-    width: 45%;
-    min-width: 180px;
-    position: relative;
-    border-top-left-radius: 16px;
-    border-bottom-left-radius: 16px;
-    overflow: hidden;
-    z-index: 2; /* 確保浮在星光層之上 */
-}
-.special-img-wrap img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-}
-/* 圖片與文字交界處的融合漸層 */
-.special-img-wrap::after {
-    content: "";
-    position: absolute;
-    top: 0; right: 0; width: 60px; height: 100%;
-    background: linear-gradient(to right, transparent, #120d05);
-}
-.special-content {
-    padding: 25px 20px;
-    flex-grow: 1;
+    animation: slideInLeft 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    backdrop-filter: blur(5px);
     display: flex;
-    flex-direction: column;
-    justify-content: center;
-    position: relative; /* 啟動 z-index */
-    z-index: 2; /* 確保浮在星光層之上 */
-}
-.special-title { color: #f39c12; margin: 0 0 5px 0; font-size: 1.6em; text-shadow: 0 2px 5px rgba(0,0,0,0.8); }
-.special-desc { color: #ccc; font-size: 0.9em; line-height: 1.6; margin-bottom: 20px; }
-.special-order-btn {
-    background: linear-gradient(135deg, #f39c12, #e67e22);
-    color: #000; border: none; padding: 12px 20px; border-radius: 8px; font-weight: bold; font-size: 1em;
-    cursor: pointer; width: 100%; transition: 0.2s; box-shadow: 0 4px 10px rgba(243, 156, 18, 0.4);
-    margin-top: auto; /* 將按鈕推到最下方 */
-    position: relative; /* 為了定位反光層 */
-    overflow: hidden; /* 確保光束不會超出按鈕邊界 */
-}
-.special-order-btn:active { transform: scale(0.97); }
-/* 點擊後的「已加入點餐」綠色狀態 */
-.special-order-btn.added-to-order {
-    background: linear-gradient(135deg, #2ecc71, #27ae60);
-    color: white;
-    box-shadow: 0 4px 10px rgba(46, 204, 113, 0.4);
-    pointer-events: none; /* 防止客人不小心連續點擊 */
-    animation: popBounce 0.4s ease-out; /* 新增微小的放大彈跳動畫 */
-    overflow: visible; /* 解除邊界隱藏，讓紙花能飛出按鈕 */
-}
-/* 點擊成功時的彈跳動畫關鍵影格 */
-@keyframes popBounce {
-    0% { transform: scale(0.95); }  /* 接續點擊按下時的微縮狀態 */
-    40% { transform: scale(1.08); } /* 瞬間放大彈出 */
-    70% { transform: scale(0.98); } /* 微幅回彈 */
-    100% { transform: scale(1); }   /* 穩定回到原本大小 */
-}
-/* === 按鈕流光掃描特效 === */
-.special-order-btn::after {
-    content: "";
-    position: absolute;
-    top: 0; left: -150%; width: 50%; height: 100%;
-    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.5), transparent);
-    transform: skewX(-25deg); /* 讓光束帶有傾斜的速度感 */
-    animation: buttonSweepLight 3s infinite; /* 每 3 秒掃過一次 */
-}
-/* 已加入狀態時，將流光偽元素變身為純 CSS 動態打勾 */
-.special-order-btn.added-to-order::after {
-    content: "";
-    display: inline-block;
-    position: relative;
-    left: 8px; top: -2px; /* 放在文字右側並微調高度 */
-    width: 6px; height: 12px;
-    background: transparent;
-    border-bottom: 3px solid white;
-    border-right: 3px solid white;
-    transform: rotate(45deg) scale(0); /* 初始為縮小隱藏狀態 */
-    opacity: 0;
-    animation: drawCheck 0.4s 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; /* 延遲 0.2 秒後 Q 彈出現 */
-}
-@keyframes drawCheck {
-    0% { transform: rotate(45deg) scale(0); opacity: 0; }
-    100% { transform: rotate(45deg) scale(1); opacity: 1; }
-}
-@keyframes buttonSweepLight {
-    0% { left: -150%; }
-    25% { left: 200%; } /* 前 25% 的時間快速掃過 */
-    100% { left: 200%; } /* 剩下的時間停頓，等待下一次呼吸 */
+    align-items: center;
+    pointer-events: auto; /* 讓 toast 本身可以被點擊 */
+    cursor: pointer;
+    transition: transform 0.2s, filter 0.2s;
 }
 
-/* === 純 CSS 點擊慶祝紙花特效 === */
-.special-order-btn::before {
-    content: "";
-    position: absolute;
-    top: 50%; left: 50%;
-    width: 6px; height: 6px;
-    background: transparent;
-    border-radius: 50%;
-    transform: translate(-50%, -50%);
-    pointer-events: none;
-    z-index: -1; /* 藏在按鈕背景下方，讓紙花有「從背後射出」的立體感 */
-    opacity: 0;
-}
-/* 當觸發已加入點餐時，射出 12 顆不同顏色與方向的紙花 */
-.special-order-btn.added-to-order::before {
-    animation: confettiExplosion 0.6s ease-out forwards;
-}
-@keyframes confettiExplosion {
-    0% {
-        opacity: 1;
-        box-shadow:
-            0 0 0 0px #f1c40f, 0 0 0 0px #e74c3c, 0 0 0 0px #3498db, 0 0 0 0px #2ecc71,
-            0 0 0 0px #9b59b6, 0 0 0 0px #f1c40f, 0 0 0 0px #e74c3c, 0 0 0 0px #fff,
-            0 0 0 0px #e67e22, 0 0 0 0px #fd79a8, 0 0 0 0px #f1c40f, 0 0 0 0px #3498db;
-    }
-    100% {
-        opacity: 0;
-        box-shadow:
-            -80px -40px 0 -1px #f1c40f, 70px -50px 0 1px #e74c3c,
-            -60px 50px 0 0px #3498db, 80px 40px 0 -1px #2ecc71,
-            0px -70px 0 1px #9b59b6, 0px 60px 0 0px #f1c40f,
-            -90px 10px 0 -1px #e74c3c, 90px -10px 0 1px #fff,
-            -40px -70px 0 0px #e67e22, 40px -80px 0 -1px #fd79a8,
-            -30px 70px 0 1px #f1c40f, 40px 60px 0 0px #3498db;
-    }
+.order-toast:hover {
+    transform: scale(1.02);
+    filter: brightness(1.2);
 }
 
-/* 手機版排版自動切換為上下堆疊 */
-@media (max-width: 600px) {
-    .special-card { flex-direction: column; }
-    .special-img-wrap { width: 100%; height: 220px; border-bottom-left-radius: 0; border-top-right-radius: 16px; }
-    /* 手機版漸層改為由下往上 */
-    .special-img-wrap::after { width: 100%; height: 60px; top: auto; bottom: 0; background: linear-gradient(to top, #120d05, transparent); }
-    .special-title { font-size: 1.4em; margin-top: 10px; }
-    .special-content { padding: 15px 20px 20px; }
-}
-/* 警告視窗專屬的呼吸光暈動畫 */
-@keyframes warningBreathingGlow {
-    0% { box-shadow: 0 0 20px rgba(231, 76, 60, 0.2), 0 0 0px rgba(231, 76, 60, 0); }
-    100% { box-shadow: 0 0 40px rgba(231, 76, 60, 0.6), 0 0 20px rgba(231, 76, 60, 0.4); }
+.order-toast .guest-name {
+    font-weight: bold;
+    color: #fff;
 }
 
-/* 玻璃碎裂掉落的退場動畫 */
-.shatter-out {
-    animation: shatterEffect 0.6s cubic-bezier(0.55, 0.085, 0.68, 0.53) forwards !important;
-}
-@keyframes shatterEffect {
-    0% { transform: scale(1) rotate(0deg); opacity: 1; filter: blur(0); }
-    /* 模擬碎裂瞬間的衝擊：放大、扭曲變形、爆出白光 */
-    20% { transform: scale(1.1) skew(5deg, -5deg); opacity: 1; filter: blur(2px); box-shadow: 0 0 80px rgba(255, 255, 255, 0.8); }
-    /* 模擬碎片重力墜落：急速往下掉、旋轉、縮小並消失 */
-    100% { transform: translateY(100vh) rotate(20deg) scale(0.5); opacity: 0; filter: blur(10px); }
+.order-toast .drink-name {
+    color: #f39c12;
+    font-weight: bold;
 }
 
-/* --- 新增：手機版底部導航列與篩選抽屜樣式 --- */
+@keyframes slideInLeft {
+    from { transform: translateX(-100%); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+}
+
+/* 自訂 Confirm 模態視窗 */
+#custom-confirm-overlay {
+    position: fixed;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.8);
+    display: flex; justify-content: center; align-items: center;
+    z-index: 10500;
+    visibility: hidden; opacity: 0;
+    transition: opacity 0.3s;
+    backdrop-filter: blur(5px);
+}
+#custom-confirm-overlay.visible { visibility: visible; opacity: 1; }
+#custom-confirm-content {
+    background: #1a1a1a; padding: 25px; border-radius: 12px; text-align: center;
+    border: 1px solid #444; box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+    width: 300px; max-width: 90%; transform: scale(0.9); transition: transform 0.3s;
+}
+#custom-confirm-overlay.visible #custom-confirm-content { transform: scale(1); }
+#custom-confirm-message { font-size: 1.1em; color: #fff; margin-bottom: 25px; line-height: 1.5; }
+#custom-confirm-buttons { display: flex; gap: 15px; justify-content: center; }
+#custom-confirm-buttons button { flex: 1; padding: 10px; font-size: 1em; border-radius: 8px; }
+#confirm-yes { background: #e74c3c; color: white; border: none; }
+#confirm-no { background: transparent; color: #aaa; border: 1px solid #555; }
+
+/* 底部導航列 (手機版) */
 .bottom-nav {
     display: none;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    background: rgba(20, 20, 20, 0.95);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border-top: 1px solid #333;
+    z-index: 9900;
+    justify-content: space-around;
+    padding: 10px 0;
+    padding-bottom: env(safe-area-inset-bottom, 10px); /* 支援 iPhone 底部安全區 */
 }
+
+.bottom-nav .nav-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    color: #888;
+    text-decoration: none;
+    font-size: 0.8em;
+    gap: 4px;
+    flex: 1;
+    transition: color 0.2s;
+}
+
+.bottom-nav .nav-item .nav-icon {
+    font-size: 1.6em;
+    margin-bottom: 2px;
+}
+
+.bottom-nav .nav-item.active {
+    color: #f39c12;
+}
+
+.bottom-nav .nav-item.active .nav-icon {
+    transform: scale(1.1);
+}
+
+/* 懸浮按鈕 FAB */
 .fab-container {
-    display: none;
-}
-.bottom-sheet-overlay {
-    display: none;
-}
-.filter-sheet-header {
-    display: none;
-}
-
-/* 獨立在最上方的隨機按鈕 */
-.filter-drawer-random-btn {
-    display: none; /* 預設隱藏，只在手機版篩選抽屜中顯示 */
-}
-
-.filter-header-search-wrap {
-    display: none;
+    position: fixed;
+    bottom: 90px;
+    right: 20px;
+    width: 56px;
+    height: 56px;
+    background: linear-gradient(135deg, #f39c12, #d35400);
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    box-shadow: 0 4px 15px rgba(243, 156, 18, 0.5);
+    cursor: pointer;
+    z-index: 9800;
+    transition: transform 0.2s;
 }
 
-/* Hover media query */
-@media (hover: hover) {
-    .toggle-filter-btn:hover { background: #444; }
-    .voice-search-btn:hover { background: rgba(255,255,255,0.1); }
-    .card:hover { transform: translateY(-5px) scale(1.02); box-shadow: 0 8px 16px rgba(0,0,0,0.5); }
-    .card:hover .drink-img { transform: scale(1.1); }
-    #welcome-content button:hover { transform: scale(1.02); }
-    .favorite-btn:hover { background: rgba(0, 0, 0, 0.7); transform: scale(1.1); }
-    .favorite-item:hover { background: #2a2a2a; transform: translateY(-3px) scale(1.02); box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
-    .avatar-option:hover { background: #333; transform: translateY(-3px); }
-    .avatar-upload-btn:hover { background: #2ecc71; }
-    .btn-cancel:hover { background: #c0392b; }
-    .btn-force-delete:hover { color: #e74c3c; }
-    .clear-all-btn:hover { background: #333; color: #fff; }
-    .order-toast:hover { filter: brightness(1.2); }
-    .carousel-track:hover, .carousel-track:active { animation-play-state: paused; }
-    .carousel-item:hover { transform: translateY(-3px); box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
-    .carousel-item:hover .carousel-img-wrap img { transform: scale(1.1); }
-    .carousel-item:hover .carousel-img-wrap .carousel-blur-bg { transform: scale(1.3); }
-    .carousel-item:hover .carousel-name-overlay { color: #fff !important; text-shadow: 0 0 8px rgba(243, 156, 18, 1), 0 0 20px rgba(243, 156, 18, 0.8), 0 0 35px rgba(243, 156, 18, 0.6), 0 2px 5px rgba(0,0,0,0.9) !important; }
-    .special-card:hover { transform: perspective(1000px) translateY(-5px) rotateX(2deg) rotateY(-2deg); box-shadow: 0 10px 40px rgba(243, 156, 18, 0.6), 0 0 20px rgba(243, 156, 18, 0.4) !important; animation-play-state: paused; }
+.fab-container:active {
+    transform: scale(0.9);
 }
 
+.fab-icon {
+    font-size: 1.8em;
+    color: white;
+}
+
+.fab-badge {
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    background: #e74c3c;
+    color: white;
+    font-size: 0.8em;
+    font-weight: bold;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border: 2px solid #121212;
+}
 
 @media (max-width: 768px) {
-    body { padding-bottom: 85px; } /* 給底部導航留空間 */
+    .bottom-nav { display: flex; }
+    body { padding-bottom: 100px; } /* 增加手機版底部空間 */
+}
 
-    #menu {
-        grid-template-columns: repeat(2, 1fr);
-        gap: 15px;
-    }
+/* 手機版底部篩選抽屜遮罩 */
+.bottom-sheet-overlay {
+    position: fixed;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.6);
+    z-index: 10000;
+    visibility: hidden;
+    opacity: 0;
+    transition: opacity 0.3s;
+}
+.bottom-sheet-overlay.visible {
+    visibility: visible;
+    opacity: 1;
+}
 
-    .card-content {
-        padding: 10px;
+@media (max-width: 768px) {
+    #filter-container {
+        padding: 0; border: none; box-shadow: none; background: transparent; margin-bottom: 15px;
     }
-
-    .card h3 {
-        font-size: 1.1em;
-        margin-bottom: 5px;
+    .search-box {
+        padding: 15px; font-size: 1.1em; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.3);
     }
-
-    .img-container {
-        height: 180px; /* 稍微增加高度以確保圖片不被切太多 */
-    }
-
-    .drink-img {
-        object-fit: cover; /* 確保填滿，但可能會裁剪 */
-    }
-
-    /* 調整手機版按鈕和標籤，避免擁擠 */
-    .card button {
-        padding: 8px;
-        font-size: 0.9em;
-        margin-top: 10px;
-    }
-
-    .profile-tags-wrapper {
-        gap: 4px;
-        margin-bottom: 8px;
-    }
-
-    .profile-tag {
-        padding: 2px 6px;
-        font-size: 0.75em;
-    }
-
-    .description-area {
-        padding: 8px;
-        font-size: 0.8em;
-    }
-
-    .bottom-nav {
-        display: flex;
-        position: fixed;
-        bottom: 0; left: 0; width: 100%;
-        background: rgba(20, 20, 20, 0.95);
-        backdrop-filter: blur(15px);
-        -webkit-backdrop-filter: blur(15px);
-        border-top: 1px solid #333;
-        z-index: 9900;
-        padding-bottom: env(safe-area-inset-bottom);
-        box-shadow: 0 -2px 10px rgba(0,0,0,0.5);
-    }
-
-    body.light-mode .bottom-nav {
-        background: rgba(255, 255, 255, 0.95);
-        border-top: 1px solid #ddd;
-        box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
-    }
-
-    .nav-item {
-        flex: 1;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        padding: 10px 0;
-        color: #888;
-        text-decoration: none;
-        transition: 0.2s;
-    }
-    .nav-item.active { color: #f39c12; }
-    .nav-icon { font-size: 1.4em; margin-bottom: 2px; }
-    .nav-label { font-size: 0.7em; }
+    .toggle-filter-btn { display: none; } /* 隱藏原本的篩選按鈕，用下方抽屜取代 */
 
     #advanced-filters {
         position: fixed;
         bottom: 0; left: 0; width: 100%;
         background: #1a1a1a;
-        z-index: 10000;
         border-radius: 20px 20px 0 0;
         padding: 20px;
         box-sizing: border-box;
-        max-height: 85vh;
-        overflow-y: auto;
+        z-index: 10001;
         transform: translateY(100%);
         transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-        box-shadow: 0 -5px 25px rgba(0,0,0,0.8);
-        margin-top: 0; /* 覆蓋掉 PC 版的 margin */
+        max-height: 85vh;
+        overflow-y: auto;
+        display: block; /* 覆寫 display: none */
     }
 
     #advanced-filters.expanded {
         transform: translateY(0);
-        max-height: 85vh;
-    }
-
-    .bottom-sheet-overlay {
-        display: block;
-        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-        background: rgba(0,0,0,0.7); backdrop-filter: blur(5px);
-        z-index: 9999; visibility: hidden; opacity: 0; transition: 0.3s;
-    }
-    .bottom-sheet-overlay.visible { visibility: visible; opacity: 1; }
-
-    .filter-sheet-header {
-        display: flex; justify-content: space-between; align-items: center;
-        border-bottom: 1px solid #333; padding-bottom: 15px; margin-bottom: 15px;
-    }
-
-    .filter-header-search-wrap {
-        display: flex; position: relative; width: 100%; margin-bottom: 15px;
-        padding-bottom: 15px; border-bottom: 1px solid #333;
-    }
-
-    .filter-sheet-close { background: transparent; color: #f39c12; border: 1px solid #f39c12; border-radius: 20px; padding: 5px 15px; cursor: pointer; }
-
-    /* 隱藏 PC 版的元素，但保留搜尋框 */
-    #filter-container { background: transparent; padding: 0; border: none; box-shadow: none; position: static !important; margin-bottom: 20px; }
-    #random-btn { display: none; }
-    .desktop-random-btn { display: none !important; }
-    .toggle-filter-btn { display: none; } /* 手機版使用底部導航列開啟篩選，隱藏此按鈕 */
-
-    .search-box { box-shadow: 0 4px 10px rgba(0,0,0,0.3); border: 1px solid #333; padding-right: 70px !important; } /* 增加右側 padding 以容納叉叉與語音按鈕 */
-
-    .filter-drawer-random-btn {
-        display: block;
     }
 }
+
+/* 備註視窗樣式 */
+#notes-modal-overlay {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.8); display: flex; justify-content: center; align-items: center;
+    z-index: 10500; visibility: hidden; opacity: 0; transition: opacity 0.3s; backdrop-filter: blur(5px);
+}
+#notes-modal-overlay.visible { visibility: visible; opacity: 1; }
+#notes-modal-content {
+    background: #1a1a1a; padding: 25px; border-radius: 12px; text-align: center;
+    border: 1px solid #444; box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+    width: 320px; max-width: 90%; transform: scale(0.9); transition: transform 0.3s;
+}
+#notes-modal-overlay.visible #notes-modal-content { transform: scale(1); }
+#notes-modal-content input {
+    width: 100%; padding: 12px; font-size: 1.1em; border-radius: 8px; border: 1px solid #555;
+    background: #222; color: #fff; box-sizing: border-box; outline: none;
+}
+#notes-modal-content input:focus { border-color: #f39c12; }
+
+/* 大頭貼視窗樣式 */
+#avatar-modal-overlay {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.85); display: flex; justify-content: center; align-items: center;
+    z-index: 10600; visibility: hidden; opacity: 0; transition: opacity 0.3s; backdrop-filter: blur(5px);
+}
+#avatar-modal-overlay.visible { visibility: visible; opacity: 1; }
+#avatar-modal-content {
+    background: #1a1a1a; padding: 25px; border-radius: 16px; text-align: center;
+    border: 1px solid #444; box-shadow: 0 10px 40px rgba(0,0,0,0.8);
+    width: 90%; max-width: 500px; max-height: 85vh; overflow-y: auto;
+    transform: scale(0.9); transition: transform 0.3s;
+}
+#avatar-modal-overlay.visible #avatar-modal-content { transform: scale(1); }
+.avatar-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); gap: 15px; margin-top: 15px;
+}
+.avatar-option {
+    background: #222; border: 2px solid #333; border-radius: 12px; padding: 10px; cursor: pointer; transition: 0.2s;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+}
+.avatar-option:hover { background: #333; border-color: #555; transform: translateY(-3px); }
+.avatar-option.selected { border-color: #f39c12; background: rgba(243, 156, 18, 0.1); box-shadow: 0 0 10px rgba(243, 156, 18, 0.3); }
+.avatar-option img { width: 60px; height: 60px; border-radius: 50%; background: #fff; margin-bottom: 8px; }
+.avatar-option span { font-size: 0.75em; color: #ccc; white-space: nowrap; }
+
+/* 自訂大頭貼上傳按鈕樣式 */
+.avatar-upload-section {
+    margin: 15px 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+.avatar-upload-btn {
+    background: linear-gradient(135deg, #8e44ad, #9b59b6);
+    color: white;
+    padding: 12px 24px;
+    border-radius: 30px;
+    font-weight: bold;
+    cursor: pointer;
+    box-shadow: 0 4px 15px rgba(142, 68, 173, 0.4);
+    transition: transform 0.2s, box-shadow 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+.avatar-upload-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(142, 68, 173, 0.6);
+}
+.avatar-upload-btn:active {
+    transform: scale(0.95);
+}
+
+/* 自動輪播區塊設計 */
+.carousel-wrapper {
+    width: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
+    white-space: nowrap;
+    -webkit-overflow-scrolling: touch;
+    scroll-behavior: smooth;
+    scroll-snap-type: x mandatory; /* 啟動 Scroll Snap */
+    padding-bottom: 15px; /* 給予陰影空間 */
+    margin-bottom: 20px;
+}
+
+/* 隱藏捲軸 */
+.carousel-wrapper::-webkit-scrollbar { display: none; }
+.carousel-wrapper { -ms-overflow-style: none; scrollbar-width: none; }
+
+.carousel-track {
+    display: inline-flex;
+    gap: 15px;
+    /* CSS 無限捲動動畫 (預設開啟，滑鼠懸停/觸控時暫停) */
+    animation: scrollCarousel 40s linear infinite;
+}
+
+@keyframes scrollCarousel {
+    0% { transform: translateX(0); }
+    100% { transform: translateX(calc(-50% - 7.5px)); } /* 移動一半的距離 (包含 gap) 達成無縫連接 */
+}
+
+/* 修改子項目，讓它可以被 Snap 捕捉 */
+.carousel-item {
+    width: 250px; /* 固定寬度讓輪播順暢 */
+    min-width: 250px;
+    border-radius: 12px;
+    overflow: hidden;
+    position: relative;
+    box-shadow: 0 6px 15px rgba(0,0,0,0.4);
+    cursor: pointer;
+    transition: transform 0.3s ease, filter 0.3s ease;
+    scroll-snap-align: start; /* Snap 對齊起點 */
+}
+
+.carousel-item:hover {
+    transform: scale(1.02) translateY(-5px);
+    z-index: 10;
+}
+
+.carousel-img-wrap {
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    position: relative;
+    background: #000;
+}
+
+/* 背景模糊放大圖，用來填補非 1:1 圖片的上下黑邊 */
+.carousel-blur-bg {
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    object-fit: cover;
+    filter: blur(10px) brightness(0.5);
+    transform: scale(1.1); /* 稍微放大避免邊緣漏光 */
+    z-index: 1;
+}
+
+/* 前景主角圖片 */
+.carousel-img-wrap img:not(.carousel-blur-bg) {
+    position: relative;
+    z-index: 2;
+    object-fit: contain !important; /* 改為 contain 保持完整比例 */
+}
+
+.carousel-name-overlay {
+    position: absolute;
+    bottom: 0; left: 0; width: 100%;
+    background: linear-gradient(transparent, rgba(0,0,0,0.9));
+    color: #fff;
+    padding: 20px 10px 10px 10px;
+    font-size: 1.2em;
+    font-weight: bold;
+    text-align: center;
+    box-sizing: border-box;
+    z-index: 3;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.8);
+}
+
+@media (max-width: 768px) {
+    .carousel-item { width: 180px; min-width: 180px; }
+    /* 手機板加速一點點 */
+    .carousel-track { animation-duration: 30s; }
+}
+
+/* 語音搜尋按鈕 */
+.voice-search-btn {
+    background: transparent;
+    border: none;
+    font-size: 1.4em;
+    cursor: pointer;
+    padding: 5px;
+    color: #f39c12;
+    transition: transform 0.2s;
+}
+.voice-search-btn:active { transform: scale(0.9); }
+.mic-recording {
+    animation: pulseMic 1s infinite;
+    color: #e74c3c;
+}
+@keyframes pulseMic {
+    0% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.2); opacity: 0.7; }
+    100% { transform: scale(1); opacity: 1; }
+}
+
+/* 右上角音樂總成 */
+.music-control-wrapper {
+    display: flex;
+    align-items: center;
+    background: rgba(30, 30, 30, 0.7);
+    border: 1px solid #444;
+    border-radius: 20px;
+    padding: 0 5px;
+    backdrop-filter: blur(5px);
+    -webkit-backdrop-filter: blur(5px);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+    height: 40px;
+    gap: 5px;
+}
+.music-control-wrapper button {
+    background: transparent;
+    border: none;
+    color: #ccc;
+    font-size: 1.2em;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    padding: 0;
+}
+.music-control-wrapper button:hover {
+    color: #fff;
+    transform: scale(1.1);
+}
+#volume-slider {
+    width: 60px;
+    margin: 0;
+    cursor: pointer;
+    accent-color: #f39c12; /* 支援現代瀏覽器的色彩設定 */
+}
+
+/* 淺色模式下音樂控制總成的樣式覆寫 */
+body.light-mode .music-control-wrapper {
+    background: rgba(255, 255, 255, 0.95);
+    border-color: #cbd5e1;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+}
+body.light-mode .music-control-wrapper button {
+    color: #475569;
+}
+body.light-mode .music-control-wrapper button:hover {
+    color: #d35400;
+}
+
+#back-to-top {
+    position: fixed;
+    bottom: 25px;
+    right: 25px;
+    background: rgba(30, 30, 30, 0.8);
+    color: #fff;
+    border: 1px solid #555;
+    border-radius: 50%;
+    width: 50px;
+    height: 50px;
+    font-size: 20px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    z-index: 9900;
+    backdrop-filter: blur(5px);
+    -webkit-backdrop-filter: blur(5px);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+    transition: opacity 0.4s ease, transform 0.4s ease, filter 0.3s ease;
+    opacity: 0; /* 預設隱藏 */
+    pointer-events: none;
+    transform: translateY(20px);
+}
+
+/* 如果有手機導航列，將按鈕往上提 */
+@media (max-width: 768px) {
+    #back-to-top {
+        bottom: 90px;
+        right: 15px;
+        width: 45px;
+        height: 45px;
+    }
+}
+    </style>
+</head>
+<body>
+    <!-- 星空背景畫布 -->
+    <canvas id="starry-sky"></canvas>
+
+    <div id="toast"></div>
+
+    <!-- 合併後的年齡確認與稱呼輸入視窗 -->
+    <div id="welcome-screen" class="visible">
+        <div id="welcome-content">
+            <h1>🍸 Iverson Bar</h1>
+            <div id="age-warning-section">
+                <h2 style="color: #e74c3c; margin-top: 0; font-size: 1.2em;">⚠️ 未滿 18 歲請勿飲酒</h2>
+                <p style="font-size: 0.9em; line-height: 1.6; margin-bottom: 15px; color: #ccc;">
+                    本網站含有酒精飲品資訊，請確認您已達法定飲酒年齡，並輸入您的專屬稱呼來進入吧台。
+                </p>
+            </div>
+            <input type="text" id="guest-name" placeholder="請輸入您的稱呼" style="width: 100%; box-sizing: border-box; margin-bottom: 15px; text-align: center;">
+
+            <!-- 設定視窗專屬的主題切換按鈕 -->
+            <div id="theme-toggle-section" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; padding: 10px 15px; background: rgba(255,255,255,0.05); border-radius: 8px; border: 1px solid #444;">
+                <span style="color: #ccc; font-size: 0.95em;">外觀主題設定</span>
+                <button id="theme-toggle-btn" onclick="toggleTheme()" style="background: transparent; border: 1px solid #888; color: #ccc; padding: 6px 16px; border-radius: 20px; cursor: pointer; transition: 0.3s;">🌙 深色模式</button>
+            </div>
+
+            <!-- 設定視窗專屬的音樂開關按鈕 (獨立於上方播放器) -->
+            <div id="welcome-music-section" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; padding: 10px 15px; background: rgba(255,255,255,0.05); border-radius: 8px; border: 1px solid #444;">
+                <span style="color: #ccc; font-size: 0.95em;">背景音樂</span>
+                <label style="display: flex; align-items: center; cursor: pointer;">
+                    <input type="checkbox" id="welcome-music-checkbox" style="width: 18px; height: 18px; margin: 0; margin-right: 8px;" checked>
+                    <span style="color: #ccc; font-size: 0.9em;">進入時播放</span>
+                </label>
+            </div>
+
+            <div id="age-checkbox-section" style="display: flex; justify-content: center; margin-bottom: 20px;">
+                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                    <input type="checkbox" id="age-checkbox" style="width: 18px; height: 18px; margin: 0;">
+                    <span style="color: #ccc; font-size: 0.95em;">我已年滿 18 歲</span>
+                </label>
+            </div>
+            <div style="display: flex; gap: 10px; justify-content: center; flex-direction: column;">
+                <button id="btn-start-order" onclick="saveNameAndConfirmAge()" style="background: #27ae60; color: white; width: 100%;">進入吧台</button>
+                <button id="btn-age-no" onclick="rejectAge()" style="background: transparent; color: #888; border: 1px solid #444; width: 100%;">未滿 18 歲 / 離開</button>
+                <button id="btn-cancel-change" onclick="cancelChangeName()" style="display: none; background: transparent; color: #888; border: 1px solid #444; width: 100%;">取消修改</button>
+            </div>
+            <p id="age-warning-msg" style="color: #e74c3c; font-size: 0.9em; margin-top: 15px; display: none;">未成年請勿飲酒，即將為您離開此頁面...</p>
+        </div>
+    </div>
+
+    <!-- 右上角浮動功能選單 -->
+    <div class="top-action-container">
+        <!-- 手機版展開選單按鈕 -->
+        <button id="menu-toggle-btn" class="menu-toggle-btn" onclick="document.getElementById('action-menu-items').classList.toggle('expanded'); this.innerHTML = this.innerHTML === '⋮' ? '✖' : '⋮';" title="展開功能選單">⋮</button>
+
+        <!-- 獨立的音樂控制總成 -->
+        <div id="music-control-wrapper" class="music-control-wrapper">
+            <button id="quick-music-btn" onclick="toggleMute()" title="播放 / 靜音">🔇</button>
+            <input type="range" id="volume-slider" min="0" max="1" step="0.01" value="0.5" title="調整音量">
+            <button id="next-music-btn" onclick="playNextSong(true)" title="切換下一首">⏭️</button>
+        </div>
+
+        <div id="action-menu-items" class="action-menu-items">
+            <!-- 右上角設定按鈕 (修改稱呼) -->
+            <button id="settings-btn" onclick="changeName()" style="background: rgba(30,30,30,0.7); color: #ccc; border: 1px solid #444; width: 40px; height: 40px; border-radius: 50%; font-size: 1.2em; display: flex; justify-content: center; align-items: center; cursor: pointer; backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px); transition: all 0.3s ease; box-shadow: 0 4px 10px rgba(0,0,0,0.5);" onmouseover="this.style.transform='rotate(90deg) scale(1.1)'; this.style.color='#fff';" onmouseout="this.style.transform='rotate(0deg) scale(1)'; this.style.color='#ccc';" title="設定 / 修改稱呼">⚙️</button>
+        </div>
+    </div>
+
+    <h1 id="main-title">🍸 Iverson Bar</h1>
+
+    <!-- 點餐紀錄 (置頂且可收合) -->
+    <div id="history">
+        <div id="history-header" onclick="toggleHistory()" style="flex-direction: column; align-items: stretch; gap: 10px;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <h3 style="margin: 0; color: #f39c12; font-size: 1.2em;">📜 點餐紀錄</h3>
+                <span class="expand-icon-wrap" id="history-expand-icon" style="font-size: 0.9em; color: #aaa; display: flex; align-items: center; gap: 4px;">
+                    <span class="expand-text">收合</span>
+                    <span class="expand-arrow" style="transition: transform 0.3s ease; display: inline-block;">▲</span>
+                </span>
+            </div>
+            <div style="display: flex; gap: 8px; align-items: center;">
+                <select id="history-date-filter" onclick="event.stopPropagation()" onchange="loadHistory()" style="flex: 1; padding: 6px 8px; border-radius: 6px; background: #222; color: #fff; border: 1px solid #444; font-size: 0.9em; outline: none;"></select>
+                <button class="clear-all-btn" onclick="clearAllMyHistory(event)" style="padding: 6px 12px; font-size: 0.9em; white-space: nowrap;">清空紀錄</button>
+            </div>
+        </div>
+        <div id="history-content" class="collapsible-wrapper expanded">
+            <div class="collapsible-inner">
+                <div id="history-list"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 排行榜 (今日/歷史) -->
+    <div id="leaderboard-container" style="display: none;">
+        <div class="lb-tabs">
+            <button class="lb-tab active" onclick="switchLeaderboard('today')">🏆 今日排行</button>
+            <button class="lb-tab" onclick="switchLeaderboard('alltime')">👑 歷史總榜</button>
+        </div>
+        <div id="leaderboard-today" class="lb-content active">
+            <div class="lb-list" id="today-leaderboard-list"></div>
+        </div>
+        <div id="leaderboard-alltime" class="lb-content">
+            <div class="lb-list" id="alltime-leaderboard-list"></div>
+        </div>
+    </div>
+
+    <!-- 我的最愛 (可收合) -->
+    <div id="favorites-container" style="display: none;">
+        <div id="favorites-header" onclick="toggleFavorites()" style="flex-direction: column; align-items: stretch; gap: 10px;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <h3 style="margin: 0; color: #e74c3c; font-size: 1.2em;">❤️ 我的最愛</h3>
+                <span class="expand-icon-wrap" id="favorites-expand-icon" style="font-size: 0.9em; color: #aaa; display: flex; align-items: center; gap: 4px;">
+                    <span class="expand-text">收合</span>
+                    <span class="expand-arrow" style="transition: transform 0.3s ease; display: inline-block;">▲</span>
+                </span>
+            </div>
+            <div style="display: flex; justify-content: flex-end;">
+                <button class="clear-all-btn" onclick="clearAllMyFavorites(event)" style="padding: 6px 12px; font-size: 0.9em; white-space: nowrap;">清空最愛</button>
+            </div>
+        </div>
+        <div id="favorites-content" class="collapsible-wrapper expanded">
+            <div class="collapsible-inner">
+                <div id="favorites-list"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 自動輪播區 (熱門推薦) -->
+    <div id="carousel-section" style="display: none;">
+         <h3 style="color: #f39c12; margin-top: 5px; margin-bottom: 10px; display: flex; align-items: center; gap: 8px;"><span>🌟</span> 吧台強推 / 本月精選</h3>
+         <div class="carousel-wrapper">
+             <div class="carousel-track" id="carousel-track"></div>
+         </div>
+    </div>
+
+    <!-- 搜尋與篩選區域 -->
+    <div id="filter-container">
+        <div class="search-bar-wrapper" style="position: relative; display: flex; align-items: center; flex-grow: 1;">
+            <input type="text" id="search-input" class="search-box" placeholder="🔍 搜尋酒名或描述..." oninput="applyFilters()" style="padding-right: 70px; width: 100%;">
+            <span id="clear-search-btn" class="clear-search-btn" onclick="clearSearch()" style="display: none; position: absolute; right: 5px; cursor: pointer; color: #e74c3c; font-size: 1.2em; padding: 5px;">✖</span>
+            <button id="voice-search-btn" class="voice-search-btn" onclick="startVoiceSearch()" title="語音搜尋" style="position: absolute; right: 35px;">🎙️</button>
+            <!-- 電腦版的隨機按鈕保留在此處 -->
+            <button id="random-btn" class="desktop-random-btn" onclick="recommendRandomDrink()" style="background: #8e44ad; color: white; border: none; padding: 0 12px; margin-left: 8px; margin-right: 8px; border-radius: 8px; cursor: pointer; font-weight: bold; white-space: nowrap; transition: 0.2s; position: relative;" onmouseover="if(!this.disabled) this.style.background='#9b59b6'" onmouseout="if(!this.disabled) this.style.background='#8e44ad'" title="不知道喝什麼？幫你抽一杯！">🎲 隨機</button>
+            <button id="toggle-filter-btn" class="toggle-filter-btn" onclick="toggleAdvancedFilters()" style="position: relative;">篩選 ▼</button>
+        </div>
+
+        <div id="advanced-filters">
+            <!-- 手機版專屬：頂部把手與關閉按鈕 -->
+            <div class="mobile-sheet-top-bar">
+                <h3 style="margin: 0; font-size: 1.3em; color: #f39c12;">🔍 搜尋與篩選</h3>
+                <button onclick="closeFilterSheet()" class="mobile-close-btn" title="關閉">✖</button>
+            </div>
+
+            <!-- 手機版專屬：醒目的隨機抽籤按鈕 -->
+            <div class="mobile-random-area">
+                <button id="mobile-random-btn" class="filter-drawer-random-btn" onclick="recommendRandomDrink()" style="background: linear-gradient(135deg, #8e44ad, #9b59b6); color: white; box-shadow: 0 6px 20px rgba(142, 68, 173, 0.5);">🎰 幫我隨機抽一杯</button>
+                <div class="random-hint">💡 勾選下方標籤後再點擊，會自動從篩選結果中抽籤喔！</div>
+            </div>
+
+            <!-- 原有的電腦版提示 (在手機版隱藏) -->
+            <div class="desktop-random-hint" style="padding: 10px; background: rgba(142, 68, 173, 0.15); border: 1px dashed #8e44ad; border-radius: 8px; margin-bottom: 15px; margin-top: 15px; color: #e0b0ff; font-size: 0.9em; text-align: center;">
+                💡 <strong>小提示：</strong> 選擇下方的標籤後再點擊「隨機」，就會只從您篩選的結果中抽一杯喔！
+            </div>
+
+            <div class="filter-group" id="filter-base">
+                <span class="filter-label">基酒:</span>
+                <label><input type="checkbox" class="tag-checkbox" value="琴酒" onchange="applyFilters()"><span class="tag-btn">琴酒</span></label>
+                <label><input type="checkbox" class="tag-checkbox" value="威士忌" onchange="applyFilters()"><span class="tag-btn">威士忌</span></label>
+                <label><input type="checkbox" class="tag-checkbox" value="伏特加" onchange="applyFilters()"><span class="tag-btn">伏特加</span></label>
+                <label><input type="checkbox" class="tag-checkbox" value="蘭姆酒" onchange="applyFilters()"><span class="tag-btn">蘭姆酒</span></label>
+                <label><input type="checkbox" class="tag-checkbox" value="龍舌蘭" onchange="applyFilters()"><span class="tag-btn">龍舌蘭</span></label>
+                <label><input type="checkbox" class="tag-checkbox" value="白蘭地" onchange="applyFilters()"><span class="tag-btn">白蘭地</span></label>
+                <label><input type="checkbox" class="tag-checkbox" value="其他" onchange="applyFilters()"><span class="tag-btn">其他</span></label>
+            </div>
+
+            <div class="filter-group" id="filter-special">
+                <span class="filter-label">特色:</span>
+                <label><input type="checkbox" class="tag-checkbox" value="熱門推薦" onchange="applyFilters()"><span class="tag-btn">熱門推薦</span></label>
+                <label><input type="checkbox" class="tag-checkbox" value="本月特調" onchange="applyFilters()"><span class="tag-btn">本月特調</span></label>
+            </div>
+
+            <div class="filter-group" id="filter-style">
+                <span class="filter-label">類型:</span>
+                <label><input type="checkbox" class="tag-checkbox" value="有氣泡" onchange="applyFilters()"><span class="tag-btn">有氣泡</span></label>
+                <label><input type="checkbox" class="tag-checkbox" value="無氣泡" onchange="applyFilters()"><span class="tag-btn">無氣泡</span></label>
+            </div>
+
+            <div class="filter-group" id="filter-flavor">
+                <span class="filter-label">風味:</span>
+                <label><input type="checkbox" class="tag-checkbox" value="偏酸" onchange="applyFilters()"><span class="tag-btn">偏酸 (酸度重)</span></label>
+                <label><input type="checkbox" class="tag-checkbox" value="偏甜" onchange="applyFilters()"><span class="tag-btn">偏甜 (酸度輕)</span></label>
+                <label><input type="checkbox" class="tag-checkbox" value="酒感重" onchange="applyFilters()"><span class="tag-btn">酒感重</span></label>
+                <label><input type="checkbox" class="tag-checkbox" value="清爽" onchange="applyFilters()"><span class="tag-btn">清爽 (酒感輕)</span></label>
+            </div>
+
+            <div class="filter-group" id="filter-history">
+                <span class="filter-label">紀錄:</span>
+                <label><input type="radio" name="history-filter" class="tag-checkbox" value="all" checked onchange="applyFilters()"><span class="tag-btn">全部</span></label>
+                <label><input type="radio" name="history-filter" class="tag-checkbox" value="ordered" onchange="applyFilters()"><span class="tag-btn">✔️ 曾經點過</span></label>
+                <label><input type="radio" name="history-filter" class="tag-checkbox" value="ordered-today" onchange="applyFilters()"><span class="tag-btn">📅 今日已點過</span></label>
+                <label><input type="radio" name="history-filter" class="tag-checkbox" value="unordered" onchange="applyFilters()"><span class="tag-btn">🆕 未點過</span></label>
+            </div>
+
+            <div class="filter-group" id="filter-sort">
+                <span class="filter-label">排序:</span>
+                <label><input type="radio" name="sort" class="tag-checkbox" value="default" checked onchange="applyFilters()"><span class="tag-btn">預設排序</span></label>
+                <label><input type="radio" name="sort" class="tag-checkbox" value="abv-desc" onchange="applyFilters()"><span class="tag-btn">酒精濃度 (高 ➔ 低)</span></label>
+                <label><input type="radio" name="sort" class="tag-checkbox" value="abv-asc" onchange="applyFilters()"><span class="tag-btn">酒精濃度 (低 ➔ 高)</span></label>
+            </div>
+
+            <div class="mobile-sheet-bottom-bar">
+                <button class="view-results-btn" onclick="closeFilterSheet()">查看篩選結果</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="menu"></div>
+
+    <!-- 回到頂部按鈕 -->
+    <button id="back-to-top" onclick="scrollToTop()">▲</button>
+
+    <!-- 本地背景音樂播放器 -->
+    <audio id="bg-music" preload="none" onended="playNextSong(false)"></audio>
+
+    <!-- 點餐推播通知容器 -->
+    <div id="order-toast-container"></div>
+
+    <!-- 圖片預覽模態視窗 -->
+    <div id="image-modal-overlay">
+        <div id="image-modal-content">
+            <img id="modal-image" src="" alt="Full size image">
+        </div>
+    </div>
+
+    <!-- Custom Confirm Modal -->
+    <div id="custom-confirm-overlay">
+        <div id="custom-confirm-content">
+            <p id="custom-confirm-message"></p>
+            <div id="custom-confirm-buttons">
+                <button id="confirm-yes" onclick="handleCustomConfirmYes()">確定</button>
+                <button id="confirm-no" onclick="handleCustomConfirmNo()">取消</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 備註輸入模態視窗 -->
+    <div id="notes-modal-overlay">
+        <div id="notes-modal-content">
+            <h3 style="color: #f39c12; margin-top: 0;">📝 需不需要客製化？</h3>
+            <p style="font-size: 0.9em; color: #aaa; margin-bottom: 15px;">(例如：去冰、加濃、微甜)</p>
+            <input type="text" id="order-notes-input" placeholder="若無可直接留白送單" onkeypress="if(event.key === 'Enter') submitOrderWithNotes()">
+            <div style="display: flex; flex-direction: column; align-items: center; margin-top: 15px;">
+                <button class="btn-order-anim" onclick="submitOrderWithNotes()" style="background: #27ae60; color: white; width: 100%; padding: 12px; font-size: 1.1em; border-radius: 8px; box-shadow: 0 4px 10px rgba(39, 174, 96, 0.3);">送出訂單 ✓</button>
+                <button onclick="closeNotesModal()" style="background: transparent; color: #888; border: none; padding: 8px; margin-top: 5px; font-size: 0.85em; text-decoration: underline; cursor: pointer; width: auto;">不點了 / 取消</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 大頭貼選擇模態視窗 -->
+    <div id="avatar-modal-overlay" onclick="if(event.target === this) closeAvatarModal()">
+        <div id="avatar-modal-content">
+            <h3 style="color: #f39c12; margin-top: 0;">✨ 挑選專屬風格</h3>
+            <p style="font-size: 0.9em; color: #aaa; margin-bottom: 5px;">點選預覽圖即可立即換裝：</p>
+
+            <div style="margin: 20px 0; border-bottom: 1px solid #333;"></div>
+            <div class="avatar-upload-section">
+                <label for="avatar-upload-input" class="avatar-upload-btn">
+                    📸 自拍或上傳照片
+                </label>
+                <input type="file" id="avatar-upload-input" accept="image/*" style="display: none;">
+                <p style="font-size: 0.8em; color: #888; margin-top: 8px;">(上傳後將自動裁切為正方形)</p>
+            </div>
+            <div style="margin: 20px 0; border-bottom: 1px solid #333;"></div>
+
+            <div id="avatar-grid" class="avatar-grid"></div>
+            <button onclick="closeAvatarModal()" style="background: transparent; color: #888; border: none; padding: 8px; margin-top: 20px; font-size: 0.9em; text-decoration: underline; cursor: pointer; width: auto;">關閉視窗</button>
+        </div>
+    </div>
+
+    <!-- 老虎機/抽籤動畫模態視窗 -->
+    <div id="slot-machine-overlay" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); display: flex; justify-content: center; align-items: center; z-index: 10500; visibility: hidden; opacity: 0; transition: opacity 0.3s; backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px);">
+        <div id="slot-machine-content" style="background: #1a1a1a; padding: 30px 40px; border-radius: 20px; text-align: center; border: 2px solid #8e44ad; box-shadow: 0 0 30px rgba(142, 68, 173, 0.6); transform: scale(0.8); transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); min-width: 250px; max-width: 90%; width: auto; box-sizing: border-box;">
+            <h3 style="color: #f39c12; margin-top: 0; font-size: 1.5em; letter-spacing: 2px;">🎰 命運的輪盤 🎰</h3>
+            <div style="margin: 20px 0; height: 100px; display: flex; align-items: center; justify-content: center; overflow: hidden; background: #000; border-radius: 12px; border: 2px inset #333; box-shadow: inset 0 0 15px rgba(0,0,0,0.8); padding: 0 15px; width: 100%; box-sizing: border-box;">
+                <!-- 這個 h2 會在 JavaScript 裡快速上下跳動製造殘影 -->
+                <h2 id="slot-machine-text" style="color: #fff; font-size: 1.8em; margin: 0; white-space: normal; word-break: break-word; line-height: 1.2; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; transition: all 0.05s; width: 100%;">準備中...</h2>
+            </div>
+            <p style="color: #aaa; font-size: 0.9em; margin-bottom: 0;">為您挑選最適合的微醺...</p>
+        </div>
+    </div>
+
+    <!-- 底部導航列 (手機版專屬) -->
+    <nav class="bottom-nav">
+        <a href="#" onclick="scrollToTop(); updateBottomNav('home'); return false;" class="nav-item active" id="nav-home">
+            <span class="nav-icon">🏠</span>
+            <span class="nav-label">首頁</span>
+        </a>
+        <a href="#" onclick="openFilterSheet(); updateBottomNav('search'); return false;" class="nav-item" id="nav-search">
+            <span class="nav-icon">🔍</span>
+            <span class="nav-label">篩選/抽一杯</span>
+        </a>
+        <a href="#favorites-container" onclick="openFavorites(); updateBottomNav('fav'); return false;" class="nav-item" id="nav-fav">
+            <span class="nav-icon">❤️</span>
+            <span class="nav-label">最愛</span>
+        </a>
+        <a href="#history" onclick="openHistory(); updateBottomNav('history'); return false;" class="nav-item" id="nav-history">
+            <span class="nav-icon">📜</span>
+            <span class="nav-label">紀錄</span>
+        </a>
+        <a href="#" onclick="changeName(); updateBottomNav('settings'); return false;" class="nav-item" id="nav-settings">
+            <span class="nav-icon">⚙️</span>
+            <span class="nav-label">設定</span>
+        </a>
+    </nav>
+
+    <!-- 製作中懸浮按鈕 (FAB) -->
+    <div id="active-orders-fab" class="fab-container" onclick="openHistory()" style="display: none;">
+        <div class="fab-icon">🍸</div>
+        <span id="active-orders-badge" class="fab-badge">0</span>
+    </div>
+
+    <!-- 底部篩選抽屜遮罩 -->
+    <div id="filter-sheet-overlay" class="bottom-sheet-overlay" onclick="closeFilterSheet()"></div>
+
+    <script src="/index.js?v=2"></script>
+</body>
+</html>

@@ -18,12 +18,32 @@ let globalFilteredDrinks = []; // 用來暫存目前符合篩選條件的酒款�
 let knownGuestCounts = {}; // 用於記錄成就推播
 let isLeaderboardFirstLoad = true; // 避免首次載入時觸發大量成就動畫
 
-const dicebearStyles = ['adventurer', 'adventurer-neutral', 'avataaars', 'avataaars-neutral', 'big-ears', 'big-ears-neutral', 'big-smile', 'bottts', 'bottts-neutral', 'croodles', 'croodles-neutral', 'dylan', 'fun-emoji', 'glass', 'icons', 'identicon', 'initials', 'lorelei', 'lorelei-neutral', 'micah', 'miniavs', 'notionists', 'notionists-neutral', 'open-peeps', 'personas', 'pixel-art', 'pixel-art-neutral', 'rings', 'shapes', 'thumbs'];
-let myAvatarStyle = localStorage.getItem('bar_guest_avatar_style') || 'adventurer-neutral';
+// 完整的 30 個 DiceBear v9 可用風格
+const uniqueDicebearStyles = [
+    'adventurer', 'adventurer-neutral', 'avataaars', 'avataaars-neutral', 
+    'big-ears', 'big-ears-neutral', 'big-smile', 'bottts', 'bottts-neutral', 
+    'croodles', 'croodles-neutral', 'dylan', 'fun-emoji', 'glass', 'icons', 
+    'identicon', 'initials', 'lorelei', 'lorelei-neutral', 'micah', 'miniavs', 
+    'notionists', 'notionists-neutral', 'open-peeps', 'personas', 'pixel-art', 
+    'pixel-art-neutral', 'rings', 'shapes', 'thumbs'
+];
+
+let myAvatarStyle = localStorage.getItem('bar_guest_avatar_style');
 let globalAvatars = {}; // 儲存所有客人的大頭貼風格
 
+// 根據名字產生固定的隨機風格，避免每次刷新頭像都變動
+function getRandomStyleForName(name) {
+    if (!name) return 'adventurer-neutral';
+    let hash = 0;
+    for (let i = 0; i < name.length; i++) {
+        hash = name.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    const index = Math.abs(hash) % uniqueDicebearStyles.length;
+    return uniqueDicebearStyles[index];
+}
+
 function getAvatarUrl(guestName) {
-    const style = globalAvatars[guestName] || (guestName === currentName ? myAvatarStyle : 'adventurer-neutral');
+    const style = globalAvatars[guestName] || (guestName === currentName && myAvatarStyle ? myAvatarStyle : getRandomStyleForName(guestName));
     if (style && style.startsWith('data:image/')) {
         return style; // It's a custom Base64 avatar
     }
@@ -197,7 +217,7 @@ function openAvatarModal() {
         `;
     }
 
-    grid.innerHTML = customAvatarHtml + dicebearStyles.map(style => {
+    grid.innerHTML = customAvatarHtml + uniqueDicebearStyles.map(style => {
         const previewUrl = `https://api.dicebear.com/9.x/${style}/svg?seed=${encodeURIComponent(currentName)}`;
         const isSelected = (!myAvatarStyle.startsWith('data:image/') && style === myAvatarStyle);
         return `
@@ -563,15 +583,22 @@ function toggleTheme() {
 }
 
 function saveNameAndConfirmAge() {
-    const name = document.getElementById('guest-name').value.trim();
+    const nameElement = document.getElementById('guest-name');
+    if (!nameElement) return;
+    
+    const name = nameElement.value.trim();
     const ageCheckbox = document.getElementById('age-checkbox');
     const isChangingName = document.getElementById('welcome-content').classList.contains('changing-name');
+    
+    if (!myAvatarStyle) { // 如果還沒設定風格，幫他隨機設定一個
+        myAvatarStyle = getRandomStyleForName(name);
+    }
     
     if (!name) {
         showToast('⚠️ 請輸入您的稱呼！', true);
         return;
     }
-    if (!isChangingName && !ageCheckbox.checked) {
+    if (!isChangingName && ageCheckbox && !ageCheckbox.checked) {
         showToast('⚠️ 請勾選「我已年滿 18 歲」！', true);
         return;
     }
@@ -591,11 +618,6 @@ function saveNameAndConfirmAge() {
     if (!isChangingName) {
         welcomeContent.classList.add('shatter-out'); // 首次進入觸發玻璃碎裂退場動畫
     }
-    
-    const music = document.getElementById('bg-music');
-    if (!isChangingName && music && music.paused) {
-        toggleMusic(); // 只有首次進入吧台時，才自動啟動背景音樂
-    }
 
     setTimeout(() => { 
         const ws = document.getElementById('welcome-screen');
@@ -609,10 +631,10 @@ function saveNameAndConfirmAge() {
 
     if (!isChangingName) triggerWelcomeGoldDust(); // 首次進入觸發金粉
 
-        // --- 新增：切換名字時，先立即清空舊的狀態並強制重繪 UI ---
-        guestFavorites = [];
-        renderFavorites();
-        applyFilters(); // 強制重繪酒單，這會立刻清除上一位客人的愛心與「已點過」標籤
+    // --- 新增：切換名字時，先立即清空舊的狀態並強制重繪 UI ---
+    guestFavorites = [];
+    renderFavorites();
+    applyFilters(); // 強制重繪酒單，這會立刻清除上一位客人的愛心與「已點過」標籤
 
     loadFavorites(); 
     loadHistory(); 
@@ -631,9 +653,8 @@ function changeName() {
     document.getElementById('btn-cancel-change').style.display = 'block';
     document.getElementById('btn-start-order').innerText = '儲存修改';
     
-    // 顯示主題切換與音樂按鈕
+    // 顯示主題切換按鈕
     document.getElementById('theme-toggle-section').style.display = 'flex';
-    document.getElementById('music-toggle-section').style.display = 'flex';
 
     const welcomeScreen = document.getElementById('welcome-screen');
     welcomeScreen.style.display = ''; // 解除隱藏
@@ -1398,21 +1419,23 @@ function order(name, btn) {
     promptForNotes(name, btn);
 }
 
-function scrollToDrink(drinkName) {
-    const searchInput = document.getElementById('search-input');
-    if (searchInput) searchInput.value = '';
-    
-    document.querySelectorAll('.tag-checkbox').forEach(cb => cb.checked = false);
-    document.querySelector('input[name="sort"][value="default"]').checked = true;
-    document.querySelector('input[name="history-filter"][value="all"]').checked = true; 
-    applyFilters(); 
-    
-    const panel = document.getElementById('advanced-filters');
-    if (panel.classList.contains('expanded')) { 
-        if(window.innerWidth <= 768) {
-            closeFilterSheet();
-        } else {
-            toggleAdvancedFilters(); 
+function scrollToDrink(drinkName, keepFilters = false) {
+    if (!keepFilters) {
+        const searchInput = document.getElementById('search-input');
+        if (searchInput) searchInput.value = '';
+        
+        document.querySelectorAll('.tag-checkbox').forEach(cb => cb.checked = false);
+        document.querySelector('input[name="sort"][value="default"]').checked = true;
+        document.querySelector('input[name="history-filter"][value="all"]').checked = true; 
+        applyFilters(); 
+        
+        const panel = document.getElementById('advanced-filters');
+        if (panel.classList.contains('expanded')) { 
+            if(window.innerWidth <= 768) {
+                closeFilterSheet();
+            } else {
+                toggleAdvancedFilters(); 
+            }
         }
     }
     
@@ -1628,7 +1651,7 @@ function recommendRandomDrink() {
                 
                 const prefix = hasFilters ? '🎯 根據您的口味偏好，推薦您：' : '🎲 吧台為您推薦：';
                 showToast(`${prefix}【${finalDrink.name}】！`);
-                scrollToDrink(finalDrink.name);
+                scrollToDrink(finalDrink.name, true);
             }, 2000);
         }
     }
@@ -2045,7 +2068,7 @@ socket.on('drink-sold-out-updated', (data) => {
             const restocks = recentlyUpdatedDrinks.filter(d => !d.isSoldOut).map(d => d.name);
             
             if (soldOuts.length > 0) {
-                const msg = soldOuts.length > 3 ? `${soldOuts.slice(0, 3).join('、')}...等 ${soldOuts.length} 款酒` : soldOuts.join('、');
+                const msg = soldOuts.length > 3 ? `${soldOuts.slice(0, 3).join('、')}...等 ${soldOuts.length} 款酒` : restocks.join('、');
                 showToast(`📢 吧台公告：【${msg}】已售罄！`, true); // true 代表紅色警告背景
             } else if (restocks.length > 0) {
                 const msg = restocks.length > 3 ? `${restocks.slice(0, 3).join('、')}...等 ${restocks.length} 款酒` : restocks.join('、');
@@ -2115,26 +2138,10 @@ socket.on('connect', () => {
     }
 });
 
-let wasMusicPlayingBeforeHidden = false;
-
-// 確保手機從背景切回前景時主動更新資料，並處理背景音樂的暫停與恢復
+// 確保手機從背景切回前景時主動更新資料
 document.addEventListener('visibilitychange', () => {
-    const music = document.getElementById('bg-music');
-    
-    if (document.hidden) {
-        // 當網頁被隱藏 (切換頁籤/縮到背景) 時，若音樂正在播放則靜默暫停
-        if (music && !music.paused) {
-            wasMusicPlayingBeforeHidden = true;
-            music.pause();
-        }
-    } else {
-        // 當網頁恢復顯示時，若隱藏前音樂是播放狀態，則自動恢復播放
-        if (wasMusicPlayingBeforeHidden && music) {
-            music.play().catch(e => console.log('恢復播放失敗', e));
-            wasMusicPlayingBeforeHidden = false;
-        }
-        
-        // 既有邏輯：主動更新最愛清單等資料
+    if (!document.hidden) {
+        // 主動更新最愛清單等資料
         if (currentName && socket.connected) {
             loadFavorites();
         }
@@ -2354,71 +2361,12 @@ function checkAgeVerification() {
             if (nameInput && currentName) nameInput.value = currentName;
                 
             // 初次進店的年齡確認畫面，不顯示主題切換與音樂按鈕
-                const themeSection = document.getElementById('theme-toggle-section');
-                if (themeSection) themeSection.style.display = 'none';
-            const musicSection = document.getElementById('music-toggle-section');
-            if (musicSection) musicSection.style.display = 'none';
+            const themeSection = document.getElementById('theme-toggle-section');
+            if (themeSection) themeSection.style.display = 'none';
         }
     }
 }
 
-// --- 背景音樂控制邏輯 ---
-function toggleMusic() {
-    const music = document.getElementById('bg-music');
-    const btn = document.getElementById('music-toggle-btn');
-    const quickBtn = document.getElementById('quick-music-btn');
-    if (!music) return;
-
-    if (music.paused) {
-        music.play().then(() => {
-            if (btn) {
-                btn.classList.add('music-playing');
-                btn.innerHTML = '<span id="music-icon" style="display:inline-block; animation: spinIcon 4s linear infinite;">🎵</span> 播放中';
-            }
-            if (quickBtn) quickBtn.innerHTML = '<span style="display:inline-block; animation: spinIcon 4s linear infinite;">🎵</span>';
-            showToast('🎵 已開啟背景音樂');
-        }).catch(e => {
-            showToast('⚠️ 無法自動播放，請檢查瀏覽器設定', true);
-        });
-    } else {
-        music.pause();
-        if (btn) {
-            btn.classList.remove('music-playing');
-            btn.innerHTML = '<span id="music-icon">🔇</span> 已暫停';
-        }
-        if (quickBtn) quickBtn.innerHTML = '🔇';
-        showToast('🔇 已暫停背景音樂');
-    }
-}
-
-// 準備爵士樂播放清單 (全域變數供手動與自動切歌使用)
-const jazzPlaylist = [
-    "https://cdn.pixabay.com/audio/2022/01/18/audio_d0a13f69d2.mp3", // 原本的輕柔 Jazz
-    "https://cdn.pixabay.com/audio/2022/02/10/audio_fc48af67b2.mp3", // 輕鬆的 Cafe Jazz
-    "https://cdn.pixabay.com/audio/2021/11/19/audio_65b35cbbe0.mp3", // 浪漫微醺 Lofi Jazz
-    "https://cdn.pixabay.com/audio/2022/03/24/audio_fede3cdb32.mp3"  // 慵懶的 Night Jazz
-];
-
-// 手動或自動切換下一首歌
-function playNextSong(isManual = false) {
-    const bgMusic = document.getElementById('bg-music');
-    if (!bgMusic) return;
-    
-    let nextSong = jazzPlaylist[Math.floor(Math.random() * jazzPlaylist.length)];
-    // 避免剛好抽到跟現在同一首
-    while (jazzPlaylist.length > 1 && bgMusic.src === nextSong) {
-        nextSong = jazzPlaylist[Math.floor(Math.random() * jazzPlaylist.length)];
-    }
-    
-    bgMusic.src = nextSong;
-    bgMusic.play().then(() => {
-        if (isManual) showToast('⏭️ 已為您切換下一首爵士樂');
-        const btn = document.getElementById('music-toggle-btn');
-        const quickBtn = document.getElementById('quick-music-btn');
-        if (btn) { btn.classList.add('music-playing'); btn.innerHTML = '<span id="music-icon" style="display:inline-block; animation: spinIcon 4s linear infinite;">🎵</span> 播放中'; }
-        if (quickBtn) quickBtn.innerHTML = '<span style="display:inline-block; animation: spinIcon 4s linear infinite;">🎵</span>';
-    }).catch(e => console.log('自動播放下一首失敗', e));
-}
 
 // 清除搜尋框內容
 function clearSearch() {
@@ -2498,7 +2446,7 @@ document.addEventListener('DOMContentLoaded', () => {
         body.light-mode #filter-container { background: rgba(255, 255, 255, 0.95) !important; border-color: #e2e8f0 !important; box-shadow: 0 4px 15px rgba(0,0,0,0.05) !important; }
         
         /* 頂部與底部導航 */
-        body.light-mode #settings-btn, body.light-mode #quick-music-btn, body.light-mode #next-music-btn, body.light-mode #menu-toggle-btn { background: rgba(255,255,255,0.95) !important; color: #475569 !important; border: 1px solid #cbd5e1 !important; box-shadow: 0 4px 10px rgba(0,0,0,0.05) !important; }
+        body.light-mode #settings-btn, body.light-mode #menu-toggle-btn { background: rgba(255,255,255,0.95) !important; color: #475569 !important; border: 1px solid #cbd5e1 !important; box-shadow: 0 4px 10px rgba(0,0,0,0.05) !important; }
         body.light-mode .bottom-nav { background: rgba(255, 255, 255, 0.98); border-top: 1px solid #e2e8f0; box-shadow: 0 -2px 10px rgba(0,0,0,0.03); }
         body.light-mode .bottom-nav .nav-item { color: #94a3b8; }
         body.light-mode .bottom-nav .nav-item.active { color: #d35400; }
@@ -2515,7 +2463,7 @@ document.addEventListener('DOMContentLoaded', () => {
         body.light-mode .avatar-option:hover { background: #f1f5f9; }
         body.light-mode .avatar-option.selected { background: #fff7ed; border-color: #ea580c; box-shadow: 0 0 0 2px rgba(234, 88, 12, 0.2); }
         body.light-mode .avatar-option span { color: #475569; }
-        body.light-mode #theme-toggle-section, body.light-mode #music-toggle-section { background: #f8fafc !important; border-color: #e2e8f0 !important; }
+        body.light-mode #theme-toggle-section { background: #f8fafc !important; border-color: #e2e8f0 !important; }
         
         /* 老虎機 */
         body.light-mode #slot-machine-content { background: #ffffff !important; border-color: #8e44ad !important; }

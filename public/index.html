@@ -8,7 +8,7 @@
     <script src="/socket.io/socket.io.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
-    <link rel="stylesheet" href="/index.css?v=1">
+    <link rel="stylesheet" href="/index.css?v=2">
     <style>
         /* 點餐按鈕專屬動畫特效 */
         .btn-order-anim {
@@ -91,6 +91,7 @@
     <canvas id="starry-sky"></canvas>
 
     <div id="toast"></div>
+
     <!-- 合併後的年齡確認與稱呼輸入視窗 -->
     <div id="welcome-screen" class="visible">
         <div id="welcome-content">
@@ -104,15 +105,9 @@
             <input type="text" id="guest-name" placeholder="請輸入您的稱呼" style="width: 100%; box-sizing: border-box; margin-bottom: 15px; text-align: center;">
             
             <!-- 新增：設定視窗專屬的主題切換按鈕 -->
-            <div id="theme-toggle-section" style="display: none; justify-content: space-between; align-items: center; margin-bottom: 15px; padding: 10px 15px; background: rgba(255,255,255,0.05); border-radius: 8px; border: 1px solid #444;">
+            <div id="theme-toggle-section" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; padding: 10px 15px; background: rgba(255,255,255,0.05); border-radius: 8px; border: 1px solid #444;">
                 <span style="color: #ccc; font-size: 0.95em;">外觀主題設定</span>
                 <button id="theme-toggle-btn" onclick="toggleTheme()" style="background: transparent; border: 1px solid #888; color: #ccc; padding: 6px 16px; border-radius: 20px; cursor: pointer; transition: 0.3s;">🌙 深色模式</button>
-            </div>
-
-            <!-- 新增：設定視窗專屬的音樂切換按鈕 -->
-            <div id="music-toggle-section" style="display: none; justify-content: space-between; align-items: center; margin-bottom: 15px; padding: 10px 15px; background: rgba(255,255,255,0.05); border-radius: 8px; border: 1px solid #444;">
-                <span style="color: #ccc; font-size: 0.95em;">背景音樂</span>
-                <button id="music-toggle-btn" onclick="toggleMusic()" style="background: transparent; border: 1px solid #888; color: #ccc; padding: 6px 16px; border-radius: 20px; cursor: pointer; transition: 0.3s;"><span id="music-icon">🔇</span> 已暫停</button>
             </div>
 
             <div id="age-checkbox-section" style="display: flex; justify-content: center; margin-bottom: 20px;">
@@ -138,12 +133,6 @@
         <div id="action-menu-items" class="action-menu-items">
             <!-- 右上角設定按鈕 (修改稱呼) -->
             <button id="settings-btn" onclick="changeName()" style="background: rgba(30,30,30,0.7); color: #ccc; border: 1px solid #444; width: 40px; height: 40px; border-radius: 50%; font-size: 1.2em; display: flex; justify-content: center; align-items: center; cursor: pointer; backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px); transition: all 0.3s ease; box-shadow: 0 4px 10px rgba(0,0,0,0.5);" onmouseover="this.style.transform='rotate(90deg) scale(1.1)'; this.style.color='#fff';" onmouseout="this.style.transform='rotate(0deg) scale(1)'; this.style.color='#ccc';" title="設定 / 修改稱呼">⚙️</button>
-
-            <!-- 右上角音樂快捷按鈕 -->
-            <button id="quick-music-btn" onclick="toggleMusic()" style="background: rgba(30,30,30,0.7); color: #ccc; border: 1px solid #444; width: 40px; height: 40px; border-radius: 50%; font-size: 1.2em; display: flex; justify-content: center; align-items: center; cursor: pointer; backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px); transition: all 0.3s ease; box-shadow: 0 4px 10px rgba(0,0,0,0.5);" onmouseover="this.style.transform='scale(1.1)'; this.style.color='#fff';" onmouseout="this.style.transform='scale(1)'; this.style.color='#ccc';" title="播放 / 暫停音樂">🔇</button>
-
-            <!-- 右上角切歌快捷按鈕 -->
-            <button id="next-music-btn" onclick="playNextSong(true)" style="background: rgba(30,30,30,0.7); color: #ccc; border: 1px solid #444; width: 40px; height: 40px; border-radius: 50%; font-size: 1.2em; display: flex; justify-content: center; align-items: center; cursor: pointer; backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px); transition: all 0.3s ease; box-shadow: 0 4px 10px rgba(0,0,0,0.5);" onmouseover="this.style.transform='scale(1.1)'; this.style.color='#fff';" onmouseout="this.style.transform='scale(1)'; this.style.color='#ccc';" title="切換下一首">⏭️</button>
         </div>
     </div>
 
@@ -300,9 +289,6 @@
     <!-- 回到頂部按鈕 -->
     <button id="back-to-top" onclick="scrollToTop()">▲</button>
 
-    <!-- 背景音樂 (將由 JS 自動隨機挑選爵士樂歌單並播放) -->
-    <audio id="bg-music" preload="none"></audio>
-
     <!-- 點餐推播通知容器 -->
     <div id="order-toast-container"></div>
 
@@ -403,6 +389,6 @@
     <!-- 底部篩選抽屜遮罩 -->
     <div id="filter-sheet-overlay" class="bottom-sheet-overlay" onclick="closeFilterSheet()"></div>
 
-    <script src="/index.js?v=1"></script>
+    <script src="/index.js?v=2"></script>
 </body>
 </html>

@@ -19,37 +19,45 @@ let isSidebarHidden = false; // 控制側邊欄狀態
 
 // --- 防止 iPad 螢幕自動休眠 (Screen Wake Lock API) ---
 let wakeLock = null;
+let wakeLockRequested = false;
+
 async function requestWakeLock() {
     try {
         if ('wakeLock' in navigator) {
             wakeLock = await navigator.wakeLock.request('screen');
             console.log('螢幕已鎖定常亮');
+            wakeLockRequested = true;
             wakeLock.addEventListener('release', () => {
                 console.log('螢幕常亮已解除');
+                wakeLockRequested = false;
             });
         }
     } catch (err) {
         console.log(`Wake Lock 錯誤: ${err.name}, ${err.message}`);
     }
 }
+
 document.addEventListener('visibilitychange', () => {
     if (wakeLock !== null && document.visibilityState === 'visible') {
         requestWakeLock();
     }
 });
+
+// 當使用者第一次在畫面上進行任何操作時，嘗試鎖定螢幕
+document.addEventListener('click', () => {
+    if (!wakeLockRequested) {
+        requestWakeLock();
+    }
+}, { once: true });
 // -----------------------------------------------------------
 
 function getAvatarUrl(guestName) {
-    const style = globalAvatars[guestName] || 'adventurer-neutral';
+    const style = globalAvatars[guestName] || 'adventurer';
     if (style && style.startsWith('data:image/')) {
         return style; 
     }
     return `https://api.dicebear.com/9.x/${style}/svg?seed=${encodeURIComponent(guestName)}`;
 }
-
-// 建立全域音效物件 (更換為清脆、穿透力強的吧台服務鈴聲)
-const notificationSound = new Audio('https://actions.google.com/sounds/v1/alarms/dinner_bell_triangle.ogg');
-notificationSound.volume = 1.0; 
 
 let titleFlashInterval = null;
 let titleFlashCount = 0;
@@ -66,18 +74,7 @@ function stopTitleFlash() {
 window.addEventListener('focus', stopTitleFlash);
 document.addEventListener('click', stopTitleFlash);
 
-function unlockNotifications() {
-    notificationSound.play().then(() => {
-        notificationSound.pause();
-        notificationSound.currentTime = 0;
-    }).catch(e => console.log('音效預載失敗:', e));
-    document.getElementById('audio-unlock-overlay').style.display = 'none';
-    requestWakeLock(); 
-}
-
 function playNotification(customFlashText = '🔔 新通知！') {
-    notificationSound.currentTime = 0;
-    notificationSound.play().catch(e => console.log('播放音效被瀏覽器阻擋:', e));
     if ("vibrate" in navigator) { navigator.vibrate([500, 200, 500, 200, 500]); }
     
     // 背景紅色心跳閃爍特效
