@@ -392,15 +392,62 @@ function getFlavorIcons(d) {
 
 // 自動輪播渲染邏輯
 function renderCarousel() {
-    const topDrinks = getTop3Drinks();
-    // 抓出沒缺貨，且是熱門標籤或是自動前三名的酒
-    let featured = allDrinks.filter(d => !d.isSoldOut && ((d.tags || []).includes('熱門推薦') || topDrinks.includes(d.name)));
+    let featured = [];
     
-    // 如果數量太少，隨機抓幾杯來湊數，確保至少有 6 杯才能完成無縫輪播
+    // 1. 固定加入：琴通寧 (如果未售罄)
+    const ginTonic = allDrinks.find(d => 
+        !d.isSoldOut && 
+        (d.name === '琴通寧  Gin Tonic' || d.name.toLowerCase().includes('gin tonic'))
+    );
+    if (ginTonic) {
+        featured.push(ginTonic);
+    }
+    
+    // 2. 固定加入：來一杯shot (特製卡片)
+    const customShot = {
+        name: "來一杯shot",
+        tags: ["其他", "無氣泡"],
+        description: "來杯經典 Shot！開啟你的微醺之夜 🥃",
+        isSoldOut: false,
+        id: "custom-shot"
+    };
+    featured.push(customShot);
+    
+    // 隨機從某個分類中挑選一款尚未被加入的酒款
+    function getCategoryDrink(categoryTag, currentList) {
+        const pool = allDrinks.filter(d => 
+            !d.isSoldOut && 
+            (d.tags || []).includes(categoryTag) && 
+            !currentList.some(item => item.name === d.name)
+        );
+        if (pool.length === 0) return null;
+        return pool[Math.floor(Math.random() * pool.length)];
+    }
+    
+    // 3. 基酒各跑一種：琴酒、威士忌、伏特加、蘭姆酒、龍舌蘭、白蘭地、其他
+    const bases = ['琴酒', '威士忌', '伏特加', '蘭姆酒', '龍舌蘭', '白蘭地', '其他'];
+    bases.forEach(base => {
+        const drink = getCategoryDrink(base, featured);
+        if (drink) featured.push(drink);
+    });
+    
+    // 4. 氣泡/無氣泡各跑一種 (若原本列表內該屬性未被代表，則隨機挑選一個)
+    const styles = ['有氣泡', '無氣泡'];
+    styles.forEach(style => {
+        const alreadyHasStyle = featured.some(d => (d.tags || []).includes(style));
+        if (!alreadyHasStyle) {
+            const drink = getCategoryDrink(style, featured);
+            if (drink) featured.push(drink);
+        }
+    });
+    
+    // 防呆：確保至少有 6 杯才能完成無縫輪播 (若品項極少，隨機抓未售罄的湊數)
     const available = allDrinks.filter(d => !d.isSoldOut);
-    while(featured.length < 6 && featured.length < available.length) {
+    while (featured.length < 6 && featured.length < available.length) {
         const randomDrink = available[Math.floor(Math.random() * available.length)];
-        if(!featured.includes(randomDrink)) featured.push(randomDrink);
+        if (!featured.some(item => item.name === randomDrink.name)) {
+            featured.push(randomDrink);
+        }
     }
     
     if (featured.length === 0) return;
@@ -1423,6 +1470,12 @@ function order(name, btn) {
 }
 
 function scrollToDrink(drinkName, keepFilters = false) {
+    if (drinkName === '來一杯shot') {
+        showToast('🥃 來一杯 Shot！正在為您隨機抽選今晚的特調...');
+        recommendRandomDrink(); // 觸發老虎機抽籤
+        return;
+    }
+    
     if (!keepFilters) {
         const searchInput = document.getElementById('search-input');
         if (searchInput) searchInput.value = '';
