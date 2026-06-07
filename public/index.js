@@ -421,6 +421,9 @@ function renderCarousel() {
             </div>
         </div>`;
     }).join('');
+
+    // 初始化或重置滾動位置，確保自轉與手動無縫對齊
+    initCarouselSwipe(true);
 }
 
 // 語音搜尋初始化與邏輯
@@ -2729,11 +2732,90 @@ function initStarrySky() {
 }
 
 // --- 輪播區滑動與拖曳控制 ---
-function initCarouselSwipe() {
-    const slider = document.querySelector('.carousel-wrapper');
-    if (!slider) return;
+let carouselAutoScrollTimer = null;
+let carouselIsInteracting = false;
+let carouselResumeTimeout = null;
+let carouselScrollPosition = 0; // 高精度浮點數滾動位置追蹤器，避免瀏覽器整數四捨五入導致靜止
 
-    // --- 新增：左右滑動按鈕 (電腦版) ---
+function startCarouselAutoScroll() {
+    if (carouselAutoScrollTimer) {
+        cancelAnimationFrame(carouselAutoScrollTimer);
+        carouselAutoScrollTimer = null;
+    }
+    
+    const slider = document.querySelector('.carousel-wrapper');
+    const track = document.getElementById('carousel-track');
+    if (!slider || !track) return;
+    
+    let lastTime = performance.now();
+    const speed = 45; // 每秒滾動的像素數
+    
+    function step(now) {
+        const delta = (now - lastTime) / 1000;
+        lastTime = now;
+        
+        if (!carouselIsInteracting) {
+            // 自動輪播時關閉 Snap 貼合以求極致平順
+            if (slider.style.scrollSnapType !== 'none') {
+                slider.style.scrollSnapType = 'none';
+            }
+            carouselScrollPosition += speed * delta;
+            slider.scrollLeft = carouselScrollPosition;
+        } else {
+            // 手動操作時同步浮點數計數器，防止手動後位置跳躍
+            carouselScrollPosition = slider.scrollLeft;
+        }
+        
+        carouselAutoScrollTimer = requestAnimationFrame(step);
+    }
+    
+    carouselAutoScrollTimer = requestAnimationFrame(step);
+}
+
+function initCarouselSwipe(resetPositionOnly = false) {
+    const slider = document.querySelector('.carousel-wrapper');
+    const track = document.getElementById('carousel-track');
+    if (!slider || !track) return;
+
+    // 計算半寬度 (單組酒款的總寬度)
+    const halfWidth = track.scrollWidth / 2;
+    
+    // 如果僅重置位置 (例如 renderCarousel 渲染後觸發)
+    if (resetPositionOnly) {
+        if (halfWidth > 0) {
+            slider.style.scrollBehavior = 'auto';
+            slider.scrollLeft = halfWidth;
+            carouselScrollPosition = halfWidth;
+        }
+        if (!carouselIsInteracting) {
+            startCarouselAutoScroll();
+        }
+        return;
+    }
+    
+    // 避免重複綁定事件監聽器
+    if (slider.dataset.carouselInitialized === 'true') {
+        if (halfWidth > 0) {
+            slider.style.scrollBehavior = 'auto';
+            slider.scrollLeft = halfWidth;
+            carouselScrollPosition = halfWidth;
+        }
+        if (!carouselIsInteracting) {
+            startCarouselAutoScroll();
+        }
+        return;
+    }
+    
+    slider.dataset.carouselInitialized = 'true';
+    
+    // 設定初始滾動位置至中間 (讓左右滑動皆有無限空間)
+    if (halfWidth > 0) {
+        slider.style.scrollBehavior = 'auto';
+        slider.scrollLeft = halfWidth;
+        carouselScrollPosition = halfWidth;
+    }
+    
+    // --- 左右滑動按鈕 (電腦版) ---
     const section = document.getElementById('carousel-section');
     if (section && !document.querySelector('.carousel-nav-btn')) {
         section.style.position = 'relative'; // 確保絕對定位的按鈕不會跑版
@@ -2769,44 +2851,106 @@ function initCarouselSwipe() {
         prevBtn.className = 'carousel-nav-btn prev';
         prevBtn.innerHTML = '&#10094;'; // < 符號
         prevBtn.title = '向左滑動';
-        prevBtn.onclick = (e) => { e.stopPropagation(); slider.scrollBy({ left: -300, behavior: 'smooth' }); };
+        prevBtn.onclick = (e) => { 
+            e.stopPropagation(); 
+            triggerManualInteraction();
+            slider.style.scrollBehavior = 'smooth';
+            slider.scrollBy({ left: -300 });
+            resetResumeTimer();
+        };
 
         const nextBtn = document.createElement('button');
         nextBtn.className = 'carousel-nav-btn next';
         nextBtn.innerHTML = '&#10095;'; // > 符號
         nextBtn.title = '向右滑動';
-        nextBtn.onclick = (e) => { e.stopPropagation(); slider.scrollBy({ left: 300, behavior: 'smooth' }); };
-
-        // 滑鼠移到按鈕上時也要暫停輪播動畫
-        [prevBtn, nextBtn].forEach(btn => {
-            btn.addEventListener('mouseenter', () => { const t = document.getElementById('carousel-track'); if (t) t.style.animationPlayState = 'paused'; });
-            btn.addEventListener('mouseleave', () => { const t = document.getElementById('carousel-track'); if (t) t.style.animationPlayState = 'running'; });
-        });
+        nextBtn.onclick = (e) => { 
+            e.stopPropagation(); 
+            triggerManualInteraction();
+            slider.style.scrollBehavior = 'smooth';
+            slider.scrollBy({ left: 300 });
+            resetResumeTimer();
+        };
 
         section.appendChild(prevBtn);
         section.appendChild(nextBtn);
     }
+    
+    // 開始手動操作
+    function triggerManualInteraction() {
+        carouselIsInteracting = true;
+        if (carouselResumeTimeout) {
+            clearTimeout(carouselResumeTimeout);
+            carouselResumeTimeout = null;
+        }
+        slider.style.scrollSnapType = 'x mandatory'; // 啟用 Snap 貼合
+        carouselScrollPosition = slider.scrollLeft; // 確保數值同步
+    }
+    
+    // 手動操作結束，計時重啟自動輪播
+    function resetResumeTimer() {
+        if (carouselResumeTimeout) {
+            clearTimeout(carouselResumeTimeout);
+        }
+        carouselResumeTimeout = setTimeout(() => {
+            carouselIsInteracting = false;
+            slider.style.scrollSnapType = 'none'; // 關閉 Snap
+            slider.style.scrollBehavior = 'auto'; // 改回 auto 以利自轉
+            carouselScrollPosition = slider.scrollLeft; // 重啟前最後同步一次
+            startCarouselAutoScroll();
+        }, 2500);
+    }
 
-    // --- CSS Scroll Snap 已取代手動 JS 拖曳邏輯 ---
-    // 保留滑鼠事件：懸停時暫停自動輪播，移開時繼續
-    slider.addEventListener('mouseenter', () => {
-        const track = document.getElementById('carousel-track');
-        if (track) track.style.animationPlayState = 'paused'; // 滑鼠懸停時暫停自動輪播
-    });
+    // --- 滑鼠與指標懸停事件 (支援電腦與平板) ---
+    const handleEnter = () => {
+        triggerManualInteraction();
+    };
+    const handleLeave = () => {
+        resetResumeTimer();
+    };
 
-    slider.addEventListener('mouseleave', () => {
-        const track = document.getElementById('carousel-track');
-        if (track) track.style.animationPlayState = 'running'; // 恢復輪播
-    });
+    slider.addEventListener('mouseenter', handleEnter);
+    slider.addEventListener('mouseleave', handleLeave);
+    slider.addEventListener('pointerenter', handleEnter);
+    slider.addEventListener('pointerleave', handleLeave);
 
-    // --- 觸控事件 (手機端)：只需處理暫停/播放動畫 ---
-    slider.addEventListener('touchstart', (e) => {
-        const track = document.getElementById('carousel-track');
-        if (track) track.style.animationPlayState = 'paused';
+    // --- 觸控事件 (手機端) ---
+    slider.addEventListener('touchstart', () => {
+        triggerManualInteraction();
+        slider.style.scrollBehavior = 'auto'; // 觸控時確保零延遲，提升手感
     }, { passive: true });
 
     slider.addEventListener('touchend', () => {
-        const track = document.getElementById('carousel-track');
-        if (track) track.style.animationPlayState = 'running';
+        resetResumeTimer();
     });
+    
+    slider.addEventListener('touchcancel', () => {
+        resetResumeTimer();
+    });
+
+    // --- 滾動事件：無縫邊界回彈 ---
+    slider.addEventListener('scroll', () => {
+        const dynHalfWidth = track.scrollWidth / 2;
+        if (dynHalfWidth <= 0) return;
+        
+        // 當滾動位置超過 [0.5 * dynHalfWidth, 1.5 * dynHalfWidth] 的區間時，進行無縫換位
+        if (slider.scrollLeft >= dynHalfWidth * 1.5) {
+            const prevBehavior = slider.style.scrollBehavior;
+            slider.style.scrollBehavior = 'auto';
+            slider.scrollLeft -= dynHalfWidth;
+            slider.style.scrollBehavior = prevBehavior;
+            carouselScrollPosition -= dynHalfWidth; // 同步追蹤器
+        } else if (slider.scrollLeft <= dynHalfWidth * 0.5) {
+            const prevBehavior = slider.style.scrollBehavior;
+            slider.style.scrollBehavior = 'auto';
+            slider.scrollLeft += dynHalfWidth;
+            slider.style.scrollBehavior = prevBehavior;
+            carouselScrollPosition += dynHalfWidth; // 同步追蹤器
+        } else if (carouselIsInteracting) {
+            // 如果是在手動滑動中，隨時更新浮點追蹤器
+            carouselScrollPosition = slider.scrollLeft;
+        }
+    });
+
+    // 啟動自轉
+    startCarouselAutoScroll();
 }
