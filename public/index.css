@@ -1315,7 +1315,9 @@ button:hover {
 /* 淺色模式下音樂控制總成的樣式覆寫 */
 body.light-mode .music-control-wrapper {
     background: rgba(255, 255, 255, 0.95);
-    /* ==================== 溫暖淺色模式 (Warm Light Mode) ==================== */
+}
+
+/* ==================== 溫暖淺色模式 (Warm Light Mode) ==================== */
 body.light-mode {
     background-color: #f7f5f0;
     color: #2c2621;
@@ -1648,4 +1650,103 @@ body.light-mode .category-tab.active {
     color: #fff;
     border-color: #d35400;
     box-shadow: 0 2px 8px rgba(211, 84, 0, 0.25);
+}
+
+/* ==================== Card Story & Spec Collapsible ==================== */
+.story-toggle-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 7px 12px;
+    margin-top: 10px;
+    margin-bottom: 2px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px dashed rgba(255, 255, 255, 0.15);
+    border-radius: 8px;
+    font-size: 0.85em;
+    color: #f39c12;
+    cursor: pointer;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    user-select: none;
+    font-weight: 500;
+}
+
+body.light-mode .story-toggle-btn {
+    background: rgba(0, 0, 0, 0.03);
+    border: 1px dashed rgba(0, 0, 0, 0.12);
+    color: #b7791f;
+}
+
+.story-toggle-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: #f39c12;
+    transform: translateY(-1px);
+}
+
+body.light-mode .story-toggle-btn:hover {
+    background: rgba(0, 0, 0, 0.06);
+    border-color: #b7791f;
+}
+
+.story-toggle-btn.active {
+    background: rgba(243, 156, 18, 0.15);
+    border-style: solid;
+    border-color: #f39c12;
+    color: #ffb84d;
+}
+
+body.light-mode .story-toggle-btn.active {
+    background: rgba(183, 121, 31, 0.12);
+    border-color: #b7791f;
+    color: #744210;
+}
+
+.story-collapsible {
+    max-height: 0;
+    overflow: hidden;
+    opacity: 0;
+    padding: 0 4px;
+    transition: max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease, padding 0.4s ease;
+}
+
+.story-collapsible.show {
+    max-height: 250px;
+    opacity: 1;
+    padding: 10px 4px 4px 4px;
+}
+
+/* Teleprompter Auto-scrolling viewport */
+.story-text-container {
+    max-height: 70px;
+    overflow-y: auto;
+    margin-bottom: 12px;
+    padding: 2px 4px;
+    border-left: 3px solid #f39c12;
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: 0 6px 6px 0;
+    scrollbar-width: none; /* Firefox */
+}
+
+.story-text-container::-webkit-scrollbar {
+    display: none; /* Chrome/Safari */
+}
+
+body.light-mode .story-text-container {
+    border-left: 3px solid #b7791f;
+    background: rgba(0, 0, 0, 0.01);
+}
+
+.story-text {
+    font-size: 0.88em;
+    line-height: 1.6;
+    color: #cbd5e1;
+    font-style: italic;
+    white-space: pre-line;
+    padding: 4px 8px;
+    text-align: justify;
+}
+
+body.light-mode .story-text {
+    color: #475569;
 }

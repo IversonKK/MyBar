@@ -360,6 +360,145 @@ function formatDescription(desc) {
     return ingredientsHtml;
 }
 
+// 解析描述中的材料、杯型、技法、裝飾與故事
+function parseDrinkDescription(desc) {
+    const result = {
+        story: '',
+        glass: '',
+        technique: '',
+        garnish: ''
+    };
+    if (!desc) return result;
+
+    const lines = desc.split(/\r?\n/).map(line => line.trim()).filter(line => line);
+    const storyLines = [];
+
+    lines.forEach(line => {
+        if (line.startsWith('材料：') || line.startsWith('材料:')) {
+            // 已在 formatDescription 中處理，故事中跳過
+        } else if (line.startsWith('杯型：') || line.startsWith('杯型:')) {
+            result.glass = line.replace(/^杯型[：:]/, '').trim();
+        } else if (line.startsWith('技法：') || line.startsWith('技法:')) {
+            result.technique = line.replace(/^技法[：:]/, '').trim();
+        } else if (line.startsWith('裝飾：') || line.startsWith('裝飾:')) {
+            result.garnish = line.replace(/^裝飾[：:]/, '').trim();
+        } else {
+            // 其他皆視為故事的一部分
+            storyLines.push(line);
+        }
+    });
+
+    result.story = storyLines.join('\n');
+    return result;
+}
+
+// 全域用來記錄各個故事容器的 scroll animation frame ID，避免重複觸發與衝突
+let activeStoryScrolls = new Map();
+
+// requestAnimationFrame 實現的垂直平滑自動捲動
+function startStoryScroll(container) {
+    if (!container) return;
+    
+    // 若該容器已有播放中的動畫，先取消它
+    if (activeStoryScrolls.has(container)) {
+        cancelAnimationFrame(activeStoryScrolls.get(container));
+    }
+    
+    container.scrollTop = 0;
+    
+    let scrollSpeed = 0.4; // 每幀移動的像素，越小越平滑/慢
+    let delayCounter = 0;
+    let currentScrollY = 0; // 用於累積浮點數滾動距離，解決部分瀏覽器 scrollTop 只接受整數導致無法滾動的問題
+    
+    function scrollStep() {
+        if (!container.isConnected) {
+            activeStoryScrolls.delete(container);
+            return;
+        }
+        
+        const scrollHeight = container.scrollHeight;
+        const clientHeight = container.clientHeight;
+        
+        // 如果容器還沒打開或高度是 0，稍候再試
+        if (clientHeight === 0) {
+            const frameId = requestAnimationFrame(scrollStep);
+            activeStoryScrolls.set(container, frameId);
+            return;
+        }
+        
+        // 當使用者滑鼠停留在容器上 (.paused) 時，暫停捲動
+        if (container.classList.contains('paused')) {
+            const frameId = requestAnimationFrame(scrollStep);
+            activeStoryScrolls.set(container, frameId);
+            return;
+        }
+        
+        // 初始停頓時間 (大約 1.5 秒，每秒約 60 幀)
+        if (delayCounter < 90) {
+            delayCounter++;
+            const frameId = requestAnimationFrame(scrollStep);
+            activeStoryScrolls.set(container, frameId);
+            return;
+        }
+        
+        // 此時佈局已完全展開並穩定，若內容高度小於等於容器顯示高度，不需要捲動
+        if (scrollHeight <= clientHeight) {
+            activeStoryScrolls.delete(container);
+            return;
+        }
+        
+        currentScrollY += scrollSpeed;
+        container.scrollTop = currentScrollY;
+        
+        // 到達底部時 (減 1 像素防止某些縮放比例下的微小差距)
+        if (container.scrollTop + clientHeight >= scrollHeight - 1) {
+            // 在底部停留約 2.5 秒 (150 幀) 後再回到頂部
+            if (delayCounter < 240) {
+                delayCounter++;
+            } else {
+                currentScrollY = 0;
+                container.scrollTop = 0;
+                delayCounter = 0; // 重置計數器，使其在頂部重新停頓
+            }
+        }
+        
+        const frameId = requestAnimationFrame(scrollStep);
+        activeStoryScrolls.set(container, frameId);
+    }
+    
+    const frameId = requestAnimationFrame(scrollStep);
+    activeStoryScrolls.set(container, frameId);
+}
+
+// 切換展開與收折故事
+function toggleCardStory(btn, drinkId, event) {
+    if (event) event.stopPropagation();
+    
+    const collapsible = document.getElementById(`story-collapsible-${drinkId}`);
+    if (!collapsible) return;
+    
+    const isShowing = collapsible.classList.contains('show');
+    
+    if (isShowing) {
+        collapsible.classList.remove('show');
+        btn.classList.remove('active');
+        btn.innerHTML = '📖 查看故事';
+    } else {
+        collapsible.classList.add('show');
+        btn.classList.add('active');
+        btn.innerHTML = '📖 隱藏故事';
+        
+        // 取得故事文字容器，啟動自動捲動
+        const storyContainer = collapsible.querySelector('.story-text-container');
+        if (storyContainer) {
+            // 等待展開動畫進行完畢後再開始捲動，體驗更佳
+            setTimeout(() => {
+                startStoryScroll(storyContainer);
+            }, 500);
+        }
+    }
+}
+
 // 根據數值生成優雅的標籤膠囊 (Pill Tags)
 function getFlavorIcons(d) {
     let html = '<div class="profile-tags-wrapper">';
@@ -966,6 +1105,9 @@ function renderMenu(drinksToRender) {
         const isFavorited = guestFavorites.includes(d.name);
         const isHot = (d.tags || []).includes('熱門推薦') || top3Drinks.includes(d.name);
         
+        const parsed = parseDrinkDescription(d.description);
+        const hasStory = !!parsed.story;
+        
         return `
         <div class="card ${d.isSoldOut ? 'sold-out' : ''}" id="drink-card-${d.id}" onclick="this.classList.remove('card-highlighted')">
             <div class="img-container">
@@ -991,6 +1133,16 @@ function renderMenu(drinksToRender) {
                 ${getFlavorIcons(d)}
 
                 <div class="description-area" onclick="event.stopPropagation();">${formatDescription(d.description)}</div>
+                
+                ${hasStory ? `
+                <div class="story-toggle-btn" onclick="toggleCardStory(this, '${d.id}', event)">📖 查看故事</div>
+                <div class="story-collapsible" id="story-collapsible-${d.id}" onclick="event.stopPropagation();">
+                    <div class="story-text-container" onmouseenter="this.classList.add('paused')" onmouseleave="this.classList.remove('paused')">
+                        <div class="story-text">“ ${parsed.story} ”</div>
+                    </div>
+                </div>
+                ` : ''}
+
                 <div class="card-action-area">
                     ${d.isSoldOut 
                     ? `<button disabled style="flex-grow: 1; background: #333; color: #777; cursor: not-allowed; border: 1px solid #444; border-radius: 8px;" onclick="event.stopPropagation();">🚫 目前已售罄</button>`

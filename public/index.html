@@ -300,8 +300,7 @@
 
     <div id="menu"></div>
     
-    <!-- 回到頂部按鈕 -->
-    <button id="back-to-top" onclick="scrollToTop()">▲</button>
+
 
     <!-- 點餐推播通知容器 -->
     <div id="order-toast-container"></div>
@@ -372,12 +371,12 @@
 
     <!-- 底部導航列 (手機版專屬) -->
     <nav class="bottom-nav">
-        <a href="#" onclick="scrollToTop(); updateBottomNav('home'); return false;" class="nav-item active" id="nav-home">
-            <span class="nav-icon">🏠</span>
-            <span class="nav-label">首頁</span>
-        </a>
-        <a href="#" onclick="openFilterSheet(); updateBottomNav('search'); return false;" class="nav-item" id="nav-search">
+        <a href="#" onclick="scrollToSearchBox(); updateBottomNav('search'); return false;" class="nav-item active" id="nav-search">
             <span class="nav-icon">🔍</span>
+            <span class="nav-label">搜尋</span>
+        </a>
+        <a href="#" onclick="openFilterSheet(); updateBottomNav('filter'); return false;" class="nav-item" id="nav-filter">
+            <span class="nav-icon">🍸</span>
             <span class="nav-label">篩選/抽一杯</span>
         </a>
         <a href="#favorites-container" onclick="openFavorites(); updateBottomNav('fav'); return false;" class="nav-item" id="nav-fav">
