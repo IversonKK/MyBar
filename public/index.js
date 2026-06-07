@@ -2950,7 +2950,7 @@ function initCarouselSwipe(resetPositionOnly = false) {
             slider.style.scrollBehavior = 'auto'; // 改回 auto 以利自轉
             carouselScrollPosition = slider.scrollLeft; // 重啟前最後同步一次
             startCarouselAutoScroll();
-        }, 2500);
+        }, 500);
     }
 
     // --- 滑鼠與指標懸停事件 (支援電腦與平板) ---
