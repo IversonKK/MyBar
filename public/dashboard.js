@@ -15,7 +15,7 @@ let globalServerOrders = []; // 用來暫存伺服器的訂單，確保配方載
 let globalAvatars = {};
 const localHiddenOrders = new Set(); // 紀錄本機端自動隱藏的訂單
 const finishedTimes = {}; // 紀錄訂單完成/退單的時間，供 10 分鐘自動清理使用
-let isSidebarHidden = false; // 控制側邊欄狀態
+let isSidebarHidden = true; // 控制側邊欄狀態
 
 // --- 防止 iPad 螢幕自動休眠 (Screen Wake Lock API) ---
 let wakeLock = null;
@@ -190,6 +190,15 @@ function toggleSidebar() {
     } else {
         sidebar.classList.remove('hidden');
         if(toggleBtn) toggleBtn.classList.add('btn-primary');
+        
+        // 自動聚焦搜尋框 (等待側邊欄 300ms 動畫展開完成)
+        const searchInput = document.getElementById('inventory-search-input');
+        if (searchInput) {
+            setTimeout(() => {
+                searchInput.focus();
+                searchInput.select(); // 選取文字方便直接輸入新搜尋
+            }, 300);
+        }
     }
 }
 
@@ -408,28 +417,77 @@ socket.on('order-deleted', (orderId) => {
     }
 });
 
-// 格式化酒保畫面的配方顯示 (保留完整資訊並加上材料標籤特效)
-function formatDashboardRecipe(desc) {
-    if (!desc) return "";
-    const parts = desc.split(/\n/);
-    let finalHtml = "";
+// 解析描述中的材料、杯型、技法、裝飾與故事
+function parseDrinkDescription(desc) {
+    const result = {
+        story: '',
+        glass: '',
+        technique: '',
+        garnish: ''
+    };
+    if (!desc) return result;
 
-    parts.forEach(p => {
-        let text = p.trim();
-        if (!text) return;
+    const lines = desc.split(/\r?\n/).map(line => line.trim()).filter(line => line);
+    const storyLines = [];
 
-        if (text.startsWith("材料：") || text.startsWith("材料:")) {
-            const items = text.replace(/材料[：:]/, "").split(/[、，,。]/).map(i => i.trim()).filter(i => i);
-            let ingredientsHtml = `<ul class="ingredient-tags">` + 
-                items.map(i => `<li class="ingredient-tag">${i}</li>`).join('') + 
-                `</ul>`;
-            finalHtml += `<div style="margin-bottom: 6px;">${ingredientsHtml}</div>`;
+    lines.forEach(line => {
+        if (line.startsWith('材料：') || line.startsWith('材料:')) {
+            // 已在材料部分呈現，此處跳過
+        } else if (line.startsWith('杯型：') || line.startsWith('杯型:')) {
+            result.glass = line.replace(/^杯型[：:]/, '').trim();
+        } else if (line.startsWith('技法：') || line.startsWith('技法:')) {
+            result.technique = line.replace(/^技法[：:]/, '').trim();
+        } else if (line.startsWith('裝飾：') || line.startsWith('裝飾:')) {
+            result.garnish = line.replace(/^裝飾[：:]/, '').trim();
         } else {
-            // 其他如作法、杯型等，保持純文字但稍微加上顏色區分
-            finalHtml += `<div style="margin-bottom: 4px; color: #bbb;">${text}</div>`;
+            // 其他皆視為故事的一部分
+            storyLines.push(line);
         }
     });
-    return finalHtml;
+
+    result.story = storyLines.join('\n');
+    return result;
+}
+
+// 格式化酒保畫面的配方顯示 (以結構化方式呈現材料、杯型、技法、裝飾，並將故事淡化置底以降低干擾)
+function formatDashboardRecipe(desc) {
+    if (!desc) return "";
+    const parsed = parseDrinkDescription(desc);
+    let html = "";
+
+    // 1. 渲染材料為膠囊標籤
+    const lines = desc.split(/\r?\n/).map(line => line.trim()).filter(line => line);
+    const materialsLine = lines.find(line => line.startsWith('材料：') || line.startsWith('材料:'));
+    if (materialsLine) {
+        const items = materialsLine.replace(/材料[：:]/, "").split(/[、，,。]/).map(i => i.trim()).filter(i => i);
+        const ingredientsHtml = `<ul class="ingredient-tags">` + 
+            items.map(i => `<li class="ingredient-tag">${i}</li>`).join('') + 
+            `</ul>`;
+        html += `<div style="margin-bottom: 8px;">${ingredientsHtml}</div>`;
+    }
+
+    // 2. 渲染製作細節 (杯型、技法、裝飾)
+    let specsHtml = "";
+    if (parsed.glass) {
+        specsHtml += `<div class="recipe-spec-item" style="display:flex; align-items:center; gap:4px;"><strong>🍸 杯型：</strong>${parsed.glass}</div>`;
+    }
+    if (parsed.technique) {
+        specsHtml += `<div class="recipe-spec-item" style="display:flex; align-items:center; gap:4px;"><strong>🥄 技法：</strong>${parsed.technique}</div>`;
+    }
+    if (parsed.garnish) {
+        specsHtml += `<div class="recipe-spec-item" style="display:flex; align-items:center; gap:4px;"><strong>🍒 裝飾：</strong>${parsed.garnish}</div>`;
+    }
+    
+    if (specsHtml) {
+        html += `<div class="recipe-specs-container" style="display: flex; flex-direction: column; gap: 4px; margin-bottom: 8px; font-size: 0.9em; color: #ddd; background: rgba(255,255,255,0.03); padding: 8px 10px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.05);">${specsHtml}</div>`;
+    }
+
+    // 3. 渲染故事 (以極其淡雅的樣式置底)
+    if (parsed.story) {
+        html += `<div class="recipe-story-item" style="font-size: 0.82em; color: #777; font-style: italic; border-top: 1px dashed rgba(255,255,255,0.08); padding-top: 6px; margin-top: 6px; line-height: 1.4; white-space: pre-line;">📖 ${parsed.story}</div>`;
+    }
+
+    return html;
 }
 
 function renderOrder(data) {

@@ -46,15 +46,7 @@
         }
         .menu-toggle-btn:hover { color: #fff; transform: scale(1.1); }
         @media (max-width: 768px) {
-            .top-action-container { flex-direction: column; align-items: flex-end; }
-            .action-menu-items {
-                flex-direction: column; opacity: 0; pointer-events: none;
-                transform: translateY(-20px) scale(0.9); position: absolute; top: 50px; right: 0;
-            }
-            .action-menu-items.expanded {
-                opacity: 1; pointer-events: auto; transform: translateY(0) scale(1);
-            }
-            .menu-toggle-btn { display: flex; }
+            .top-action-container { display: none !important; }
         }
 
         /* 手機版篩選抽屜與搜尋框樣式 */
