@@ -756,6 +756,22 @@ function applyFilters() {
     const selectedSpecials = Array.from(document.querySelectorAll('#filter-special .tag-checkbox:checked')).map(cb => cb.value.trim());
     const selectedFlavors = Array.from(document.querySelectorAll('#filter-flavor .tag-checkbox:checked')).map(cb => cb.value.trim());
 
+    // --- 同步更新頂部基酒頁籤的選中狀態 ---
+    const tabs = document.querySelectorAll('.category-tab');
+    if (tabs.length > 0) {
+        tabs.forEach(tab => tab.classList.remove('active'));
+        if (selectedBases.length === 1) {
+            const activeTab = Array.from(tabs).find(tab => tab.dataset.value === selectedBases[0]);
+            if (activeTab) {
+                activeTab.classList.add('active');
+            } else {
+                document.querySelector('.category-tab[data-value="all"]')?.classList.add('active');
+            }
+        } else {
+            document.querySelector('.category-tab[data-value="all"]')?.classList.add('active');
+        }
+    }
+
     const historyFilterValue = document.querySelector('input[name="history-filter"]:checked').value;
     // 讀取「顯示已售罄」開關的狀態
     const showSoldOut = document.getElementById('show-sold-out-toggle')?.checked || false;
@@ -2642,6 +2658,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     initCarouselSwipe(); // 初始化輪播區滑動與拖曳控制
+    initCategoryTabs(); // 初始化基酒分類頁籤事件
 
     if (window.innerWidth > 768) {
         // --- 自動將「搜尋與篩選區塊」固定在畫面最上方，並隨捲動隱藏/顯示 ---
@@ -3006,4 +3023,36 @@ function initCarouselSwipe(resetPositionOnly = false) {
 
     // 啟動自轉
     startCarouselAutoScroll();
+}
+
+// --- 初始化基酒分類頁籤事件 ---
+function initCategoryTabs() {
+    const tabs = document.querySelectorAll('.category-tab');
+    tabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+            const value = tab.dataset.value;
+            
+            // 找出所有基酒的 checkbox
+            const baseCheckboxes = Array.from(document.querySelectorAll('#filter-base .tag-checkbox'));
+            
+            // 取消勾選所有基酒
+            baseCheckboxes.forEach(cb => {
+                cb.checked = false;
+            });
+            
+            if (value !== 'all') {
+                // 找到對應值的 checkbox 並勾選
+                const targetCheckbox = baseCheckboxes.find(cb => cb.value === value);
+                if (targetCheckbox) {
+                    targetCheckbox.checked = true;
+                }
+            }
+            
+            // 執行系統原生篩選與重繪
+            applyFilters();
+            
+            // 自動橫向滑動使選中的頁籤置中，提升操作手感
+            tab.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+        });
+    });
 }

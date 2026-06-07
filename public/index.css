@@ -1585,3 +1585,67 @@ body.light-mode #slot-machine-text {
         line-height: 1.1;
     }
 }
+
+/* 基酒頁籤樣式設計 */
+.category-tabs-wrapper {
+    width: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
+    white-space: nowrap;
+    padding: 8px 0 2px 0;
+    margin-top: 5px;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none; /* Firefox 隱藏捲軸 */
+    -ms-overflow-style: none; /* IE 隱藏捲軸 */
+}
+.category-tabs-wrapper::-webkit-scrollbar {
+    display: none; /* Chrome/Safari 隱藏捲軸 */
+}
+.category-tabs {
+    display: inline-flex;
+    gap: 8px;
+    padding: 0 5px 5px 5px;
+}
+.category-tab {
+    display: inline-block;
+    padding: 8px 16px;
+    background: rgba(255, 255, 255, 0.08);
+    color: #b3b3b3;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 20px;
+    font-size: 0.9em;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    backdrop-filter: blur(5px);
+    -webkit-backdrop-filter: blur(5px);
+}
+.category-tab:hover {
+    background: rgba(255, 255, 255, 0.15);
+    color: #fff;
+    border-color: rgba(255, 255, 255, 0.2);
+}
+.category-tab.active {
+    background: #d35400;
+    color: #fff;
+    border-color: #d35400;
+    box-shadow: 0 2px 8px rgba(211, 84, 0, 0.4);
+}
+
+/* 淺色模式樣式覆寫 */
+body.light-mode .category-tab {
+    background: rgba(0, 0, 0, 0.05);
+    color: #475569;
+    border-color: rgba(0, 0, 0, 0.08);
+}
+body.light-mode .category-tab:hover {
+    background: rgba(0, 0, 0, 0.1);
+    color: #0f172a;
+    border-color: rgba(0, 0, 0, 0.15);
+}
+body.light-mode .category-tab.active {
+    background: #d35400;
+    color: #fff;
+    border-color: #d35400;
+    box-shadow: 0 2px 8px rgba(211, 84, 0, 0.25);
+}
