@@ -47,5 +47,23 @@
         "status": "completed",
         "makingTime": "9:42:41 PM",
         "completedTime": "9:42:45 PM"
+    },
+    {
+        "id": "1780926803336-266",
+        "guest": "Andy",
+        "drink": "B&B",
+        "time": "下午9:53:23",
+        "notes": "手動補單",
+        "status": "completed",
+        "completedTime": "9:53:23 PM"
+    },
+    {
+        "id": "1780926864774-78",
+        "guest": "Andy",
+        "drink": "佛森特調",
+        "time": "下午9:54:24",
+        "notes": "手動補單",
+        "status": "completed",
+        "completedTime": "9:54:24 PM"
     }
 ]

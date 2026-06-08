@@ -354,6 +354,7 @@ function reloadRecipes() {
 socket.on('sync-orders', (serverOrders) => {
     globalServerOrders = serverOrders;
     renderAllOrders();
+    checkAndRenderAdjustList();
 });
 
 function renderAllOrders() {
@@ -412,9 +413,10 @@ socket.on('order-deleted', (orderId) => {
     const el = document.getElementById('order-' + orderId);
     if (el) {
         el.remove();
-        globalServerOrders = globalServerOrders.filter(o => o.id !== orderId);
-        updateCountsAndTitle();
     }
+    globalServerOrders = globalServerOrders.filter(o => o.id !== orderId);
+    updateCountsAndTitle();
+    checkAndRenderAdjustList();
 });
 
 // 解析描述中的材料、杯型、技法、裝飾與故事
@@ -895,6 +897,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (el.id === 'edit-recipe-modal-overlay') closeEditRecipeModal();
                     else if (el.id === 'stats-modal-overlay') closeStatsModal();
                     else if (el.id === 'guest-history-modal-overlay') closeGuestHistoryModal();
+                    else if (el.id === 'adjust-leaderboard-modal-overlay') closeAdjustLeaderboardModal();
                 }
             });
         });
@@ -1223,4 +1226,195 @@ function showGuestHistory(guestName) {
 function closeGuestHistoryModal() {
     const modal = document.getElementById('guest-history-modal-overlay');
     if (modal) modal.classList.remove('visible');
+}
+
+// ==================== 調整歷史榜單相關功能 ====================
+function openAdjustLeaderboardModal() {
+    const modal = document.getElementById('adjust-leaderboard-modal-overlay');
+    if (!modal) return;
+
+    // Reset Inputs
+    document.getElementById('manual-guest-name').value = '';
+    document.getElementById('manual-custom-drink-name').value = '';
+    document.getElementById('adjust-search-input').value = '';
+    
+    // Populate Drink Select
+    const select = document.getElementById('manual-drink-select');
+    if (select) {
+        let optionsHtml = `<option value="">-- 請選擇飲品 --</option>`;
+        
+        // 酒單上的飲品
+        if (allDrinks && allDrinks.length > 0) {
+            optionsHtml += `<optgroup label="📋 酒單上飲品">`;
+            allDrinks.forEach(d => {
+                optionsHtml += `<option value="${d.name}">${d.name}</option>`;
+            });
+            optionsHtml += `</optgroup>`;
+        }
+        
+        // 酒單上沒有的自訂特調
+        optionsHtml += `<optgroup label="✨ 自訂特調">`;
+        optionsHtml += `<option value="custom-fosen">佛森特調 (自訂特調)</option>`;
+        optionsHtml += `<option value="custom-other">其他自訂飲品...</option>`;
+        optionsHtml += `</optgroup>`;
+        
+        select.innerHTML = optionsHtml;
+        select.value = '';
+    }
+    
+    // Hide custom input wrap
+    const customWrap = document.getElementById('manual-custom-drink-wrap');
+    if (customWrap) customWrap.style.display = 'none';
+
+    // Populate Guests Datalist
+    const datalist = document.getElementById('existing-guests-datalist');
+    if (datalist) {
+        const guests = [...new Set(globalServerOrders.map(o => o.guest))].filter(g => g);
+        datalist.innerHTML = guests.map(g => `<option value="${g}"></option>`).join('');
+    }
+
+    renderAdjustHistoryList();
+    modal.classList.add('visible');
+}
+
+function closeAdjustLeaderboardModal() {
+    const modal = document.getElementById('adjust-leaderboard-modal-overlay');
+    if (modal) modal.classList.remove('visible');
+}
+
+function handleManualDrinkSelectChange() {
+    const select = document.getElementById('manual-drink-select');
+    const customWrap = document.getElementById('manual-custom-drink-wrap');
+    const customInput = document.getElementById('manual-custom-drink-name');
+    if (!select || !customWrap || !customInput) return;
+
+    if (select.value === 'custom-fosen') {
+        customWrap.style.display = 'block';
+        customInput.value = '佛森特調';
+    } else if (select.value === 'custom-other') {
+        customWrap.style.display = 'block';
+        customInput.value = '';
+        customInput.focus();
+    } else {
+        customWrap.style.display = 'none';
+        customInput.value = '';
+    }
+}
+
+function submitManualCompletedOrder() {
+    const guest = document.getElementById('manual-guest-name').value.trim();
+    const drinkVal = document.getElementById('manual-drink-select').value;
+    
+    if (!guest) {
+        alert('⚠️ 請輸入客人名稱！');
+        return;
+    }
+    if (!drinkVal) {
+        alert('⚠️ 請選擇要新增的飲品！');
+        return;
+    }
+
+    let finalDrinkName = '';
+    if (drinkVal === 'custom-fosen' || drinkVal === 'custom-other') {
+        const customName = document.getElementById('manual-custom-drink-name').value.trim();
+        if (!customName) {
+            alert('⚠️ 請輸入自訂飲品名稱！');
+            return;
+        }
+        finalDrinkName = customName;
+    } else {
+        finalDrinkName = drinkVal;
+    }
+
+    // Emit event to add completed order
+    socket.emit('add-manual-completed-order', {
+        guest: guest,
+        drink: finalDrinkName,
+        time: new Date().toLocaleTimeString(),
+        notes: '手動補單',
+        status: 'completed'
+    });
+
+    showToast(`✅ 成功新增 ${guest} 的已完成調酒：${finalDrinkName}`);
+
+    // Clear name fields or keep for quick consecutive adds
+    document.getElementById('manual-custom-drink-name').value = '';
+    document.getElementById('manual-drink-select').value = '';
+    document.getElementById('manual-custom-drink-wrap').style.display = 'none';
+}
+
+function renderAdjustHistoryList() {
+    const container = document.getElementById('adjust-history-list');
+    if (!container) return;
+
+    const searchTerm = document.getElementById('adjust-search-input').value.trim().toLowerCase();
+    
+    // Filter out historical completed/rejected orders
+    let historyOrders = globalServerOrders.filter(o => o.status === 'completed' || o.status === 'rejected');
+    
+    // Sort: newest first
+    historyOrders.sort((a, b) => parseInt(b.id.split('-')[0]) - parseInt(a.id.split('-')[0]));
+
+    if (searchTerm) {
+        historyOrders = historyOrders.filter(o => 
+            o.guest.toLowerCase().includes(searchTerm) || 
+            o.drink.toLowerCase().includes(searchTerm)
+        );
+    }
+
+    if (historyOrders.length === 0) {
+        container.innerHTML = '<p style="text-align: center; color: #888; padding: 20px 0;">無符合條件的歷史紀錄 🔍</p>';
+        return;
+    }
+
+    const statusColors = {
+        'completed': ['#27ae60', '已出餐'],
+        'rejected': ['#e74c3c', '已退單']
+    };
+
+    container.innerHTML = historyOrders.map(o => {
+        const ts = parseInt(o.id.split('-')[0]);
+        const dateStr = !isNaN(ts) ? new Date(ts).toLocaleDateString('zh-TW', { month: '2-digit', day: '2-digit' }) : '';
+        const [color, statusText] = statusColors[o.status] || ['#888', o.status];
+        const shortId = o.id.split('-')[0].slice(-5);
+        const encodedName = encodeURIComponent(o.drink);
+        const imgSrc = `/images/${encodedName}.jpg`;
+        const imgSrcPng = `/images/${encodedName}.png`;
+        
+        return `
+            <div style="display: flex; align-items: center; justify-content: space-between; background: #222; border: 1px solid #333; padding: 10px; border-radius: 8px; gap: 10px;">
+                <div style="display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0;">
+                    <img src="${imgSrc}" onerror="handleImgError(this, '${imgSrcPng}')" style="width: 40px; height: 40px; border-radius: 6px; object-fit: contain; background: #000;">
+                    <div style="min-width: 0; flex: 1;">
+                        <div style="font-weight: bold; color: #fff; text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">
+                            ${o.guest} ➔ <span style="color: #f39c12;">${o.drink}</span>
+                        </div>
+                        <div style="font-size: 0.8em; color: #888;">
+                            #${shortId} | 📅 ${dateStr} ${o.time}
+                        </div>
+                    </div>
+                </div>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <span style="font-size: 0.8em; font-weight: bold; padding: 3px 6px; border-radius: 4px; background: ${color}20; color: ${color}; border: 1px solid ${color}40;">
+                        ${statusText}
+                    </span>
+                    <button onclick="deleteHistoryOrder('${o.id}')" class="pos-btn btn-danger" style="padding: 5px 8px; font-size: 0.8em; border-radius: 4px;">✖ 刪除</button>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+function deleteHistoryOrder(orderId) {
+    if (confirm('⚠️ 確定要刪除這筆歷史紀錄嗎？\n這會從資料庫中移除，並重新計算排行榜與統計數據！')) {
+        socket.emit('delete-order', orderId);
+        showToast('✅ 正在刪除該筆歷史紀錄...');
+    }
+}
+
+function checkAndRenderAdjustList() {
+    const modal = document.getElementById('adjust-leaderboard-modal-overlay');
+    if (modal && modal.classList.contains('visible')) {
+        renderAdjustHistoryList();
+    }
 }

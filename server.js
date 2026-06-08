@@ -107,6 +107,16 @@ function saveAvatarsData() {
     }
 }
 
+function saveCompletedOrdersData() {
+    try {
+        const completedOrders = orders.filter(o => o.status === 'completed' || o.status === 'rejected');
+        fs.writeFileSync(completedOrdersLogPath, JSON.stringify(completedOrders, null, 4), 'utf8');
+        console.log(`成功儲存 completed_orders.json，共計 ${completedOrders.length} 筆。`);
+    } catch (err) {
+        console.error("寫入 completed_orders.json 失敗:", err);
+    }
+}
+
 function loadDrinksData() {
     const oldSoldOutNames = allDrinks.filter(d => d.isSoldOut).map(d => d.name);
     allDrinks = [];
@@ -233,6 +243,7 @@ io.on('connection', (socket) => {
     socket.on('delete-order', (orderId) => {
         orders = orders.filter(o => o.id !== orderId);
         saveOrdersData();
+        saveCompletedOrdersData();
         io.emit('order-deleted', orderId);
     });
 
@@ -251,6 +262,7 @@ io.on('connection', (socket) => {
     socket.on('clear-guest-history', (guestName) => {
         orders = orders.filter(o => o.guest !== guestName);
         saveOrdersData();
+        saveCompletedOrdersData();
         io.emit('sync-orders', orders);
     });
 
@@ -345,6 +357,22 @@ io.on('connection', (socket) => {
         favoritesDatabase[guest] = [];
         saveFavoritesData();
         io.emit('favorites-updated', guest);
+    });
+
+    socket.on('add-manual-completed-order', (data) => {
+        const orderId = Date.now() + '-' + Math.floor(Math.random() * 1000);
+        const newOrder = {
+            id: orderId,
+            guest: data.guest,
+            drink: data.drink,
+            time: data.time || new Date().toLocaleTimeString(),
+            notes: data.notes || '手動新增',
+            status: 'completed',
+            completedTime: new Date().toLocaleTimeString()
+        };
+        orders.push(newOrder);
+        appendToCompletedLog(newOrder);
+        io.emit('sync-orders', orders);
     });
 });
 

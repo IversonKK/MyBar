@@ -30,6 +30,7 @@
                 </select>
             </div>
             <button onclick="showTodayStats()" class="pos-btn">📊 統計</button>
+            <button onclick="openAdjustLeaderboardModal()" class="pos-btn" style="background: #8e44ad; color: #fff; border-color: #8e44ad;">🏆 調整榜單</button>
             <button onclick="clearFinished()" class="pos-btn">🧹 清理</button>
             <button onclick="resetAllHistory()" class="pos-btn btn-danger">🔥 清空</button>
             <button onclick="toggleSidebar()" class="pos-btn" id="btn-toggle-inv">📦 庫存</button>
@@ -176,6 +177,54 @@
                 <button class="modal-close" onclick="closeGuestHistoryModal()">✖</button>
             </div>
             <div id="guest-history-list" style="flex: 1; overflow-y: auto; padding-right: 5px;"></div>
+        </div>
+    </div>
+
+    <!-- 調整歷史榜單 Modal -->
+    <div id="adjust-leaderboard-modal-overlay" class="modal-overlay">
+        <div class="modal-content" style="max-width: 550px; display: flex; flex-direction: column; height: 80vh;">
+            <div class="modal-header">
+                <h2 style="color: #8e44ad; display: flex; align-items: center; gap: 8px;">🏆 調整歷史榜單</h2>
+                <button class="modal-close" onclick="closeAdjustLeaderboardModal()">✖</button>
+            </div>
+            
+            <!-- 新增紀錄區域 -->
+            <div style="background: rgba(255,255,255,0.03); border: 1px solid #333; padding: 15px; border-radius: 8px; margin-bottom: 15px;">
+                <h3 style="color: #f39c12; margin-top: 0; margin-bottom: 10px; font-size: 1.05em;">➕ 手動新增已完成紀錄</h3>
+                
+                <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 10px;">
+                    <!-- 客人名稱 -->
+                    <div style="flex: 1; min-width: 130px;">
+                        <label style="display: block; font-size: 0.8em; color: #aaa; margin-bottom: 4px;">客人名稱</label>
+                        <input type="text" id="manual-guest-name" list="existing-guests-datalist" placeholder="輸入或選擇客人..." style="width: 100%; box-sizing: border-box; padding: 8px; border-radius: 6px; background: #222; border: 1px solid #444; color: #fff;">
+                        <datalist id="existing-guests-datalist"></datalist>
+                    </div>
+                    
+                    <!-- 選擇飲品 -->
+                    <div style="flex: 1.2; min-width: 180px;">
+                        <label style="display: block; font-size: 0.8em; color: #aaa; margin-bottom: 4px;">選擇飲品</label>
+                        <select id="manual-drink-select" onchange="handleManualDrinkSelectChange()" style="width: 100%; box-sizing: border-box; padding: 8px; border-radius: 6px; background: #222; border: 1px solid #444; color: #fff;"></select>
+                    </div>
+                </div>
+
+                <!-- 自訂飲品名稱 (隱藏) -->
+                <div id="manual-custom-drink-wrap" style="display: none; margin-bottom: 10px;">
+                    <label style="display: block; font-size: 0.8em; color: #aaa; margin-bottom: 4px;">自訂飲品名稱</label>
+                    <input type="text" id="manual-custom-drink-name" placeholder="請輸入自訂酒名 (例如：佛森特調)" style="width: 100%; box-sizing: border-box; padding: 8px; border-radius: 6px; background: #222; border: 1px solid #444; color: #fff;">
+                </div>
+                
+                <button onclick="submitManualCompletedOrder()" class="pos-btn btn-primary" style="width: 100%; justify-content: center; background: #8e44ad; border-color: #8e44ad; color: #fff;">送出並設為已完成</button>
+            </div>
+            
+            <!-- 歷史紀錄列表 -->
+            <div style="flex: 1; display: flex; flex-direction: column; overflow: hidden;">
+                <h3 style="color: #f39c12; margin-top: 0; margin-bottom: 8px; font-size: 1.05em;">📜 已完成歷史紀錄</h3>
+                
+                <!-- 簡單搜尋框 -->
+                <input type="text" id="adjust-search-input" oninput="renderAdjustHistoryList()" placeholder="🔍 搜尋客人或酒名..." style="width: 100%; box-sizing: border-box; padding: 8px; border-radius: 6px; background: #222; border: 1px solid #444; color: #fff; margin-bottom: 10px;">
+                
+                <div id="adjust-history-list" style="flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; padding-right: 5px;"></div>
+            </div>
         </div>
     </div>
 
