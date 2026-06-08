@@ -1237,12 +1237,20 @@ function openAdjustLeaderboardModal() {
     document.getElementById('manual-guest-name').value = '';
     document.getElementById('manual-custom-drink-name').value = '';
     document.getElementById('adjust-search-input').value = '';
+    const dateFilter = document.getElementById('adjust-date-filter');
+    if (dateFilter) dateFilter.innerHTML = ''; // Clear to trigger default date selection
     
     // Populate Drink Select
     const select = document.getElementById('manual-drink-select');
     if (select) {
         let optionsHtml = `<option value="">-- 請選擇飲品 --</option>`;
         
+        // 酒單上沒有的自訂特調 (放到最上面)
+        optionsHtml += `<optgroup label="✨ 自訂特調">`;
+        optionsHtml += `<option value="custom-fosen">佛森特調 (自訂特調)</option>`;
+        optionsHtml += `<option value="custom-other">其他自訂飲品...</option>`;
+        optionsHtml += `</optgroup>`;
+
         // 酒單上的飲品
         if (allDrinks && allDrinks.length > 0) {
             optionsHtml += `<optgroup label="📋 酒單上飲品">`;
@@ -1251,12 +1259,6 @@ function openAdjustLeaderboardModal() {
             });
             optionsHtml += `</optgroup>`;
         }
-        
-        // 酒單上沒有的自訂特調
-        optionsHtml += `<optgroup label="✨ 自訂特調">`;
-        optionsHtml += `<option value="custom-fosen">佛森特調 (自訂特調)</option>`;
-        optionsHtml += `<option value="custom-other">其他自訂飲品...</option>`;
-        optionsHtml += `</optgroup>`;
         
         select.innerHTML = optionsHtml;
         select.value = '';
@@ -1349,11 +1351,51 @@ function renderAdjustHistoryList() {
 
     const searchTerm = document.getElementById('adjust-search-input').value.trim().toLowerCase();
     
+    const todayStr = new Date().toLocaleDateString('zh-TW');
+    const dateFilter = document.getElementById('adjust-date-filter');
+    let selectedDate = 'all';
+
     // Filter out historical completed/rejected orders
     let historyOrders = globalServerOrders.filter(o => o.status === 'completed' || o.status === 'rejected');
+
+    // Aggregate unique dates from all completed/rejected orders
+    const uniqueDates = new Set();
+    uniqueDates.add(todayStr);
+    historyOrders.forEach(o => {
+        const ts = parseInt(o.id.split('-')[0]);
+        if (!isNaN(ts)) {
+            uniqueDates.add(new Date(ts).toLocaleDateString('zh-TW'));
+        }
+    });
+
+    // Populate or update the date selector dropdown
+    if (dateFilter) {
+        if (dateFilter.options.length > 0) {
+            selectedDate = dateFilter.value;
+        } else {
+            // Default to today
+            selectedDate = todayStr;
+        }
+
+        let optionsHtml = `<option value="all" ${selectedDate === 'all' ? 'selected' : ''}>📅 所有日期</option>`;
+        Array.from(uniqueDates).forEach(dStr => {
+            const label = dStr === todayStr ? `📅 今日 (${dStr})` : dStr;
+            optionsHtml += `<option value="${dStr}" ${selectedDate === dStr ? 'selected' : ''}>${label}</option>`;
+        });
+        dateFilter.innerHTML = optionsHtml;
+        selectedDate = dateFilter.value;
+    }
     
     // Sort: newest first
     historyOrders.sort((a, b) => parseInt(b.id.split('-')[0]) - parseInt(a.id.split('-')[0]));
+
+    // Filter by selected date
+    if (selectedDate !== 'all') {
+        historyOrders = historyOrders.filter(o => {
+            const ts = parseInt(o.id.split('-')[0]);
+            return !isNaN(ts) && new Date(ts).toLocaleDateString('zh-TW') === selectedDate;
+        });
+    }
 
     if (searchTerm) {
         historyOrders = historyOrders.filter(o => 
