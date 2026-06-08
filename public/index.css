@@ -158,12 +158,13 @@ h1 {
 /* --- 高光閃爍動畫 (用於搜尋導航或狀態更新) --- */
 @keyframes highlightFlash {
     0% { box-shadow: 0 0 0 0 rgba(243, 156, 18, 0.8); border-color: #f39c12; transform: scale(1.02); }
-    50% { box-shadow: 0 0 20px 10px rgba(243, 156, 18, 0.4); border-color: #f39c12; transform: scale(1.02); }
+    10% { box-shadow: 0 0 25px 12px rgba(243, 156, 18, 0.8); border-color: #f39c12; transform: scale(1.03); }
+    80% { box-shadow: 0 0 20px 8px rgba(243, 156, 18, 0.5); border-color: #f39c12; transform: scale(1.02); }
     100% { box-shadow: 0 6px 15px rgba(0,0,0,0.4); border-color: #333; transform: scale(1); }
 }
 
 .card-highlighted {
-    animation: highlightFlash 2s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+    animation: highlightFlash 3.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
 }
 /* ------------------------------------------- */
 
@@ -171,6 +172,25 @@ h1 {
     transform: translateY(-5px);
     box-shadow: 0 10px 20px rgba(0,0,0,0.6);
     border-color: #555;
+}
+
+.card-sold-out-overlay {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) rotate(-15deg);
+    font-size: 1.6em;
+    font-weight: 900;
+    color: #fff;
+    background: rgba(231, 76, 60, 0.85);
+    padding: 5px 15px;
+    border: 3px solid #fff;
+    border-radius: 8px;
+    pointer-events: none;
+    z-index: 5;
+    letter-spacing: 2px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+    white-space: nowrap;
 }
 
 /* 圖片容器與愛心按鈕 */
@@ -1711,25 +1731,18 @@ body.light-mode .story-toggle-btn.active {
 }
 
 .story-collapsible.show {
-    max-height: 250px;
+    max-height: 1000px;
     opacity: 1;
     padding: 10px 4px 4px 4px;
 }
 
-/* Teleprompter Auto-scrolling viewport */
+/* Story text container (no auto-scrolling) */
 .story-text-container {
-    max-height: 70px;
-    overflow-y: auto;
     margin-bottom: 12px;
     padding: 2px 4px;
     border-left: 3px solid #f39c12;
     background: rgba(255, 255, 255, 0.02);
     border-radius: 0 6px 6px 0;
-    scrollbar-width: none; /* Firefox */
-}
-
-.story-text-container::-webkit-scrollbar {
-    display: none; /* Chrome/Safari */
 }
 
 body.light-mode .story-text-container {
@@ -1749,4 +1762,127 @@ body.light-mode .story-text-container {
 
 body.light-mode .story-text {
     color: #475569;
+}
+
+/* ==================== 手機版雙欄並排響應式排版 ==================== */
+@media (max-width: 768px) {
+    body {
+        padding: 10px;
+        padding-bottom: 100px;
+    }
+    
+    #menu {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+    }
+    
+    .card-content {
+        padding: 12px 10px;
+    }
+    
+    .card h3 {
+        font-size: 1.1em;
+        margin-bottom: 8px;
+        gap: 4px;
+    }
+    
+    .profile-tags-wrapper {
+        gap: 4px;
+        margin-bottom: 8px;
+    }
+    
+    .profile-tag {
+        font-size: 0.75em;
+        padding: 3px 6px;
+        border-radius: 12px;
+        gap: 2px;
+    }
+    
+    .ingredient-tags {
+        gap: 4px;
+        margin-bottom: 8px;
+    }
+    
+    .ingredient-tag {
+        font-size: 0.75em;
+        padding: 2px 6px;
+    }
+    
+    .description-area {
+        font-size: 0.85em;
+        margin-bottom: 10px;
+        line-height: 1.4;
+    }
+    
+    .story-toggle-btn {
+        padding: 5px 10px;
+        font-size: 0.78em;
+        margin-top: 6px;
+        border-radius: 6px;
+    }
+    
+    .story-collapsible.show {
+        padding: 6px 2px 2px 2px;
+    }
+    
+    .story-text-container {
+        margin-bottom: 6px;
+    }
+    
+    .story-text {
+        font-size: 0.78em;
+        line-height: 1.4;
+        padding: 2px 4px;
+    }
+    
+    .card-action-area {
+        gap: 6px;
+    }
+    
+    .card-action-area button {
+        font-size: 0.95em;
+        padding: 8px 12px;
+        border-radius: 6px;
+    }
+    
+    .badge-stack-left {
+        top: 6px;
+        left: 6px;
+        gap: 4px;
+    }
+    
+    .hot-badge, .ordered-badge-img {
+        font-size: 0.75em;
+        padding: 2px 5px;
+        border-radius: 4px;
+    }
+    
+    .favorite-btn {
+        bottom: 6px;
+        right: 6px;
+        width: 32px;
+        height: 32px;
+        font-size: 1.1em;
+    }
+    
+    .card-sold-out-overlay {
+        font-size: 1.1em;
+        padding: 3px 8px;
+        border-width: 2px;
+    }
+}
+
+/* 針對極小螢幕 (如 iPhone SE) 的微調 */
+@media (max-width: 360px) {
+    #menu {
+        gap: 8px;
+    }
+    .profile-tag {
+        font-size: 0.7em;
+        padding: 2px 4px;
+    }
+    .ingredient-tag {
+        font-size: 0.7em;
+        padding: 2px 4px;
+    }
 }

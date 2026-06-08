@@ -102,6 +102,15 @@
                 <button id="theme-toggle-btn" onclick="toggleTheme()" style="background: transparent; border: 1px solid #888; color: #ccc; padding: 6px 16px; border-radius: 20px; cursor: pointer; transition: 0.3s;">🌙 深色模式</button>
             </div>
 
+            <!-- 新增：設定視窗專屬的清除資料區塊 -->
+            <div id="danger-zone-section" style="display: none; flex-direction: column; gap: 8px; margin-bottom: 15px; padding: 12px 15px; background: rgba(231, 76, 60, 0.05); border-radius: 8px; border: 1px solid rgba(231, 76, 60, 0.2);">
+                <span style="color: #e74c3c; font-size: 0.9em; font-weight: bold; margin-bottom: 5px;">⚠️ 刪除個人資料</span>
+                <div style="display: flex; gap: 8px; width: 100%;">
+                    <button onclick="clearAllMyFavorites(event)" style="flex: 1; padding: 8px 12px; font-size: 0.9em; border: 1px solid #c0392b; background: rgba(192, 57, 43, 0.2); color: #e74c3c; cursor: pointer; border-radius: 6px; font-weight: bold;">清空最愛</button>
+                    <button onclick="clearAllMyHistory(event)" style="flex: 1; padding: 8px 12px; font-size: 0.9em; border: 1px solid #c0392b; background: rgba(192, 57, 43, 0.2); color: #e74c3c; cursor: pointer; border-radius: 6px; font-weight: bold;">清空紀錄</button>
+                </div>
+            </div>
+
             <div id="age-checkbox-section" style="display: flex; justify-content: center; margin-bottom: 20px;">
                 <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
                     <input type="checkbox" id="age-checkbox" style="width: 18px; height: 18px; margin: 0;">
@@ -142,7 +151,6 @@
             </div>
             <div style="display: flex; gap: 8px; align-items: center;">
                 <select id="history-date-filter" onclick="event.stopPropagation()" onchange="loadHistory()" style="flex: 1; padding: 6px 8px; border-radius: 6px; background: #222; color: #fff; border: 1px solid #444; font-size: 0.9em; outline: none;"></select>
-                <button class="clear-all-btn" onclick="clearAllMyHistory(event)" style="padding: 6px 12px; font-size: 0.9em; white-space: nowrap;">清空紀錄</button>
             </div>
         </div>
         <div id="history-content" class="collapsible-wrapper expanded">
@@ -168,16 +176,13 @@
 
     <!-- 我的最愛 (可收合) -->
     <div id="favorites-container" style="display: none;">
-        <div id="favorites-header" onclick="toggleFavorites()" style="flex-direction: column; align-items: stretch; gap: 10px;">
-            <div style="display: flex; justify-content: space-between; align-items: center;">
+        <div id="favorites-header" onclick="toggleFavorites()">
+            <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
                 <h3 style="margin: 0; color: #e74c3c; font-size: 1.2em;">❤️ 我的最愛</h3>
                 <span class="expand-icon-wrap" id="favorites-expand-icon" style="font-size: 0.9em; color: #aaa; display: flex; align-items: center; gap: 4px;">
                     <span class="expand-text">收合</span>
                     <span class="expand-arrow" style="transition: transform 0.3s ease; display: inline-block;">▲</span>
                 </span>
-            </div>
-            <div style="display: flex; justify-content: flex-end;">
-                <button class="clear-all-btn" onclick="clearAllMyFavorites(event)" style="padding: 6px 12px; font-size: 0.9em; white-space: nowrap;">清空最愛</button>
             </div>
         </div>
         <div id="favorites-content" class="collapsible-wrapper expanded">

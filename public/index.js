@@ -487,15 +487,6 @@ function toggleCardStory(btn, drinkId, event) {
         collapsible.classList.add('show');
         btn.classList.add('active');
         btn.innerHTML = '📖 隱藏故事';
-        
-        // 取得故事文字容器，啟動自動捲動
-        const storyContainer = collapsible.querySelector('.story-text-container');
-        if (storyContainer) {
-            // 等待展開動畫進行完畢後再開始捲動，體驗更佳
-            setTimeout(() => {
-                startStoryScroll(storyContainer);
-            }, 500);
-        }
     }
 }
 
@@ -814,6 +805,9 @@ function saveNameAndConfirmAge() {
         welcomeContent.classList.remove('shatter-out');
         welcomeContent.classList.remove('changing-name'); // 關閉視窗時清除修改狀態
         
+        // 隱藏清除資料區塊
+        document.getElementById('danger-zone-section').style.display = 'none';
+        
         // 延遲等待淡出動畫結束後，徹底隱藏元素避免阻擋點擊
         setTimeout(() => { ws.style.display = 'none'; }, 400);
     }, isChangingName ? 0 : 600);
@@ -844,6 +838,9 @@ function changeName() {
     
     // 顯示主題切換按鈕
     document.getElementById('theme-toggle-section').style.display = 'flex';
+    
+    // 顯示清除資料區塊
+    document.getElementById('danger-zone-section').style.display = 'flex';
 
     const welcomeScreen = document.getElementById('welcome-screen');
     welcomeScreen.style.display = ''; // 解除隱藏
@@ -855,6 +852,9 @@ function cancelChangeName() {
     const welcomeScreen = document.getElementById('welcome-screen');
     welcomeScreen.classList.remove('visible');
     document.getElementById('welcome-content').classList.remove('changing-name'); // 關閉視窗時清除修改狀態
+    
+    // 隱藏清除資料區塊
+    document.getElementById('danger-zone-section').style.display = 'none';
     
     // 延遲等待淡出動畫結束後徹底隱藏
     setTimeout(() => {
@@ -1112,7 +1112,7 @@ function renderMenu(drinksToRender) {
         <div class="card ${d.isSoldOut ? 'sold-out' : ''}" id="drink-card-${d.id}" onclick="this.classList.remove('card-highlighted')">
             <div class="img-container">
                 <img src="${localPath}" onerror="handleImgError(this, '${localPathPng}')" class="drink-img" onclick="openImageModal(this.src); event.stopPropagation();" title="點擊放大圖片" style="aspect-ratio: 1 / 1; object-fit: cover; width: 100%; border-radius: 12px 12px 0 0; ${d.isSoldOut ? 'filter: grayscale(1); opacity: 0.7;' : ''}" loading="lazy" decoding="async">
-                ${d.isSoldOut ? '<div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-15deg); font-size: 1.6em; font-weight: 900; color: #fff; background: rgba(231, 76, 60, 0.85); padding: 5px 15px; border: 3px solid #fff; border-radius: 8px; pointer-events: none; z-index: 5; letter-spacing: 2px; box-shadow: 0 4px 10px rgba(0,0,0,0.5); white-space: nowrap;">SOLD OUT</div>' : ''}
+                ${d.isSoldOut ? '<div class="card-sold-out-overlay">SOLD OUT</div>' : ''}
                 <div class="badge-stack-left">
                     ${isHot ? `<div class="hot-badge" style="transition: transform 0.3s ease, filter 0.3s ease;" onmouseover="this.style.transform='translateY(-4px)'; this.style.filter='brightness(1.15)'" onmouseout="this.style.transform='translateY(0)'; this.style.filter='brightness(1)'">👑 熱門</div>` : ''}
                     ${isOrdered ? `<div class="ordered-badge-img" style="transition: transform 0.3s ease, filter 0.3s ease;" onmouseover="this.style.transform='translateY(-4px)'; this.style.filter='brightness(1.15)'" onmouseout="this.style.transform='translateY(0)'; this.style.filter='brightness(1)'">✔️ 已點過</div>` : ''}
@@ -2865,11 +2865,16 @@ function updateBottomNav(activeId) {
 function updateFAB() {
     if (!currentName) return;
     
-    // 只計算「尚未完成且未退單」的訂單
-    const myActiveOrders = globalServerOrders.filter(o => 
-        o.guest === currentName && 
-        (o.status === 'pending' || o.status === 'making')
-    );
+    const todayStr = new Date().toLocaleDateString('zh-TW');
+    
+    // 只計算「今日且尚未完成與未退單」的訂單
+    const myActiveOrders = globalServerOrders.filter(o => {
+        if (o.guest !== currentName) return false;
+        if (o.status !== 'pending' && o.status !== 'making') return false;
+        const ts = parseInt(o.id.split('-')[0]);
+        if (isNaN(ts)) return false;
+        return new Date(ts).toLocaleDateString('zh-TW') === todayStr;
+    });
     
     const fab = document.getElementById('active-orders-fab');
     const badge = document.getElementById('active-orders-badge');
