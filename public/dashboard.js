@@ -1419,14 +1419,12 @@ function renderAdjustHistoryList() {
         const dateStr = !isNaN(ts) ? new Date(ts).toLocaleDateString('zh-TW', { month: '2-digit', day: '2-digit' }) : '';
         const [color, statusText] = statusColors[o.status] || ['#888', o.status];
         const shortId = o.id.split('-')[0].slice(-5);
-        const encodedName = encodeURIComponent(o.drink);
-        const imgSrc = `/images/${encodedName}.jpg`;
-        const imgSrcPng = `/images/${encodedName}.png`;
+        const avatarUrl = getAvatarUrl(o.guest);
         
         return `
             <div style="display: flex; align-items: center; justify-content: space-between; background: #222; border: 1px solid #333; padding: 10px; border-radius: 8px; gap: 10px;">
                 <div style="display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0;">
-                    <img src="${imgSrc}" onerror="handleImgError(this, '${imgSrcPng}')" style="width: 40px; height: 40px; border-radius: 6px; object-fit: contain; background: #000;">
+                    <img src="${avatarUrl}" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover; background: #222; border: 1px solid #555;">
                     <div style="min-width: 0; flex: 1;">
                         <div style="font-weight: bold; color: #fff; text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">
                             ${o.guest} ➔ <span style="color: #f39c12;">${o.drink}</span>
