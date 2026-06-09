@@ -1308,6 +1308,28 @@ function handleManualDrinkSelectChange() {
     }
 }
 
+window.selectPresetImage = function(element) {
+    const hiddenInput = document.getElementById('selected-preset-image');
+    const presetName = element.getAttribute('data-preset');
+    if (!hiddenInput) return;
+
+    if (hiddenInput.value === presetName) {
+        // 取消選取
+        element.style.borderColor = 'transparent';
+        element.style.boxShadow = 'none';
+        hiddenInput.value = '';
+    } else {
+        // 選取
+        document.querySelectorAll('.preset-img-option').forEach(el => {
+            el.style.borderColor = 'transparent';
+            el.style.boxShadow = 'none';
+        });
+        element.style.borderColor = '#f39c12';
+        element.style.boxShadow = '0 0 8px rgba(243, 156, 18, 0.6)';
+        hiddenInput.value = presetName;
+    }
+};
+
 function submitManualCompletedOrder() {
     const guest = document.getElementById('manual-guest-name').value.trim();
     const drinkVal = document.getElementById('manual-drink-select').value;
@@ -1322,6 +1344,8 @@ function submitManualCompletedOrder() {
     }
 
     let finalDrinkName = '';
+    const presetImage = document.getElementById('selected-preset-image')?.value || '';
+
     if (drinkVal === 'custom-fosen' || drinkVal === 'custom-other') {
         const customName = document.getElementById('manual-custom-drink-name').value.trim();
         if (!customName) {
@@ -1339,7 +1363,8 @@ function submitManualCompletedOrder() {
         drink: finalDrinkName,
         time: new Date().toLocaleTimeString(),
         notes: '手動補單',
-        status: 'completed'
+        status: 'completed',
+        presetImage: presetImage
     });
 
     showToast(`✅ 成功新增 ${guest} 的已完成調酒：${finalDrinkName}`);
@@ -1348,6 +1373,13 @@ function submitManualCompletedOrder() {
     document.getElementById('manual-custom-drink-name').value = '';
     document.getElementById('manual-drink-select').value = '';
     document.getElementById('manual-custom-drink-wrap').style.display = 'none';
+    
+    const hiddenInput = document.getElementById('selected-preset-image');
+    if (hiddenInput) hiddenInput.value = '';
+    document.querySelectorAll('.preset-img-option').forEach(el => {
+        el.style.borderColor = 'transparent';
+        el.style.boxShadow = 'none';
+    });
 }
 
 function renderAdjustHistoryList() {

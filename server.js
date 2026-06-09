@@ -373,6 +373,26 @@ io.on('connection', (socket) => {
             status: 'completed',
             completedTime: new Date().toLocaleTimeString()
         };
+
+        // 如果選擇了預設配圖，將檔案複製到 images/ 之下
+        if (data.presetImage) {
+            const presetPath = path.join(__dirname, 'public', 'images', 'presets', data.presetImage);
+            const ext = path.extname(data.presetImage) || '.png';
+            const targetPath = path.join(__dirname, 'public', 'images', `${data.drink}${ext}`);
+            try {
+                if (fs.existsSync(presetPath)) {
+                    fs.copyFileSync(presetPath, targetPath);
+                    console.log(`成功複製預設圖片 ${data.presetImage} 至: ${targetPath}`);
+                    
+                    // 重新掃描圖片與配方庫以讓自訂飲品在選單中擁有這張配圖
+                    loadDrinksData();
+                    io.emit('recipes-updated');
+                }
+            } catch (err) {
+                console.error("複製預設圖片失敗:", err);
+            }
+        }
+
         orders.push(newOrder);
         appendToCompletedLog(newOrder);
         io.emit('sync-orders', orders);
