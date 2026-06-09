@@ -995,8 +995,10 @@ function applyFilters() {
         // 風味過濾 (組內取 AND，例如：同時勾選偏酸且酒感重)
         const matchesFlavor = selectedFlavors.every(flavor => {
             if (flavor === '偏酸') return d.sour >= 4;
+            if (flavor === '酸度中') return d.sour === 3;
             if (flavor === '偏甜') return d.sour > 0 && d.sour <= 2;
             if (flavor === '酒感重') return d.strong >= 4;
+            if (flavor === '酒感中') return d.strong === 3;
             if (flavor === '清爽') return d.strong > 0 && d.strong <= 2;
             return true;
         });
@@ -1244,6 +1246,20 @@ function switchLeaderboard(type) {
     }
 }
 
+function toggleLeaderboard() {
+    const wrapper = document.getElementById('leaderboard-content');
+    const iconWrap = document.getElementById('leaderboard-expand-icon');
+    wrapper.classList.toggle('expanded');
+    
+    if (wrapper.classList.contains('expanded')) {
+        if(iconWrap) iconWrap.querySelector('.expand-text').innerText = '收合';
+        if(iconWrap) iconWrap.classList.add('expanded-state');
+    } else {
+        if(iconWrap) iconWrap.querySelector('.expand-text').innerText = '展開';
+        if(iconWrap) iconWrap.classList.remove('expanded-state');
+    }
+}
+
 function toggleHistory() {
     const wrapper = document.getElementById('history-content');
     const iconWrap = document.getElementById('history-expand-icon');
@@ -1404,12 +1420,16 @@ function loadHistory() {
                 <div class="history-card-img-wrapper">
                     <img src="${imgSrc}" onerror="handleImgError(this, '${imgSrcPng}')" onclick="openImageModal(this.src)" style="${isSoldOut ? 'filter: grayscale(1); opacity: 0.7;' : ''}" loading="lazy">
                     ${isSoldOut ? '<div class="history-sold-out-tag">SOLD OUT</div>' : ''}
+                    ${canCancel ? `<button class="history-btn-cancel-overlay" onclick="event.stopPropagation(); cancelOrder('${targetId}', this)" title="取消此訂單">✕</button>` : ''}
                 </div>
 
                 <div class="history-card-content">
                     <div class="history-card-header">
                         <span class="history-drink-name">${o.drink}</span>
-                        <span class="history-status-tag" style="background: ${color}; color: #000;">${text}</span>
+                        <div class="history-header-actions">
+                            <span class="history-status-tag" style="background: ${color}; color: #000;">${text}</span>
+                            <button class="history-btn-reorder" onclick="event.stopPropagation(); scrollToDrink('${safeDrinkName}')" ${isSoldOut ? 'disabled title="目前售罄"' : ''}>👀 去看看</button>
+                        </div>
                     </div>
 
                     <div class="history-time-info">
@@ -1422,11 +1442,6 @@ function loadHistory() {
                     </div>
 
                     ${o.notes ? `<div class="history-notes-box">💬 備註: ${o.notes}</div>` : ''}
-
-                    <div class="history-card-actions">
-                        ${canCancel ? `<button class="history-btn-cancel" onclick="cancelOrder('${targetId}', this)">✖ 取消</button>` : ''}
-                        <button class="history-btn-reorder" onclick="event.stopPropagation(); scrollToDrink('${safeDrinkName}')" ${isSoldOut ? 'disabled title="目前售罄"' : ''}>🔄 再點一杯</button>
-                    </div>
                 </div>
             </div>
         `;
@@ -1960,7 +1975,7 @@ function showOrderToast(guest, drink) {
         toast.style.cursor = 'not-allowed';
     } else {
         // Stop propagation so clicking the button doesn't trigger the toast's main onClick (scrollToDrink)
-        actionHtml = `<button class="btn-reorder" style="margin-left: 10px;" onclick="event.stopPropagation(); scrollToDrink('${safeDrinkName}')">🔄 再點一杯</button>`;
+        actionHtml = `<button class="btn-reorder" style="margin-left: 10px;" onclick="event.stopPropagation(); scrollToDrink('${safeDrinkName}')">👀 去看看</button>`;
         toast.onclick = () => { toast.style.display = 'none'; scrollToDrink(drink); };
     }
     
@@ -2564,7 +2579,7 @@ function updateHistoryOrderUI(orderData) {
         if (canCancel) {
             cellHtml += `<button class="history-btn-cancel" onclick="cancelOrder('${orderData.id}', this)">✖ 取消</button>`;
         }
-        cellHtml += `<button class="history-btn-reorder" onclick="event.stopPropagation(); scrollToDrink('${safeDrinkName}')" ${isSoldOut ? 'disabled title="目前售罄"' : ''}>🔄 再點一杯</button>`;
+        cellHtml += `<button class="history-btn-reorder" onclick="event.stopPropagation(); scrollToDrink('${safeDrinkName}')" ${isSoldOut ? 'disabled title="目前售罄"' : ''}>👀 去看看</button>`;
         cancelBtnCell.innerHTML = cellHtml;
     }
 }
@@ -2878,16 +2893,39 @@ function updateFAB() {
     
     const fab = document.getElementById('active-orders-fab');
     const badge = document.getElementById('active-orders-badge');
+    const backToTopBtn = document.getElementById('back-to-top');
     
     if (fab && badge) {
         if (myActiveOrders.length > 0) {
             badge.innerText = myActiveOrders.length;
             fab.style.display = 'flex';
+            if (backToTopBtn) {
+                backToTopBtn.style.display = 'none';
+            }
         } else {
             fab.style.display = 'none';
+            if (backToTopBtn) {
+                backToTopBtn.style.display = 'flex';
+                // 主動發送滾動事件，使 back-to-top 依據目前捲動位置來決定透明度與可點擊性
+                window.dispatchEvent(new Event('scroll'));
+            }
         }
     }
 }
+
+// 捲動至搜尋框位置並自動 focus 搜尋欄位
+window.scrollToSearchBox = function() {
+    const filterContainer = document.getElementById('filter-container');
+    const searchInput = document.getElementById('search-input');
+    if (filterContainer) {
+        customSmoothScrollToElement(filterContainer, 600);
+    }
+    if (searchInput) {
+        setTimeout(() => {
+            searchInput.focus();
+        }, 600);
+    }
+};
 
 // --- 星空背景特效 ---
 function initStarrySky() {

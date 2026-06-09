@@ -56,5 +56,97 @@
         "notes": "手動補單",
         "status": "completed",
         "completedTime": "9:54:24 PM"
+    },
+    {
+        "id": "1780934437464-808",
+        "guest": "lv",
+        "drink": "生命梅酒",
+        "time": "上午12:00:37",
+        "notes": "手動補單",
+        "status": "completed",
+        "completedTime": "12:00:37 AM"
+    },
+    {
+        "id": "1780934732922-20",
+        "guest": "lv",
+        "drink": "A1",
+        "time": "上午12:05:32",
+        "notes": "",
+        "status": "completed",
+        "makingTime": "12:18:50 AM",
+        "completedTime": "12:18:51 AM"
+    },
+    {
+        "id": "1781008502418-335",
+        "guest": "lv",
+        "drink": "伏特加萊姆  Vodka Lime",
+        "time": "下午8:35:02",
+        "notes": "",
+        "status": "rejected",
+        "completedTime": "10:15:17 PM"
+    },
+    {
+        "id": "1781008549191-256",
+        "guest": "lv",
+        "drink": "海明威黛綺莉  Hemingway Daiquiri",
+        "time": "下午8:35:49",
+        "notes": "",
+        "status": "rejected",
+        "completedTime": "10:15:18 PM"
+    },
+    {
+        "id": "1779817121920-477",
+        "guest": "lv",
+        "drink": "准將  Commodore",
+        "time": "上午1:38:41",
+        "notes": "",
+        "status": "rejected",
+        "makingTime": "2:12:35 AM",
+        "completedTime": "10:15:43 PM"
+    },
+    {
+        "id": "1780762794195-936",
+        "guest": "lv",
+        "drink": "玫莓冰茶  Rose Berry Icetea",
+        "time": "上午12:19:54",
+        "notes": "",
+        "status": "rejected",
+        "completedTime": "10:15:44 PM"
+    },
+    {
+        "id": "1781015649326-643",
+        "guest": "lv",
+        "drink": "X.Y.Z.",
+        "time": "下午10:34:09",
+        "notes": "",
+        "status": "rejected",
+        "completedTime": "10:41:51 PM"
+    },
+    {
+        "id": "1781016238381-92",
+        "guest": "TestUser",
+        "drink": "來一杯shot",
+        "time": "下午10:43:58",
+        "notes": "手動補單",
+        "status": "completed",
+        "completedTime": "10:43:58 PM"
+    },
+    {
+        "id": "1781020119962-566",
+        "guest": "Iv",
+        "drink": "B52轟炸機",
+        "time": "下午11:48:39",
+        "notes": "",
+        "status": "rejected",
+        "completedTime": "11:48:42 PM"
+    },
+    {
+        "id": "1781020136411-951",
+        "guest": "Iv",
+        "drink": "三位一體  Trinite",
+        "time": "下午11:48:56",
+        "notes": "",
+        "status": "rejected",
+        "completedTime": "11:48:59 PM"
     }
 ]

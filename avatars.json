@@ -10,5 +10,7 @@
     "TestGuest": "personas",
     "TestGTesteruest": "personas",
     "TestGTeTestersteruest": "personas",
-    "Tester": "personas"
+    "Tester": "personas",
+    "GuestA": "personas",
+    "GuestB": "adventurer"
 }

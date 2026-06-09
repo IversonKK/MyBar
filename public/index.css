@@ -544,10 +544,42 @@ button:hover {
     border-radius: 4px;
 }
 
+/* 取消鈕 — 圖片左上角半透明疊加，hover 卡片時浮現 */
+.history-btn-cancel-overlay {
+    position: absolute;
+    top: 4px;
+    left: 4px;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    border: none;
+    background: rgba(0, 0, 0, 0.4);
+    color: #ccc;
+    font-size: 11px;
+    line-height: 20px;
+    text-align: center;
+    padding: 0;
+    cursor: pointer;
+    opacity: 0.25;
+    transition: opacity 0.25s, background 0.25s, color 0.25s, transform 0.2s;
+    z-index: 2;
+}
+.history-card:hover .history-btn-cancel-overlay,
+.history-btn-cancel-overlay:focus {
+    opacity: 1;
+    background: rgba(231, 76, 60, 0.85);
+    color: #fff;
+}
+.history-btn-cancel-overlay:active {
+    transform: scale(0.9);
+}
+
 /* 內容區塊 */
 .history-card-content {
     padding: 10px;
     flex-grow: 1;
+    min-width: 0;
+    overflow: hidden;
     display: flex;
     flex-direction: column;
     justify-content: center;
@@ -555,28 +587,41 @@ button:hover {
 
 .history-card-header {
     display: flex;
-    justify-content: space-between;
+    flex-wrap: wrap;
     align-items: center;
     margin-bottom: 6px;
+    gap: 4px 8px;
 }
 
 .history-drink-name {
-    font-size: 1.1em;
+    font-size: 1.05em;
     font-weight: bold;
     color: #fff;
+    word-break: break-word;
+    flex: 1 1 auto;
+    min-width: 120px;
+}
+
+.history-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    flex-shrink: 0;
+    margin-left: auto;
 }
 
 .history-status-tag {
-    font-size: 0.8em;
+    font-size: 0.7em;
     font-weight: bold;
-    padding: 3px 8px;
-    border-radius: 12px;
+    padding: 2px 6px;
+    border-radius: 10px;
+    white-space: nowrap;
 }
 
 .history-time-info {
     font-size: 0.85em;
     color: #aaa;
-    margin-bottom: 6px;
+    margin-bottom: 4px;
 }
 
 .time-icon {
@@ -588,14 +633,13 @@ button:hover {
 .history-notes-box {
     background: rgba(243, 156, 18, 0.1);
     border: 1px dashed #f39c12;
-    padding: 6px 8px;
+    padding: 5px 8px;
     border-radius: 6px;
-    font-size: 0.85em;
+    font-size: 0.8em;
     color: #f39c12;
-    margin-bottom: 8px;
 }
 
-/* 操作按鈕 */
+/* 操作按鈕（已整合到 header 行） */
 .history-card-actions {
     display: flex;
     gap: 8px;
@@ -607,22 +651,26 @@ button:hover {
     background: transparent;
     color: #e74c3c;
     border: 1px solid #e74c3c;
-    padding: 4px 10px;
-    font-size: 0.85em;
-    border-radius: 6px;
+    padding: 2px 6px;
+    font-size: 0.75em;
+    border-radius: 5px;
+    cursor: pointer;
+    line-height: 1;
 }
 
 .history-btn-cancel:hover {
-    background: rgba(231, 76, 60, 0.1);
+    background: rgba(231, 76, 60, 0.15);
 }
 
 .history-btn-reorder {
     background: #3498db;
     color: white;
-    padding: 4px 10px;
-    font-size: 0.85em;
+    padding: 2px 8px;
+    font-size: 0.75em;
     border: none;
-    border-radius: 6px;
+    border-radius: 5px;
+    cursor: pointer;
+    line-height: 1;
 }
 
 .history-btn-reorder:hover {
@@ -639,11 +687,15 @@ button:hover {
 /* 排行榜設計 */
 #leaderboard-container {
     background: #1e1e1e;
-    padding: 15px;
     border-radius: 12px;
     margin-bottom: 25px;
     border: 1px solid #333;
     box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+    overflow: hidden;
+}
+
+#leaderboard-content .collapsible-inner {
+    padding: 15px;
 }
 
 .lb-tabs {

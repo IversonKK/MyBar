@@ -142,9 +142,12 @@ function loadDrinksData() {
         const files = fs.readdirSync(imagesDir);
         let idCounter = 1;
         
+        const processedNames = new Set();
         files.forEach(file => {
             if (file.toLowerCase().endsWith('.jpg') || file.toLowerCase().endsWith('.png')) {
                 const rawDrinkName = file.replace(/\.(jpg|png)$/i, '');
+                if (processedNames.has(rawDrinkName)) return;
+                processedNames.add(rawDrinkName);
                 let recipeKey = rawDrinkName;
                 
                 if (!recipeDatabase[recipeKey]) {

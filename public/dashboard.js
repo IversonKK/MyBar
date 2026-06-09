@@ -362,15 +362,18 @@ function renderAllOrders() {
     const listMaking = document.getElementById('list-making');
     const listCompleted = document.getElementById('list-completed');
     
-    const currentOrderIds = globalServerOrders.map(o => 'order-' + o.id);
+    const currentOrderIds = globalServerOrders
+        .filter(o => !o.hiddenFromDashboard && !localHiddenOrders.has(o.id))
+        .map(o => 'order-' + o.id);
 
-    // Remove deleted orders
+    // Remove deleted or hidden orders
     document.querySelectorAll('.order-card').forEach(el => {
         if (!currentOrderIds.includes(el.id)) el.remove();
     });
 
     // Render or update existing
     globalServerOrders.forEach(order => {
+        if (order.hiddenFromDashboard || localHiddenOrders.has(order.id)) return;
         const el = document.getElementById('order-' + order.id);
         const targetList = getListByStatus(order.status);
         
@@ -1247,14 +1250,16 @@ function openAdjustLeaderboardModal() {
         
         // 酒單上沒有的自訂特調 (放到最上面)
         optionsHtml += `<optgroup label="✨ 自訂特調">`;
+        optionsHtml += `<option value="來一杯shot">來一杯shot</option>`;
         optionsHtml += `<option value="custom-fosen">佛森特調 (自訂特調)</option>`;
         optionsHtml += `<option value="custom-other">其他自訂飲品...</option>`;
         optionsHtml += `</optgroup>`;
 
-        // 酒單上的飲品
+        // 酒單上的飲品 (排除已在自訂特調中的項目)
         if (allDrinks && allDrinks.length > 0) {
             optionsHtml += `<optgroup label="📋 酒單上飲品">`;
             allDrinks.forEach(d => {
+                if (d.name === '來一杯shot') return; // 已移至自訂特調區塊
                 optionsHtml += `<option value="${d.name}">${d.name}</option>`;
             });
             optionsHtml += `</optgroup>`;
@@ -1420,11 +1425,15 @@ function renderAdjustHistoryList() {
         const [color, statusText] = statusColors[o.status] || ['#888', o.status];
         const shortId = o.id.split('-')[0].slice(-5);
         const avatarUrl = getAvatarUrl(o.guest);
+        const encodedDrink = encodeURIComponent(o.drink);
+        const drinkImgJpg = `/images/${encodedDrink}.jpg`;
+        const drinkImgPng = `/images/${encodedDrink}.png`;
         
         return `
             <div style="display: flex; align-items: center; justify-content: space-between; background: #222; border: 1px solid #333; padding: 10px; border-radius: 8px; gap: 10px;">
                 <div style="display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0;">
-                    <img src="${avatarUrl}" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover; background: #222; border: 1px solid #555;">
+                    <img src="${avatarUrl}" style="width: 36px; height: 36px; border-radius: 50%; object-fit: cover; background: #222; border: 1px solid #555; flex-shrink: 0;">
+                    <img src="${drinkImgJpg}" onerror="handleImgError(this, '${drinkImgPng}')" onclick="openImageModal(this.src); event.stopPropagation();" title="點擊放大" style="width: 40px; height: 40px; border-radius: 6px; object-fit: cover; background: #111; border: 1px solid #444; cursor: pointer; flex-shrink: 0; transition: transform 0.2s, box-shadow 0.2s;" onmouseover="this.style.transform='scale(1.15)'; this.style.boxShadow='0 0 8px rgba(243,156,18,0.5)'" onmouseout="this.style.transform='scale(1)'; this.style.boxShadow='none'">
                     <div style="min-width: 0; flex: 1;">
                         <div style="font-weight: bold; color: #fff; text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">
                             ${o.guest} ➔ <span style="color: #f39c12;">${o.drink}</span>

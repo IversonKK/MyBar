@@ -160,17 +160,28 @@
         </div>
     </div>
 
-    <!-- 排行榜 (今日/歷史) -->
+    <!-- 排行榜 (今日/歷史，可收合) -->
     <div id="leaderboard-container" style="display: none;">
-        <div class="lb-tabs">
-            <button class="lb-tab active" onclick="switchLeaderboard('today')">🏆 今日排行</button>
-            <button class="lb-tab" onclick="switchLeaderboard('alltime')">👑 歷史總榜</button>
+        <div id="leaderboard-header" onclick="toggleLeaderboard()" style="cursor: pointer; user-select: none; display: flex; justify-content: space-between; align-items: center; padding: 12px 15px; background: linear-gradient(135deg, #1a1a2e, #16213e); border-bottom: 1px solid #333;">
+            <h3 style="margin: 0; color: #ffd700; font-size: 1.2em;">🏆 排行榜</h3>
+            <span class="expand-icon-wrap" id="leaderboard-expand-icon" style="font-size: 0.9em; color: #aaa; display: flex; align-items: center; gap: 4px;">
+                <span class="expand-text">收合</span>
+                <span class="expand-arrow" style="transition: transform 0.3s ease; display: inline-block;">▲</span>
+            </span>
         </div>
-        <div id="leaderboard-today" class="lb-content active">
-            <div class="lb-list" id="today-leaderboard-list"></div>
-        </div>
-        <div id="leaderboard-alltime" class="lb-content">
-            <div class="lb-list" id="alltime-leaderboard-list"></div>
+        <div id="leaderboard-content" class="collapsible-wrapper expanded">
+            <div class="collapsible-inner">
+                <div class="lb-tabs">
+                    <button class="lb-tab active" onclick="switchLeaderboard('today')">🏆 今日排行</button>
+                    <button class="lb-tab" onclick="switchLeaderboard('alltime')">👑 歷史總榜</button>
+                </div>
+                <div id="leaderboard-today" class="lb-content active">
+                    <div class="lb-list" id="today-leaderboard-list"></div>
+                </div>
+                <div id="leaderboard-alltime" class="lb-content">
+                    <div class="lb-list" id="alltime-leaderboard-list"></div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -269,8 +280,10 @@
             <div class="filter-group" id="filter-flavor">
                 <span class="filter-label">風味:</span>
                 <label><input type="checkbox" class="tag-checkbox" value="偏酸" onchange="applyFilters()"><span class="tag-btn">偏酸 (酸度重)</span></label>
+                <label><input type="checkbox" class="tag-checkbox" value="酸度中" onchange="applyFilters()"><span class="tag-btn">酸甜平衡 (酸度中)</span></label>
                 <label><input type="checkbox" class="tag-checkbox" value="偏甜" onchange="applyFilters()"><span class="tag-btn">偏甜 (酸度輕)</span></label>
                 <label><input type="checkbox" class="tag-checkbox" value="酒感重" onchange="applyFilters()"><span class="tag-btn">酒感重</span></label>
+                <label><input type="checkbox" class="tag-checkbox" value="酒感中" onchange="applyFilters()"><span class="tag-btn">酒感中</span></label>
                 <label><input type="checkbox" class="tag-checkbox" value="清爽" onchange="applyFilters()"><span class="tag-btn">清爽 (酒感輕)</span></label>
             </div>
 
@@ -356,7 +369,7 @@
 
     <!-- 老虎機/抽籤動畫模態視窗 -->
     <div id="slot-machine-overlay" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); display: flex; justify-content: center; align-items: center; z-index: 10500; visibility: hidden; opacity: 0; transition: opacity 0.3s; backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px);">
-        <div id="slot-machine-content" style="background: #1a1a1a; padding: 30px 40px; border-radius: 20px; text-align: center; border: 2px solid #8e44ad; box-shadow: 0 0 30px rgba(142, 68, 173, 0.6); transform: scale(0.8); transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); min-width: 250px; max-width: 90%; width: auto; box-sizing: border-box;">
+        <div id="slot-machine-content" style="background: #1a1a1a; padding: 30px 40px; border-radius: 20px; text-align: center; border: 2px solid #8e44ad; box-shadow: 0 0 30px rgba(142, 68, 173, 0.6); transform: scale(0.8); transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); min-width: 250px; max-width: 90%; width: 320px; box-sizing: border-box;">
             <h3 style="color: #f39c12; margin-top: 0; font-size: 1.5em; letter-spacing: 2px;">🎰 命運的輪盤 🎰</h3>
             <div style="margin: 20px 0; height: 100px; display: flex; align-items: center; justify-content: center; overflow: hidden; background: #000; border-radius: 12px; border: 2px inset #333; box-shadow: inset 0 0 15px rgba(0,0,0,0.8); padding: 0 15px; width: 100%; box-sizing: border-box;">
                 <!-- 這個 h2 會在 JavaScript 裡快速上下跳動製造殘影 -->
@@ -394,6 +407,11 @@
     <div id="active-orders-fab" class="fab-container" onclick="openHistory()" style="display: none;">
         <div class="fab-icon">🍸</div>
         <span id="active-orders-badge" class="fab-badge">0</span>
+    </div>
+
+    <!-- 回到頂部懸浮按鈕 (在無待作訂單且捲動超過 400px 時顯示) -->
+    <div id="back-to-top" class="fab-container" onclick="window.scrollTo({top: 0, behavior: 'smooth'})" style="display: none; background: linear-gradient(135deg, #444, #222); box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);">
+        <div class="fab-icon" style="font-size: 1.4em;">▲</div>
     </div>
 
     <!-- 底部篩選抽屜遮罩 -->
