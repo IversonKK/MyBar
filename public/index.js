@@ -30,6 +30,11 @@ const uniqueDicebearStyles = [
 
 let myAvatarStyle = localStorage.getItem('bar_guest_avatar_style');
 let globalAvatars = {}; // 儲存所有客人的大頭貼風格
+let globalRatings = {};
+let myRatings = {};
+let globalCampaign = { active: false, text: '', tag: '活動', style: 'gold' };
+let achievementsUnlocked = {};
+let isAchievementsFirstLoad = true;
 
 // 根據名字產生固定的隨機風格，避免每次刷新頭像都變動
 function getRandomStyleForName(name) {
@@ -167,8 +172,33 @@ function updateMainTitle() {
 
 if (currentName) {
     document.getElementById('welcome-screen').style.display = 'none';
+    document.getElementById('achievements-container').style.display = 'block';
 }
 updateMainTitle();
+
+// 初始化載入評分與活動資料
+fetch('/api/ratings')
+    .then(res => res.json())
+    .then(data => {
+        globalRatings = data;
+        syncMyRatings();
+        loadHistory();
+        initAchievementsState();
+    })
+    .catch(err => {
+        console.error("Error loading ratings:", err);
+        initAchievementsState();
+    });
+
+fetch('/api/campaign')
+    .then(res => res.json())
+    .then(data => {
+        globalCampaign = data;
+        updateCampaignBanner(globalCampaign);
+    })
+    .catch(err => {
+        console.error("Error loading campaign:", err);
+    });
 
 const avatarStyleNames = {
     'adventurer': '冒險家',
@@ -1109,7 +1139,40 @@ function renderMenu(drinksToRender) {
         
         const parsed = parseDrinkDescription(d.description);
         const hasStory = !!parsed.story;
+
+        const ratingData = globalRatings[d.name] || { avg: 0, count: 0, list: [] };
+        let ratingStatsHtml = '';
+        if (ratingData.count > 0) {
+            ratingStatsHtml = `
+                <div class="card-rating-summary" onclick="toggleReviews('${d.id}', event)">
+                    <span>⭐ ${ratingData.avg} (${ratingData.count} 評分)</span>
+                    <span style="margin-left: auto; font-size: 0.9em; font-weight: normal; color: #aaa;">查看評論 ▼</span>
+                </div>
+            `;
+        }
         
+        let reviewsHtml = '';
+        if (ratingData.list && ratingData.list.length > 0) {
+            reviewsHtml = ratingData.list.map(r => {
+                const starsStr = '★'.repeat(r.stars) + '☆'.repeat(5 - r.stars);
+                return `
+                    <div class="card-review-item">
+                        <div class="card-review-header">
+                            <span class="card-review-user">${r.guest}</span>
+                            <span style="color: #f39c12; font-size: 0.85em;">${starsStr}</span>
+                        </div>
+                        <div class="card-review-comment">${r.comment || '無評論內容'}</div>
+                    </div>
+                `;
+            }).join('');
+        }
+        
+        const reviewsCollapsibleHtml = `
+            <div class="reviews-collapsible" id="reviews-collapsible-${d.id}" style="display: none;" onclick="event.stopPropagation();">
+                ${reviewsHtml || '<div style="color: #666; font-size: 0.9em; text-align: center;">暫無詳細評論</div>'}
+            </div>
+        `;
+
         return `
         <div class="card ${d.isSoldOut ? 'sold-out' : ''}" id="drink-card-${d.id}" onclick="this.classList.remove('card-highlighted')">
             <div class="img-container">
@@ -1133,6 +1196,8 @@ function renderMenu(drinksToRender) {
                 <h3>${d.name} ${d.isSoldOut ? '<span style="color:#e74c3c; font-size:0.65em; vertical-align:middle; margin-left:5px;">(Sold Out)</span>' : ''}</h3>
                 
                 ${getFlavorIcons(d)}
+                
+                ${ratingStatsHtml}
 
                 <div class="description-area" onclick="event.stopPropagation();">${formatDescription(d.description)}</div>
                 
@@ -1144,6 +1209,8 @@ function renderMenu(drinksToRender) {
                     </div>
                 </div>
                 ` : ''}
+
+                ${reviewsCollapsibleHtml}
 
                 <div class="card-action-area">
                     ${d.isSoldOut 
@@ -1414,6 +1481,34 @@ function loadHistory() {
         const dateDisplay = !isNaN(ts) ? new Date(ts).toLocaleDateString('zh-TW', { month: '2-digit', day: '2-digit' }) : '';
 
         // 卡片式設計的 HTML 結構
+        // 計算排隊資訊（待處理/製作中的訂單）
+        let queueHtml = '';
+        if (o.status === 'pending' || o.status === 'making') {
+            const queueInfo = getQueueInfoForOrder(o);
+            if (queueInfo) {
+                queueHtml = buildQueueHtml(queueInfo);
+            }
+        }
+
+        // 評分資訊（已完成訂單）
+        let rateHtml = '';
+        if (o.status === 'completed') {
+            const r = myRatings[o.id];
+            if (r) {
+                const starsStr = '★'.repeat(r.stars) + '☆'.repeat(5 - r.stars);
+                rateHtml = `
+                    <div class="history-rating-display" style="margin-top: 8px; font-size: 0.9em; display: flex; align-items: center; gap: 6px;">
+                        <span class="history-rating-stars" style="color: #f39c12; font-weight: bold;">${starsStr}</span>
+                        ${r.comment ? `<span class="history-rating-comment" style="color: #aaa; font-style: italic;">"${r.comment}"</span>` : ''}
+                    </div>
+                `;
+            } else {
+                rateHtml = `
+                    <button class="history-btn-rate" onclick="event.stopPropagation(); openRatingModal('${o.id}', '${safeDrinkName}')" style="background: #f39c12; color: #000; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-weight: bold; margin-top: 8px; transition: 0.2s;">⭐ 評分</button>
+                `;
+            }
+        }
+
         return `
             <div class="history-card ${o.status || 'pending'}" id="history-order-${o.id}">
                 
@@ -1442,6 +1537,8 @@ function loadHistory() {
                     </div>
 
                     ${o.notes ? `<div class="history-notes-box">💬 備註: ${o.notes}</div>` : ''}
+                    ${queueHtml}
+                    ${rateHtml}
                 </div>
             </div>
         `;
@@ -1586,6 +1683,18 @@ function closeNotesModal() {
         pendingOrderBtn = null;
     }, 400);
 }
+function appendQuickNote(text) {
+    const input = document.getElementById('order-notes-input');
+    if (!input) return;
+    const val = input.value.trim();
+    if (val) {
+        if (val.includes(text)) return;
+        input.value = val + '，' + text;
+    } else {
+        input.value = text;
+    }
+    input.focus();
+}
 function submitOrderWithNotes() {
     if (orderCooldown > 0) return; // 雙重防呆，防止因手機卡頓導致的連點送單
     
@@ -1613,6 +1722,7 @@ function finalizeOrder(name, btn, notes) {
     // 手機端點餐成功震動回饋
     if ("vibrate" in navigator) { navigator.vibrate(50); }
     triggerSmallConfetti(); // 替換為單次的小型碎紙花特效，避免每次點餐都放長達 5 秒的煙火太過干擾
+    requestNotificationPermission();
     globalServerOrders.push(orderData);
     renderLeaderboard();
     checkMilestone();
@@ -1835,11 +1945,13 @@ function recommendRandomDrink() {
                 slotImg.style.opacity = '0.7';
             }
             
+            if (typeof playTickSound === 'function') playTickSound();
             spins++;
             delay += 12; // 每次跳動增加延遲，模擬越來越慢的煞車感
             setTimeout(spinRoulette, delay);
         } else {
             // 動畫結束，顯示最終大獎
+            if (typeof playCelebrateSound === 'function') playCelebrateSound();
             const encodedFinalName = encodeURIComponent(finalDrink.name);
             
             if (slotText) {
@@ -2237,6 +2349,7 @@ socket.on('sync-orders', (serverOrders) => {
     loadHistory();
     applyFilters();
     updateFAB();
+    if (typeof checkAchievements === 'function') checkAchievements();
 });
 
 socket.on('order-status-updated', (data) => {
@@ -2253,16 +2366,19 @@ socket.on('order-status-updated', (data) => {
     // 當客人的訂單被吧台退回時，彈出紅色的專屬推播通知
     if (data.guest === currentName && data.status === 'rejected' && oldStatus !== 'rejected') {
         showToast(`🚫 抱歉，您的【${data.drink}】訂單已被吧台退回！`, true);
+        sendSystemNotification('🍸 Iverson Bar', `抱歉，您的【${data.drink}】訂單已被吧台退回！`, true);
     }
 
     // 當客人的訂單開始製作時，彈出橘黃色的專屬推播通知
     if (data.guest === currentName && data.status === 'making' && oldStatus !== 'making') {
         showToast(`👨‍🍳 吧台正在為您製作【${data.drink}】！`, 'warning');
+        sendSystemNotification('🍸 Iverson Bar', `吧台正在為您製作【${data.drink}】！`, false);
     }
 
     // 當客人的訂單完成(出餐)時，彈出綠色的專屬推播通知
     if (data.guest === currentName && data.status === 'completed' && oldStatus !== 'completed') {
         showToast(`🍸 您的【${data.drink}】已經完成囉！`, false);
+        sendSystemNotification('🍸 Iverson Bar', `您的【${data.drink}】已經完成囉！`, true);
     }
 
     renderLeaderboard();
@@ -2270,6 +2386,31 @@ socket.on('order-status-updated', (data) => {
     updateHistoryOrderUI(data);
     applyFilters();
     updateFAB();
+    if (typeof checkAchievements === 'function') checkAchievements();
+});
+
+socket.on('sync-campaign', (campaign) => {
+    globalCampaign = campaign;
+    updateCampaignBanner(campaign);
+});
+
+socket.on('campaign-updated', (campaign) => {
+    globalCampaign = campaign;
+    updateCampaignBanner(campaign);
+});
+
+socket.on('rating-updated', (data) => {
+    globalRatings[data.drinkName] = data.stats;
+    if (data.entry && data.entry.guest === currentName) {
+        myRatings[data.entry.orderId] = {
+            stars: data.entry.stars,
+            comment: data.entry.comment,
+            ts: data.entry.ts
+        };
+    }
+    loadHistory();
+    applyFilters();
+    if (typeof checkAchievements === 'function') checkAchievements();
 });
 
 socket.on('admin-notification', (orderData) => {
@@ -3250,4 +3391,520 @@ function initCategoryTabs() {
             tab.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
         });
     });
+}
+
+// =====================================================
+// 🔔 系統推播通知 & Service Worker
+// =====================================================
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js')
+            .then(reg => console.log('Service Worker registered successfully!', reg.scope))
+            .catch(err => console.error('Service Worker registration failed:', err));
+    });
+}
+
+let notificationPermissionRequested = false;
+
+async function requestNotificationPermission() {
+    if (!('Notification' in window)) return false;
+    if (Notification.permission === 'granted') return true;
+    if (Notification.permission === 'denied') return false;
+    if (notificationPermissionRequested) return false;
+    notificationPermissionRequested = true;
+    
+    const perm = await Notification.requestPermission();
+    return perm === 'granted';
+}
+
+function sendSystemNotification(title, body, isImportant = false) {
+    if (!('Notification' in window)) return;
+    if (Notification.permission !== 'granted') return;
+    
+    const options = {
+        body: body,
+        icon: "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🍸</text></svg>",
+        badge: "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🍸</text></svg>",
+        tag: 'bar-order-update',
+        renotify: true,
+        vibrate: isImportant ? [200, 100, 200, 100, 200] : [200, 100, 200]
+    };
+    
+    if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+        navigator.serviceWorker.controller.postMessage({
+            type: 'SHOW_NOTIFICATION',
+            title: title,
+            options: options
+        });
+    } else {
+        new Notification(title, options);
+    }
+}
+
+function updateCampaignBanner(campaign) {
+    const banner = document.getElementById('campaign-banner');
+    const tag = document.getElementById('campaign-banner-tag');
+    const text = document.getElementById('campaign-banner-text');
+    if (!banner) return;
+    
+    if (campaign && campaign.active) {
+        banner.className = `campaign-banner ${campaign.style || 'gold'}`;
+        if (tag) tag.textContent = campaign.tag || '活動';
+        if (text) text.textContent = campaign.text || '';
+    } else {
+        banner.className = 'campaign-banner hidden';
+    }
+}
+
+// =====================================================
+// ⭐ 評分系統
+// =====================================================
+let pendingRatingOrderId = null;
+let pendingRatingDrink = null;
+let selectedStars = 0;
+const ratingLabels = ['', '😞 有點失望', '😐 還好啦', '🙂 不錯喔！', '😊 很好喝！', '🤩 完美！必喝！'];
+
+function syncMyRatings() {
+    myRatings = {};
+    if (!globalRatings) return;
+    Object.keys(globalRatings).forEach(drinkName => {
+        const stats = globalRatings[drinkName];
+        if (stats && stats.list) {
+            stats.list.forEach(entry => {
+                if (entry.guest === currentName) {
+                    myRatings[entry.orderId] = {
+                        stars: entry.stars,
+                        comment: entry.comment,
+                        ts: entry.ts
+                    };
+                }
+            });
+        }
+    });
+}
+
+function openRatingModal(orderId, drinkName) {
+    pendingRatingOrderId = orderId;
+    pendingRatingDrink = drinkName;
+    selectedStars = 0;
+    
+    document.getElementById('rating-modal-drink').textContent = drinkName;
+    document.getElementById('rating-comment-input').value = '';
+    document.getElementById('rating-label-text').textContent = '';
+    const submitBtn = document.getElementById('rating-submit-btn');
+    submitBtn.disabled = true;
+    submitBtn.style.opacity = '0.4';
+    
+    // Reset stars
+    document.querySelectorAll('.star-btn').forEach(btn => btn.classList.remove('active'));
+    
+    document.getElementById('rating-modal-overlay').classList.add('visible');
+    document.body.style.overflow = 'hidden';
+}
+
+function closeRatingModal() {
+    document.getElementById('rating-modal-overlay').classList.remove('visible');
+    document.body.style.overflow = '';
+}
+
+function selectStar(n) {
+    selectedStars = n;
+    const stars = document.querySelectorAll('.star-btn');
+    stars.forEach((s, idx) => {
+        s.classList.toggle('active', idx < n);
+    });
+    document.getElementById('rating-label-text').textContent = ratingLabels[n] || '';
+    const submitBtn = document.getElementById('rating-submit-btn');
+    submitBtn.disabled = false;
+    submitBtn.style.opacity = '1';
+}
+
+function submitRating() {
+    if (selectedStars < 1 || selectedStars > 5) return;
+    const comment = document.getElementById('rating-comment-input').value.trim();
+    
+    socket.emit('submit-rating', {
+        drinkName: pendingRatingDrink,
+        guest: currentName,
+        stars: selectedStars,
+        comment: comment,
+        orderId: pendingRatingOrderId
+    });
+    
+    // Optimistic update
+    myRatings[pendingRatingOrderId] = {
+        stars: selectedStars,
+        comment: comment,
+        ts: Date.now()
+    };
+    
+    closeRatingModal();
+    loadHistory();
+    applyFilters();
+    showToast('⭐ 評分送出成功！');
+}
+
+function toggleReviews(drinkId, event) {
+    if (event) event.stopPropagation();
+    const collapsible = document.getElementById(`reviews-collapsible-${drinkId}`);
+    if (collapsible) {
+        const isHidden = collapsible.style.display === 'none';
+        collapsible.style.display = isHidden ? 'block' : 'none';
+    }
+}
+
+// =====================================================
+// 🏆 成就系統 (Achievements Engine)
+// =====================================================
+const badgesDefinition = [
+    {
+        id: 'pioneer',
+        name: '開路先鋒',
+        desc: '今天第一個成功下單的人',
+        icon: '🏆',
+        color: 'linear-gradient(135deg, #ffd700 0%, #ffa500 100%)',
+        check: (myTodayOrders, myTodayRatings) => {
+            const todayStr = new Date().toDateString();
+            const allTodayOrders = globalServerOrders.filter(o => {
+                if (!o.id || o.status !== 'completed') return false;
+                const ts = parseInt(o.id.split('-')[0]);
+                return !isNaN(ts) && new Date(ts).toDateString() === todayStr;
+            });
+            if (allTodayOrders.length === 0) return false;
+            allTodayOrders.sort((a, b) => parseInt(a.id.split('-')[0]) - parseInt(b.id.split('-')[0]));
+            return allTodayOrders[0].guest === currentName;
+        }
+    },
+    {
+        id: 'first_step',
+        name: '微醺起步',
+        desc: '今天點了第一杯酒',
+        icon: '🍺',
+        color: 'linear-gradient(135deg, #84fab0 0%, #8fd3f4 100%)',
+        check: (myTodayOrders, myTodayRatings) => myTodayOrders.length >= 1
+    },
+    {
+        id: 'double_drink',
+        name: '成雙成對',
+        desc: '今天點了 2 杯酒',
+        icon: '🍻',
+        color: 'linear-gradient(135deg, #a1c4fd 0%, #c2e9fb 100%)',
+        check: (myTodayOrders, myTodayRatings) => myTodayOrders.length >= 2
+    },
+    {
+        id: 'triple_drink',
+        name: '三生有幸',
+        desc: '今天點了 3 杯酒',
+        icon: '🎉',
+        color: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+        check: (myTodayOrders, myTodayRatings) => myTodayOrders.length >= 3
+    },
+    {
+        id: 'lightweight',
+        name: '小酌怡情',
+        desc: '點過酒精濃度 (ABV) < 5% 的低感調酒',
+        icon: '🥤',
+        color: 'linear-gradient(135deg, #e0c3fc 0%, #8ec5fc 100%)',
+        check: (myTodayOrders, myTodayRatings) => myTodayOrders.some(o => {
+            const d = allDrinks.find(item => item.name === o.drink);
+            return d && d.abv < 5;
+        })
+    },
+    {
+        id: 'heavyweight',
+        name: '烈酒狂熱',
+        desc: '點過酒精濃度 (ABV) >= 20% 的高濃度調酒',
+        icon: '🔥',
+        color: 'linear-gradient(135deg, #ff9a9e 0%, #fecfef 99%, #fecfef 100%)',
+        check: (myTodayOrders, myTodayRatings) => myTodayOrders.some(o => {
+            const d = allDrinks.find(item => item.name === o.drink);
+            return d && d.abv >= 20;
+        })
+    },
+    {
+        id: 'luxury',
+        name: '輕奢名流',
+        desc: '點過包含「香檳」或「氣泡」的酒款',
+        icon: '🥂',
+        color: 'linear-gradient(135deg, #fbc2eb 0%, #a6c1ee 100%)',
+        check: (myTodayOrders, myTodayRatings) => myTodayOrders.some(o => {
+            const d = allDrinks.find(item => item.name === o.drink);
+            if (!d) return false;
+            const text = (d.tags || []).join(' ') + ' ' + (d.description || '');
+            return text.includes('香檳') || text.includes('氣泡');
+        })
+    },
+    {
+        id: 'favorite_fan',
+        name: '忠實收藏家',
+        desc: '將至少一款酒加入最愛清單',
+        icon: '❤️',
+        color: 'linear-gradient(135deg, #ff758c 0%, #ff7eb3 100%)',
+        check: (myTodayOrders, myTodayRatings) => guestFavorites.length >= 1
+    },
+    {
+        id: 'critic',
+        name: '金舌頭評委',
+        desc: '今晚給予 3 次或以上的出杯評分',
+        icon: '📝',
+        color: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
+        check: (myTodayOrders, myTodayRatings) => myTodayRatings.length >= 3
+    },
+    {
+        id: 'perfectionist',
+        name: '完美的挑剔者',
+        desc: '評分給予滿分 5 顆星',
+        icon: '✨',
+        color: 'linear-gradient(135deg, #f6d365 0%, #fda085 100%)',
+        check: (myTodayOrders, myTodayRatings) => myTodayRatings.some(r => r.stars === 5)
+    },
+    {
+        id: 'speed_drinker',
+        name: '極速狂飆',
+        desc: '一小時內累計下單並喝了 3 杯或以上',
+        icon: '⚡',
+        color: 'linear-gradient(135deg, #f12711 0%, #f5af19 100%)',
+        check: (myTodayOrders, myTodayRatings) => {
+            if (myTodayOrders.length < 3) return false;
+            const timestamps = myTodayOrders
+                .map(o => parseInt(o.id.split('-')[0]))
+                .filter(ts => !isNaN(ts))
+                .sort((a, b) => a - b);
+            for (let i = 0; i < timestamps.length; i++) {
+                for (let j = i + 2; j < timestamps.length; j++) {
+                    if (timestamps[j] - timestamps[i] <= 60 * 60 * 1000) {
+                        return true;
+                    }
+                }
+            }
+            return false;
+        }
+    },
+    {
+        id: 'abyss_lord',
+        name: '深淵領主',
+        desc: '點過 2 杯或以上酒精濃度 (ABV) >= 30% 的特濃調酒',
+        icon: '☠️',
+        color: 'linear-gradient(135deg, #0f2027 0%, #203a43 50%, #2c5364 100%)',
+        check: (myTodayOrders, myTodayRatings) => {
+            const heavyDrinks = myTodayOrders.filter(o => {
+                const d = allDrinks.find(item => item.name === o.drink);
+                return d && d.abv >= 30;
+            });
+            return heavyDrinks.length >= 2;
+        }
+    },
+    {
+        id: 'legendary_drinker',
+        name: '傳奇酒豪',
+        desc: '今晚累計點餐達 9 杯或以上',
+        icon: '🔱',
+        color: 'linear-gradient(135deg, #8a2387 0%, #e94057 50%, #f27121 100%)',
+        check: (myTodayOrders, myTodayRatings) => myTodayOrders.length >= 9
+    }
+];
+
+function initAchievementsState() {
+    if (!currentName) return;
+    const stored = localStorage.getItem(`bar_achievements_${currentName}`);
+    if (stored) {
+        try {
+            achievementsUnlocked = JSON.parse(stored);
+        } catch(e) {
+            achievementsUnlocked = {};
+        }
+    } else {
+        achievementsUnlocked = {};
+    }
+    renderAchievementsGrid();
+}
+
+function checkAchievements() {
+    if (!currentName) return;
+    const todayStr = new Date().toDateString();
+    
+    // 篩選今日 completed 訂單
+    const myTodayOrders = globalServerOrders.filter(o => {
+        if (o.guest !== currentName || o.status !== 'completed' || !o.id) return false;
+        const ts = parseInt(o.id.split('-')[0]);
+        return !isNaN(ts) && new Date(ts).toDateString() === todayStr;
+    });
+    
+    // 篩選今日評分
+    const myTodayRatings = [];
+    Object.keys(myRatings).forEach(orderId => {
+        const r = myRatings[orderId];
+        if (r && r.ts && new Date(r.ts).toDateString() === todayStr) {
+            myTodayRatings.push(r);
+        }
+    });
+    
+    let unlockedNew = false;
+    badgesDefinition.forEach(badge => {
+        if (achievementsUnlocked[badge.id]) return;
+        
+        if (badge.check(myTodayOrders, myTodayRatings)) {
+            achievementsUnlocked[badge.id] = { unlockedAt: Date.now() };
+            unlockedNew = true;
+            
+            if (!isAchievementsFirstLoad) {
+                // Show confetti and toast
+                if (typeof confetti === 'function') {
+                    confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
+                }
+                showToast(`🏆 恭喜解鎖徽章：【${badge.name}】！`);
+            }
+        }
+    });
+    
+    if (unlockedNew) {
+        localStorage.setItem(`bar_achievements_${currentName}`, JSON.stringify(achievementsUnlocked));
+        renderAchievementsGrid();
+    }
+    isAchievementsFirstLoad = false;
+}
+
+function renderAchievementsGrid() {
+    const list = document.getElementById('achievements-list');
+    const unlockedCountEl = document.getElementById('achievements-unlocked-count');
+    const totalCountEl = document.getElementById('achievements-total-count');
+    const percentEl = document.getElementById('achievements-percent');
+    if (!list) return;
+    
+    let unlockedCount = 0;
+    let html = '';
+    
+    badgesDefinition.forEach(badge => {
+        const isUnlocked = !!achievementsUnlocked[badge.id];
+        if (isUnlocked) unlockedCount++;
+        
+        const cardClass = isUnlocked ? 'achievement-card unlocked' : 'achievement-card';
+        const statusText = isUnlocked ? '✅ 已解鎖' : '🔒 未解鎖';
+        const cardStyle = isUnlocked ? `background: ${badge.color}; color: #fff;` : '';
+        
+        html += `
+            <div class="${cardClass}" style="${cardStyle}">
+                <div class="achievement-icon" style="font-size: 2em; margin-bottom: 5px;">${badge.icon}</div>
+                <div class="achievement-name" style="font-weight: bold; font-size: 1.05em; margin-bottom: 2px;">${badge.name}</div>
+                <div class="achievement-desc" style="font-size: 0.85em; opacity: 0.9; margin-bottom: 5px;">${badge.desc}</div>
+                <div class="achievement-status-tag" style="font-size: 0.8em; margin-top: auto; padding: 2px 6px; border-radius: 4px; background: rgba(0,0,0,0.15);">${statusText}</div>
+            </div>
+        `;
+    });
+    
+    list.innerHTML = html;
+    if (unlockedCountEl) unlockedCountEl.textContent = unlockedCount;
+    if (totalCountEl) totalCountEl.textContent = badgesDefinition.length;
+    if (percentEl) {
+        const pct = Math.round((unlockedCount / badgesDefinition.length) * 100);
+        percentEl.textContent = pct;
+    }
+}
+
+function toggleAchievements() {
+    const content = document.getElementById('achievements-content');
+    const arrow = document.querySelector('#achievements-expand-icon .expand-arrow');
+    const text = document.querySelector('#achievements-expand-icon .expand-text');
+    if (content) {
+        content.classList.toggle('expanded');
+        const isExpanded = content.classList.contains('expanded');
+        if (arrow) arrow.style.transform = isExpanded ? 'rotate(180deg)' : 'rotate(0deg)';
+        if (text) text.textContent = isExpanded ? '收合' : '展開';
+    }
+}
+
+// =====================================================
+// 📊 排隊順位與隊列資訊
+// =====================================================
+function getQueueInfoForOrder(myOrder) {
+    const todayStr = new Date().toDateString();
+    const activeOrders = globalServerOrders.filter(o => {
+        if (o.status !== 'pending' && o.status !== 'making') return false;
+        const ts = parseInt(o.id.split('-')[0]);
+        if (isNaN(ts)) return false;
+        return new Date(ts).toDateString() === todayStr;
+    }).sort((a, b) => parseInt(a.id.split('-')[0]) - parseInt(b.id.split('-')[0]));
+
+    const myIndex = activeOrders.findIndex(o => o.id === myOrder.id);
+    if (myIndex === -1) return null;
+
+    const before = activeOrders.slice(0, myIndex);
+    return { before, myIndex, total: activeOrders.length };
+}
+
+function buildQueueHtml(queueInfo) {
+    if (!queueInfo || queueInfo.before.length === 0) {
+        return `
+            <div class="queue-info-box queue-first" style="background: rgba(39, 174, 96, 0.1); border: 1px dashed #27ae60; padding: 10px; border-radius: 8px; margin-top: 8px; font-size: 0.9em; color: #2ecc71; font-weight: bold; display: flex; align-items: center; gap: 6px;">
+                <span>🥂</span>
+                <span>您是當前第一順位！吧台正在用心準備中...</span>
+            </div>
+        `;
+    }
+
+    const beforeOrders = queueInfo.before;
+    const avatarHtml = beforeOrders.slice(0, 3).map(o => {
+        const avatarUrl = getAvatarUrl(o.guest);
+        return `<img src="${avatarUrl}" class="queue-person-avatar" style="width: 20px; height: 20px; border-radius: 50%; border: 1px solid #ffb703; margin-left: -5px;" title="${o.guest} 的 ${o.drink}">`;
+    }).join('');
+
+    const countText = beforeOrders.length;
+    const overflowText = beforeOrders.length > 3 ? `+${beforeOrders.length - 3}` : '';
+
+    return `
+        <div class="queue-info-box" style="background: rgba(243, 156, 18, 0.08); border: 1px dashed #f39c12; padding: 10px; border-radius: 8px; margin-top: 8px; font-size: 0.88em; color: #ffb703; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+            <span>⏳ 前面還有 <strong>${countText}</strong> 杯在排隊</span>
+            <div class="queue-avatars-list" style="display: flex; align-items: center; padding-left: 5px;">
+                ${avatarHtml}
+                ${overflowText ? `<span style="font-size: 0.75em; color: #aaa; margin-left: 5px;">${overflowText}</span>` : ''}
+            </div>
+        </div>
+    `;
+}
+
+// =====================================================
+// 🔊 老虎機音效合成器
+// =====================================================
+function playTickSound() {
+    try {
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        if (!AudioContext) return;
+        const ctx = new AudioContext();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(1500, ctx.currentTime);
+        gain.gain.setValueAtTime(0.015, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.04);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.04);
+    } catch(e) {}
+}
+
+function playCelebrateSound() {
+    try {
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        if (!AudioContext) return;
+        const ctx = new AudioContext();
+        const playNote = (freq, time, duration) => {
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(freq, time);
+            gain.gain.setValueAtTime(0, time);
+            gain.gain.linearRampToValueAtTime(0.12, time + 0.03);
+            gain.gain.exponentialRampToValueAtTime(0.001, time + duration);
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.start(time);
+            osc.stop(time + duration);
+        };
+        const now = ctx.currentTime;
+        playNote(523.25, now, 0.15); // C5
+        playNote(659.25, now + 0.08, 0.15); // E5
+        playNote(783.99, now + 0.16, 0.15); // G5
+        playNote(1046.50, now + 0.24, 0.4); // C6
+    } catch(e) {}
 }

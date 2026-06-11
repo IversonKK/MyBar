@@ -31,6 +31,7 @@
             </div>
             <button onclick="showTodayStats()" class="pos-btn">📊 統計</button>
             <button onclick="openAdjustLeaderboardModal()" class="pos-btn" style="background: #8e44ad; color: #fff; border-color: #8e44ad;">🏆 調整榜單</button>
+            <button onclick="openCampaignModal()" class="pos-btn" id="btn-campaign-settings" style="background: #e67e22; color: #fff; border-color: #e67e22;">📢 活動設定</button>
             <button onclick="clearFinished()" class="pos-btn">🧹 清理</button>
             <button onclick="resetAllHistory()" class="pos-btn btn-danger">🔥 清空</button>
             <button onclick="toggleSidebar()" class="pos-btn" id="btn-toggle-inv">📦 庫存</button>
@@ -220,6 +221,20 @@
                         <div class="preset-img-option" data-preset="preset4.png" onclick="selectPresetImage(this)" style="position: relative; width: 50px; height: 50px; border-radius: 6px; overflow: hidden; border: 2px solid transparent; cursor: pointer; flex-shrink: 0; transition: border-color 0.2s, box-shadow 0.2s;"><img src="/images/presets/preset4.png" style="width: 100%; height: 100%; object-fit: cover;"></div>
                         <div class="preset-img-option" data-preset="preset5.png" onclick="selectPresetImage(this)" style="position: relative; width: 50px; height: 50px; border-radius: 6px; overflow: hidden; border: 2px solid transparent; cursor: pointer; flex-shrink: 0; transition: border-color 0.2s, box-shadow 0.2s;"><img src="/images/presets/preset5.png" style="width: 100%; height: 100%; object-fit: cover;"></div>
                         <div class="preset-img-option" data-preset="preset6.png" onclick="selectPresetImage(this)" style="position: relative; width: 50px; height: 50px; border-radius: 6px; overflow: hidden; border: 2px solid transparent; cursor: pointer; flex-shrink: 0; transition: border-color 0.2s, box-shadow 0.2s;"><img src="/images/presets/preset6.png" style="width: 100%; height: 100%; object-fit: cover;"></div>
+                        <div class="preset-img-option" data-preset="preset7.png" onclick="selectPresetImage(this)" style="position: relative; width: 50px; height: 50px; border-radius: 6px; overflow: hidden; border: 2px solid transparent; cursor: pointer; flex-shrink: 0; transition: border-color 0.2s, box-shadow 0.2s;"><img src="/images/presets/preset7.png" style="width: 100%; height: 100%; object-fit: cover;"></div>
+                        <div class="preset-img-option" data-preset="preset8.png" onclick="selectPresetImage(this)" style="position: relative; width: 50px; height: 50px; border-radius: 6px; overflow: hidden; border: 2px solid transparent; cursor: pointer; flex-shrink: 0; transition: border-color 0.2s, box-shadow 0.2s;"><img src="/images/presets/preset8.png" style="width: 100%; height: 100%; object-fit: cover;"></div>
+                        <div class="preset-img-option" data-preset="preset9.png" onclick="selectPresetImage(this)" style="position: relative; width: 50px; height: 50px; border-radius: 6px; overflow: hidden; border: 2px solid transparent; cursor: pointer; flex-shrink: 0; transition: border-color 0.2s, box-shadow 0.2s;"><img src="/images/presets/preset9.png" style="width: 100%; height: 100%; object-fit: cover;"></div>
+                        <div class="preset-img-option" data-preset="preset10.png" onclick="selectPresetImage(this)" style="position: relative; width: 50px; height: 50px; border-radius: 6px; overflow: hidden; border: 2px solid transparent; cursor: pointer; flex-shrink: 0; transition: border-color 0.2s, box-shadow 0.2s;"><img src="/images/presets/preset10.png" style="width: 100%; height: 100%; object-fit: cover;"></div>
+                        <div class="preset-img-option" data-preset="preset11.png" onclick="selectPresetImage(this)" style="position: relative; width: 50px; height: 50px; border-radius: 6px; overflow: hidden; border: 2px solid transparent; cursor: pointer; flex-shrink: 0; transition: border-color 0.2s, box-shadow 0.2s;"><img src="/images/presets/preset11.png" style="width: 100%; height: 100%; object-fit: cover;"></div>
+                        <div class="preset-img-option" data-preset="preset12.png" onclick="selectPresetImage(this)" style="position: relative; width: 50px; height: 50px; border-radius: 6px; overflow: hidden; border: 2px solid transparent; cursor: pointer; flex-shrink: 0; transition: border-color 0.2s, box-shadow 0.2s;"><img src="/images/presets/preset12.png" style="width: 100%; height: 100%; object-fit: cover;"></div>
+                        <div class="preset-img-option" data-preset="preset13.png" onclick="selectPresetImage(this)" style="position: relative; width: 50px; height: 50px; border-radius: 6px; overflow: hidden; border: 2px solid transparent; cursor: pointer; flex-shrink: 0; transition: border-color 0.2s, box-shadow 0.2s;"><img src="/images/presets/preset13.png" style="width: 100%; height: 100%; object-fit: cover;"></div>
+                        <div class="preset-img-option" data-preset="preset14.png" onclick="selectPresetImage(this)" style="position: relative; width: 50px; height: 50px; border-radius: 6px; overflow: hidden; border: 2px solid transparent; cursor: pointer; flex-shrink: 0; transition: border-color 0.2s, box-shadow 0.2s;"><img src="/images/presets/preset14.png" style="width: 100%; height: 100%; object-fit: cover;"></div>
+                        <div class="preset-img-option" data-preset="preset15.png" onclick="selectPresetImage(this)" style="position: relative; width: 50px; height: 50px; border-radius: 6px; overflow: hidden; border: 2px solid transparent; cursor: pointer; flex-shrink: 0; transition: border-color 0.2s, box-shadow 0.2s;"><img src="/images/presets/preset15.png" style="width: 100%; height: 100%; object-fit: cover;"></div>
+                        <div class="preset-img-option" data-preset="preset16.png" onclick="selectPresetImage(this)" style="position: relative; width: 50px; height: 50px; border-radius: 6px; overflow: hidden; border: 2px solid transparent; cursor: pointer; flex-shrink: 0; transition: border-color 0.2s, box-shadow 0.2s;"><img src="/images/presets/preset16.png" style="width: 100%; height: 100%; object-fit: cover;"></div>
+                        <div class="preset-img-option" data-preset="preset17.png" onclick="selectPresetImage(this)" style="position: relative; width: 50px; height: 50px; border-radius: 6px; overflow: hidden; border: 2px solid transparent; cursor: pointer; flex-shrink: 0; transition: border-color 0.2s, box-shadow 0.2s;"><img src="/images/presets/preset17.png" style="width: 100%; height: 100%; object-fit: cover;"></div>
+                        <div class="preset-img-option" data-preset="preset18.png" onclick="selectPresetImage(this)" style="position: relative; width: 50px; height: 50px; border-radius: 6px; overflow: hidden; border: 2px solid transparent; cursor: pointer; flex-shrink: 0; transition: border-color 0.2s, box-shadow 0.2s;"><img src="/images/presets/preset18.png" style="width: 100%; height: 100%; object-fit: cover;"></div>
+                        <div class="preset-img-option" data-preset="preset19.png" onclick="selectPresetImage(this)" style="position: relative; width: 50px; height: 50px; border-radius: 6px; overflow: hidden; border: 2px solid transparent; cursor: pointer; flex-shrink: 0; transition: border-color 0.2s, box-shadow 0.2s;"><img src="/images/presets/preset19.png" style="width: 100%; height: 100%; object-fit: cover;"></div>
+                        <div class="preset-img-option" data-preset="preset20.png" onclick="selectPresetImage(this)" style="position: relative; width: 50px; height: 50px; border-radius: 6px; overflow: hidden; border: 2px solid transparent; cursor: pointer; flex-shrink: 0; transition: border-color 0.2s, box-shadow 0.2s;"><img src="/images/presets/preset20.png" style="width: 100%; height: 100%; object-fit: cover;"></div>
                     </div>
                     <input type="hidden" id="selected-preset-image" value="">
                 </div>
@@ -238,6 +253,60 @@
                 </div>
                 
                 <div id="adjust-history-list" style="flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; padding-right: 5px;"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 評分詳情 Modal -->
+    <div id="rating-details-modal-overlay" class="modal-overlay">
+        <div class="modal-content" style="max-width: 500px; display: flex; flex-direction: column; max-height: 80vh;">
+            <div class="modal-header">
+                <h2 id="rating-details-title" style="color: #f39c12; margin: 0;">⭐ 評分與評論詳情</h2>
+                <button class="modal-close" onclick="closeRatingDetailsModal()">✖</button>
+            </div>
+            <div id="rating-details-summary" style="padding: 12px; background: rgba(243, 156, 18, 0.08); border-radius: 8px; margin-top: 10px; margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between;">
+                <div style="font-size: 1.1em; font-weight: bold; color: #fff;" id="rating-details-drink-name">Mojito</div>
+                <div style="font-size: 1.2em; font-weight: bold; color: #f39c12;" id="rating-details-stats">⭐ 0.0 (0 筆評分)</div>
+            </div>
+            <div id="rating-details-body" style="flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; padding-right: 5px;">
+                <!-- 評論列表將動態插入 -->
+            </div>
+        </div>
+    </div>
+
+    <!-- 活動設定 Modal -->
+    <div id="campaign-modal-overlay" class="modal-overlay">
+        <div class="modal-content" style="max-width: 450px;">
+            <div class="modal-header">
+                <h2>📢 主題活動與特惠設定</h2>
+                <button class="modal-close" onclick="closeCampaignModal()">✖</button>
+            </div>
+            <div class="edit-form-group" style="display: flex; align-items: center; gap: 10px; margin-top: 10px; margin-bottom: 20px;">
+                <label style="margin: 0; cursor: pointer; display: flex; align-items: center; gap: 8px; font-size: 1.05em; color: #fff;">
+                    <input type="checkbox" id="campaign-active" style="width: 20px; height: 20px; cursor: pointer;">
+                    啟用活動 Banner
+                </label>
+            </div>
+            <div class="edit-form-group">
+                <label for="campaign-tag-input">活動標籤 (如: Happy Hour, 特惠)</label>
+                <input type="text" id="campaign-tag-input" placeholder="例如：活動" maxlength="10">
+            </div>
+            <div class="edit-form-group">
+                <label for="campaign-text-input">活動內容說明 (最多 100 字)</label>
+                <textarea id="campaign-text-input" placeholder="例如：今日 Happy Hour：全場調酒 9 折！" maxlength="100" style="height: 60px; resize: none;"></textarea>
+            </div>
+            <div class="edit-form-group">
+                <label for="campaign-style-select">Banner 樣式主題</label>
+                <select id="campaign-style-select">
+                    <option value="gold">✨ 奢華金黃 (金底黑字)</option>
+                    <option value="rose">🌹 浪漫玫紅 (紅底白字)</option>
+                    <option value="cyan">💎 時尚極光 (藍青漸層)</option>
+                    <option value="amber">🔥 暖心琥珀 (橘紅漸層)</option>
+                </select>
+            </div>
+            <div style="display: flex; gap: 10px; margin-top: 20px;">
+                <button class="pos-btn btn-primary" onclick="submitCampaignSettings()" style="flex: 1; padding: 10px;">儲存並發佈</button>
+                <button class="pos-btn" onclick="closeCampaignModal()" style="flex: 1; padding: 10px; background: transparent; border-color: #555;">取消</button>
             </div>
         </div>
     </div>

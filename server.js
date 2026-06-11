@@ -16,6 +16,9 @@ let recipeDatabase = {};
 let orders = [];
 let favoritesDatabase = {};
 let avatarsDatabase = {};
+let tunnelUrl = ''; // 儲存 cloudflared 隧道網址
+let ratingsDatabase = {}; // { drinkName: [{ guest, stars, comment, orderId, ts }] }
+let campaignDatabase = { active: false, text: '', tag: '活動', style: 'gold' };
 
 const defaultAvatarStyles = [
     "adventurer", "avataaars", "big-ears", "big-smile", "bottts", "croodles",
@@ -27,6 +30,8 @@ const ordersPath = path.join(__dirname, 'orders.json');
 const completedOrdersLogPath = path.join(__dirname, 'completed_orders.json');
 const favoritesPath = path.join(__dirname, 'favorites.json');
 const avatarsPath = path.join(__dirname, 'avatars.json');
+const ratingsPath = path.join(__dirname, 'ratings.json');
+const campaignPath = path.join(__dirname, 'campaign.json');
 
 function loadOrdersData() {
     try {
@@ -105,6 +110,52 @@ function saveAvatarsData() {
     } catch (err) {
         console.error("寫入 avatars.json 失敗:", err);
     }
+}
+
+function loadRatingsData() {
+    try {
+        if (fs.existsSync(ratingsPath)) {
+            ratingsDatabase = JSON.parse(fs.readFileSync(ratingsPath, 'utf8'));
+            console.log("成功讀取 ratings.json！");
+        }
+    } catch (err) {
+        console.error("讀取 ratings.json 失敗:", err.message);
+    }
+}
+
+function saveRatingsData() {
+    try {
+        fs.writeFileSync(ratingsPath, JSON.stringify(ratingsDatabase, null, 4), 'utf8');
+    } catch (err) {
+        console.error("寫入 ratings.json 失敗:", err);
+    }
+}
+
+function loadCampaignData() {
+    try {
+        if (fs.existsSync(campaignPath)) {
+            campaignDatabase = JSON.parse(fs.readFileSync(campaignPath, 'utf8'));
+            console.log("成功讀取 campaign.json！");
+        }
+    } catch (err) {
+        console.error("讀取 campaign.json 失敗:", err.message);
+    }
+}
+
+function saveCampaignData() {
+    try {
+        fs.writeFileSync(campaignPath, JSON.stringify(campaignDatabase, null, 4), 'utf8');
+    } catch (err) {
+        console.error("寫入 campaign.json 失敗:", err);
+    }
+}
+
+// 計算一款酒的評分統計
+function calcRatingStats(drinkName) {
+    const list = ratingsDatabase[drinkName] || [];
+    if (list.length === 0) return { avg: 0, count: 0, list: [] };
+    const avg = list.reduce((s, r) => s + r.stars, 0) / list.length;
+    return { avg: Math.round(avg * 10) / 10, count: list.length, list };
 }
 
 function saveCompletedOrdersData() {
@@ -195,9 +246,41 @@ loadDrinksData();
 loadOrdersData();
 loadFavoritesData();
 loadAvatarsData();
+loadRatingsData();
+loadCampaignData();
 
 app.get('/api/drinks', (req, res) => {
     res.json(allDrinks);
+});
+
+// Cloudflared 隧道 URL API
+app.get('/api/tunnel-url', (req, res) => {
+    res.json({ url: tunnelUrl });
+});
+
+app.use(express.json());
+app.post('/api/tunnel-url', (req, res) => {
+    const { url } = req.body;
+    if (url && url.startsWith('https://')) {
+        tunnelUrl = url;
+        console.log(`✅ 已記錄隧道網址: ${url}`);
+        res.json({ ok: true });
+    } else {
+        res.status(400).json({ error: 'invalid url' });
+    }
+});
+
+// 評分統計 API
+app.get('/api/ratings', (req, res) => {
+    const stats = {};
+    Object.keys(ratingsDatabase).forEach(drinkName => {
+        stats[drinkName] = calcRatingStats(drinkName);
+    });
+    res.json(stats);
+});
+
+app.get('/api/campaign', (req, res) => {
+    res.json(campaignDatabase);
 });
 
 app.get('/api/music', (req, res) => {
@@ -215,6 +298,7 @@ app.get('/api/music', (req, res) => {
 io.on('connection', (socket) => {
     socket.emit('sync-orders', orders);
     socket.emit('sync-avatars', avatarsDatabase);
+    socket.emit('sync-campaign', campaignDatabase);
 
     socket.on('new-order', (orderData) => {
         if (!avatarsDatabase[orderData.guest]) {
@@ -362,6 +446,35 @@ io.on('connection', (socket) => {
         io.emit('favorites-updated', guest);
     });
 
+    // 評分系統
+    socket.on('submit-rating', (data) => {
+        const { drinkName, guest, stars, comment, orderId } = data;
+        if (!drinkName || !guest || !stars || stars < 1 || stars > 5) return;
+
+        if (!ratingsDatabase[drinkName]) ratingsDatabase[drinkName] = [];
+
+        // 防止同一筆訂單重複評分
+        const alreadyRated = ratingsDatabase[drinkName].some(r => r.orderId === orderId);
+        if (alreadyRated) {
+            socket.emit('rating-error', '您已經評分過這杯酒了！');
+            return;
+        }
+
+        const entry = {
+            guest,
+            stars: parseInt(stars),
+            comment: (comment || '').trim().slice(0, 100),
+            orderId,
+            ts: Date.now()
+        };
+        ratingsDatabase[drinkName].push(entry);
+        saveRatingsData();
+
+        const stats = calcRatingStats(drinkName);
+        io.emit('rating-updated', { drinkName, stats, entry });
+        console.log(`⭐ ${guest} 給「${drinkName}」評了 ${stars} 顆星`);
+    });
+
     socket.on('add-manual-completed-order', (data) => {
         const orderId = Date.now() + '-' + Math.floor(Math.random() * 1000);
         const newOrder = {
@@ -396,6 +509,18 @@ io.on('connection', (socket) => {
         orders.push(newOrder);
         appendToCompletedLog(newOrder);
         io.emit('sync-orders', orders);
+    });
+
+    socket.on('update-campaign', (data) => {
+        campaignDatabase = {
+            active: !!data.active,
+            text: (data.text || '').trim().slice(0, 100),
+            tag: (data.tag || '活動').trim().slice(0, 10),
+            style: data.style || 'gold'
+        };
+        saveCampaignData();
+        io.emit('campaign-updated', campaignDatabase);
+        console.log(`📢 活動更新: ${campaignDatabase.active ? '啟用' : '停用'} - ${campaignDatabase.text}`);
     });
 });
 

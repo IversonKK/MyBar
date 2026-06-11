@@ -13,6 +13,8 @@ const socket = io();
 let allDrinks = [];
 let globalServerOrders = []; // 用來暫存伺服器的訂單，確保配方載入時能重繪
 let globalAvatars = {};
+let globalRatings = {}; // { drinkName: { avg, count } }
+let globalCampaign = { active: false, text: '', tag: '活動', style: 'gold' };
 const localHiddenOrders = new Set(); // 紀錄本機端自動隱藏的訂單
 const finishedTimes = {}; // 紀錄訂單完成/退單的時間，供 10 分鐘自動清理使用
 let isSidebarHidden = true; // 控制側邊欄狀態
@@ -310,12 +312,22 @@ function renderInventory(fullRender = true) {
         const t = Date.now(); 
         const localPath = `/images/${encodedName}.jpg?t=${t}`;
         const localPathPng = `/images/${encodedName}.png?t=${t}`;
+        
+        // 評分徹章
+        const ratingData = globalRatings[d.name];
+        const ratingBadge = ratingData && ratingData.count > 0
+            ? `<span class="inv-rating-badge" onclick="openRatingDetailsModal('${safeName}')" title="${ratingData.count} 人評分">⭐ ${ratingData.avg.toFixed(1)} <small>(${ratingData.count})</small></span>`
+            : `<span class="inv-rating-badge no-rating" title="尚無評分">☆ 未評分</span>`;
+        
         return `
         <div class="inv-item ${d.isSoldOut ? 'sold-out' : ''}">
             <img src="${localPath}" onerror="handleImgError(this, '${localPathPng}')" onclick="openImageModal(this.src)">
             <div class="inv-item-info">
                 <div class="inv-item-name" title="${d.name}">${d.name}</div>
-                <div class="inv-item-status">${d.isSoldOut ? '🚫 已下架' : '✅ 供應中'}</div>
+                <div class="inv-item-meta">
+                    <div class="inv-item-status">${d.isSoldOut ? '🚫 已下架' : '✅ 供應中'}</div>
+                    ${ratingBadge}
+                </div>
             </div>
             <div class="inv-item-actions">
                 <button class="inv-action-btn toggle-btn" onclick="toggleSoldOut(${d.id})">
@@ -345,6 +357,47 @@ function toggleSoldOutByKeyword(keyword) {
     });
     showToast(`✅ 已將「${keyword}」相關酒款設為 ${actionText}！`);
 }
+
+// 接收評分更新 → 即時刷新庫存列表星數
+socket.on('rating-updated', (data) => {
+    globalRatings[data.drinkName] = data.stats;
+    renderInventory(false); // 只更新清單，不重建快速鍵
+});
+
+function updateCampaignStatusBadge() {
+    const btn = document.getElementById('btn-campaign-settings');
+    if (!btn) return;
+    if (globalCampaign && globalCampaign.active) {
+        btn.innerHTML = `📢 活動中: ${globalCampaign.tag || '活動'}`;
+        btn.style.background = '#27ae60';
+        btn.style.borderColor = '#27ae60';
+    } else {
+        btn.innerHTML = `📢 活動設定`;
+        btn.style.background = '#e67e22';
+        btn.style.borderColor = '#e67e22';
+    }
+}
+
+// 接收活動更新
+socket.on('campaign-updated', (data) => {
+    globalCampaign = data;
+    updateCampaignStatusBadge();
+});
+socket.on('sync-campaign', (data) => {
+    globalCampaign = data;
+    updateCampaignStatusBadge();
+});
+
+// 初始化載入評分與活動資料
+fetch('/api/ratings').then(r => r.json()).then(data => {
+    globalRatings = data;
+    renderInventory();
+}).catch(() => {});
+
+fetch('/api/campaign').then(r => r.json()).then(data => {
+    globalCampaign = data;
+    updateCampaignStatusBadge();
+}).catch(() => {});
 
 function reloadRecipes() {
     socket.emit('reload-recipes');
@@ -901,6 +954,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     else if (el.id === 'stats-modal-overlay') closeStatsModal();
                     else if (el.id === 'guest-history-modal-overlay') closeGuestHistoryModal();
                     else if (el.id === 'adjust-leaderboard-modal-overlay') closeAdjustLeaderboardModal();
+                    else if (el.id === 'rating-details-modal-overlay') closeRatingDetailsModal();
+                    else if (el.id === 'campaign-modal-overlay') closeCampaignModal();
                 }
             });
         });
@@ -1287,6 +1342,82 @@ function openAdjustLeaderboardModal() {
 function closeAdjustLeaderboardModal() {
     const modal = document.getElementById('adjust-leaderboard-modal-overlay');
     if (modal) modal.classList.remove('visible');
+}
+
+function openRatingDetailsModal(drinkName) {
+    const modal = document.getElementById('rating-details-modal-overlay');
+    const titleEl = document.getElementById('rating-details-drink-name');
+    const statsEl = document.getElementById('rating-details-stats');
+    const bodyEl = document.getElementById('rating-details-body');
+
+    if (!modal || !titleEl || !statsEl || !bodyEl) return;
+
+    titleEl.textContent = drinkName;
+    const stats = globalRatings[drinkName] || { avg: 0, count: 0, list: [] };
+    statsEl.textContent = `⭐ ${stats.avg.toFixed(1)} (${stats.count} 筆評分)`;
+
+    const reviews = stats.list || [];
+    if (reviews.length === 0) {
+        bodyEl.innerHTML = `<div style="text-align: center; color: #666; padding: 20px;">尚無任何留言與評論</div>`;
+    } else {
+        // 由新到舊排序
+        const sortedReviews = [...reviews].sort((a, b) => (b.ts || 0) - (a.ts || 0));
+        bodyEl.innerHTML = sortedReviews.map(r => {
+            const dateStr = r.ts ? new Date(r.ts).toLocaleString('zh-TW', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : '';
+            const starsStr = '★'.repeat(r.stars) + '☆'.repeat(5 - r.stars);
+            return `
+                <div class="review-card">
+                    <div class="review-header">
+                        <div class="review-user">
+                            <img src="${getAvatarUrl(r.guest)}" style="width: 24px; height: 24px; border-radius: 50%; background: #000; border: 1px solid #444;" onerror="this.src='/images/avatar-default.png'">
+                            <span>${r.guest}</span>
+                        </div>
+                        <span class="review-stars">${starsStr}</span>
+                    </div>
+                    ${r.comment ? `<div class="review-comment">"${r.comment}"</div>` : ''}
+                    <div class="review-time">${dateStr}</div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    modal.classList.add('visible');
+}
+
+function closeRatingDetailsModal() {
+    const modal = document.getElementById('rating-details-modal-overlay');
+    if (modal) modal.classList.remove('visible');
+}
+
+function openCampaignModal() {
+    const modal = document.getElementById('campaign-modal-overlay');
+    if (!modal) return;
+    document.getElementById('campaign-active').checked = !!globalCampaign.active;
+    document.getElementById('campaign-tag-input').value = globalCampaign.tag || '';
+    document.getElementById('campaign-text-input').value = globalCampaign.text || '';
+    document.getElementById('campaign-style-select').value = globalCampaign.style || 'gold';
+    modal.classList.add('visible');
+}
+
+function closeCampaignModal() {
+    const modal = document.getElementById('campaign-modal-overlay');
+    if (modal) modal.classList.remove('visible');
+}
+
+function submitCampaignSettings() {
+    const active = document.getElementById('campaign-active').checked;
+    const tag = document.getElementById('campaign-tag-input').value.trim();
+    const text = document.getElementById('campaign-text-input').value.trim();
+    const style = document.getElementById('campaign-style-select').value;
+
+    if (active && !text) {
+        showToast('⚠️ 啟用活動時，活動內容說明不可為空！', true);
+        return;
+    }
+
+    socket.emit('update-campaign', { active, tag, text, style });
+    closeCampaignModal();
+    showToast('📢 活動設定已更新並同步至所有客戶端！');
 }
 
 function handleManualDrinkSelectChange() {

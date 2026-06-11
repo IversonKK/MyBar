@@ -233,3 +233,78 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helve
 .edit-form-group input, .edit-form-group textarea, .edit-form-group select { width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #444; background: #000; color: #fff; box-sizing: border-box; font-size: 0.95em; outline: none; transition: border-color 0.2s; }
 .edit-form-group input:focus, .edit-form-group textarea:focus, .edit-form-group select:focus { border-color: #f39c12; }
 .edit-form-group textarea { resize: vertical; min-height: 80px; }
+
+/* Ratings & Reviews */
+.inv-rating-badge {
+    background: rgba(243, 156, 18, 0.15);
+    color: #f39c12;
+    padding: 3px 8px;
+    border-radius: 20px;
+    font-size: 0.85em;
+    font-weight: bold;
+    border: 1px solid rgba(243, 156, 18, 0.35);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    transition: all 0.2s;
+    user-select: none;
+}
+.inv-rating-badge:hover {
+    background: #f39c12;
+    color: #000;
+    transform: scale(1.05);
+}
+.inv-rating-badge.no-rating {
+    background: rgba(255, 255, 255, 0.05);
+    color: #888;
+    border-color: rgba(255, 255, 255, 0.1);
+    cursor: default;
+}
+.inv-rating-badge.no-rating:hover {
+    background: rgba(255, 255, 255, 0.05);
+    color: #888;
+    transform: none;
+}
+
+/* Reviews List Styles */
+.review-card {
+    background: #1e1e1e;
+    border: 1px solid #2d2d2d;
+    border-radius: 8px;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    transition: border-color 0.2s;
+}
+.review-card:hover {
+    border-color: #444;
+}
+.review-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.review-user {
+    font-weight: bold;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.review-stars {
+    color: #f39c12;
+    font-weight: bold;
+}
+.review-comment {
+    color: #ccc;
+    font-size: 0.95em;
+    line-height: 1.4;
+    word-break: break-all;
+}
+.review-time {
+    color: #666;
+    font-size: 0.8em;
+    align-self: flex-end;
+}
