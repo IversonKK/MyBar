@@ -1,4 +1,4 @@
-# ============================================================
+﻿# ============================================================
 #  🍸 Iverson Bar — 一鍵啟動腳本
 #  功能：啟動 Node.js 伺服器 + cloudflared HTTPS 隧道
 #        自動偵測 URL 並開啟 QR Code 頁面
@@ -40,7 +40,7 @@ $cfInstalled = $null -ne (Get-Command cloudflared -ErrorAction SilentlyContinue)
 
 if (-not $cfInstalled) {
     Write-Color "⚠️  找不到 cloudflared，正在使用 winget 安裝..." "Yellow"
-    winget install --id Cloudflare.cloudflared -e --silent
+    winget install --id Cloudflare.cloudflared -e --silent --accept-source-agreements --accept-package-agreements
     
     # 更新 PATH
     $env:PATH = [System.Environment]::GetEnvironmentVariable("PATH", "Machine") + ";" + [System.Environment]::GetEnvironmentVariable("PATH", "User")
