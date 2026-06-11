@@ -3600,6 +3600,30 @@ const badgesDefinition = [
         check: (myTodayOrders, myTodayRatings) => myTodayOrders.length >= 3
     },
     {
+        id: 'five_drinks',
+        name: '五福臨門',
+        desc: '今天點了 5 杯酒',
+        icon: '🍹',
+        color: 'linear-gradient(135deg, #ff0844 0%, #ffb199 100%)',
+        check: (myTodayOrders, myTodayRatings) => myTodayOrders.length >= 5
+    },
+    {
+        id: 'seven_drinks',
+        name: '七星高照',
+        desc: '今天點了 7 杯酒',
+        icon: '🌟',
+        color: 'linear-gradient(135deg, #30cfd0 0%, #330867 100%)',
+        check: (myTodayOrders, myTodayRatings) => myTodayOrders.length >= 7
+    },
+    {
+        id: 'ask_for_shot',
+        name: '主動找酒保要一杯SHOT',
+        desc: '點了「來一杯shot」特調',
+        icon: '🥃',
+        color: 'linear-gradient(135deg, #ed213a 0%, #93291e 100%)',
+        check: (myTodayOrders, myTodayRatings) => myTodayOrders.some(o => o.drink === '來一杯shot')
+    },
+    {
         id: 'lightweight',
         name: '小酌怡情',
         desc: '點過酒精濃度 (ABV) < 5% 的低感調酒',
