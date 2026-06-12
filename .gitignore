@@ -1,2 +1,8 @@
 node_modules/
 .env
+avatars.json
+completed_orders.json
+favorites.json
+orders.json
+ratings.json
+read_step.js
