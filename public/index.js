@@ -2163,7 +2163,7 @@ function startSlotMachineSpin(data) {
             if ("vibrate" in navigator) { navigator.vibrate([100, 50, 100]); } // 抽中時給予特殊震動回饋
             triggerConfetti(); // 抽出結果的瞬間發射紙花特效
             
-            // 停留 2.5 秒讓客人看清楚開獎結果，然後關閉老虎機並導航
+            // 停留 0.7 秒讓客人看清楚開獎結果，然後關閉老虎機並導航
             setTimeout(() => {
                 if (slotOverlay) {
                     slotOverlay.style.opacity = '0';
@@ -2187,7 +2187,7 @@ function startSlotMachineSpin(data) {
                 const prefix = hasFilters ? '🎯 根據您的口味偏好，推薦您：' : '🎲 吧台為您推薦：';
                 showToast(`${prefix}【${finalDrink.name}】！`);
                 scrollToDrink(finalDrink.name, true);
-            }, 2500);
+            }, 700);
         }
     }
     
