@@ -368,7 +368,7 @@
         <div id="notes-modal-content">
             <h3 style="color: #f39c12; margin-top: 0;">📝 需不需要客製化？</h3>
             <p style="font-size: 0.9em; color: #aaa; margin-bottom: 15px;">(例如：去冰、加濃、微甜)</p>
-            <input type="text" id="order-notes-input" placeholder="若無可直接留白送單" onkeypress="if(event.key === 'Enter') submitOrderWithNotes()">
+            <input type="text" id="order-notes-input" placeholder="若無可直接留白送單 (最多 30 字)" maxlength="30" onkeypress="if(event.key === 'Enter') submitOrderWithNotes()">
             <div class="quick-notes-wrapper">
                 <span class="quick-note-tag" onclick="appendQuickNote('去冰')">❄️ 去冰</span>
                 <span class="quick-note-tag" onclick="appendQuickNote('少冰')">🧊 少冰</span>

@@ -1,4 +1,4 @@
-﻿# ============================================================
+# ============================================================
 #  🍸 Iverson Bar — 一鍵啟動腳本
 #  功能：啟動 Node.js 伺服器 + cloudflared HTTPS 隧道
 #        自動偵測 URL 並開啟 QR Code 頁面
@@ -18,9 +18,10 @@ Write-Color "  🍸  Iverson Bar  —  吧台一鍵啟動系統" "Yellow"
 Write-Color "============================================" "DarkGray"
 Write-Host ""
 
-# ── 步驟 1：停止舊的 Node 程序 ──
-Write-Color "⏹  正在停止舊的伺服器程序..." "DarkGray"
+# ── 步驟 1：停止舊的 Node 與 cloudflared 程序 ──
+Write-Color "⏹  正在停止舊的伺服器與隧道程序..." "DarkGray"
 Get-Process -Name "node" -ErrorAction SilentlyContinue | Stop-Process -Force
+Get-Process -Name "cloudflared" -ErrorAction SilentlyContinue | Stop-Process -Force
 Start-Sleep -Milliseconds 600
 
 # ── 步驟 2：啟動 Node.js 伺服器（新視窗）──

@@ -997,8 +997,8 @@ function applyFilters() {
     const top3Drinks = getTop3Drinks(); // 取得自動熱門 Top 3
 
     const filteredDrinks = allDrinks.filter(d => {
-        // 預設隱藏已售罄的酒款，除非開關被打開
-        if (!showSoldOut && d.isSoldOut) return false;
+        // 讓已下架的酒款一律顯示（不再隱藏），後續由 sort 排序置底，且卡片與按鈕為灰色不可點擊狀態
+        // if (!showSoldOut && d.isSoldOut) return false;
 
         // 安全檢查：確保欄位存在，避免程式崩潰
         const drinkName = d.name || "";
@@ -1686,13 +1686,36 @@ function closeNotesModal() {
 function appendQuickNote(text) {
     const input = document.getElementById('order-notes-input');
     if (!input) return;
-    const val = input.value.trim();
-    if (val) {
-        if (val.includes(text)) return;
-        input.value = val + '，' + text;
-    } else {
-        input.value = text;
+    let val = input.value.trim();
+    
+    // 定義互斥對組
+    const mutuallyExclusive = [
+        ['去冰', '少冰'],
+        ['加濃', '薄一點']
+    ];
+    
+    // 將現有的備註以逗號拆分成陣列
+    let parts = val ? val.split(/[，,]/).map(p => p.trim()).filter(p => p) : [];
+    
+    // 檢查新加入的選項是否有互斥項，若有則將其從現有清單中移除
+    mutuallyExclusive.forEach(pair => {
+        if (pair.includes(text)) {
+            const opposite = pair.find(item => item !== text);
+            parts = parts.filter(p => p !== opposite);
+        }
+    });
+    
+    // 避免重複添加相同標籤
+    if (!parts.includes(text)) {
+        const testVal = [...parts, text].join('，');
+        if (testVal.length > 30) {
+            showToast('⚠️ 備註字數已達 30 字上限！', 'warning');
+            return;
+        }
+        parts.push(text);
     }
+    
+    input.value = parts.join('，');
     input.focus();
 }
 function submitOrderWithNotes() {
@@ -1748,6 +1771,13 @@ function finalizeOrder(name, btn, notes) {
 }
 
 function order(name, btn) {
+    // 檢查是否已下架售罄
+    const drink = allDrinks.find(d => d.name === name);
+    if (drink && drink.isSoldOut) {
+        showToast(`⚠️ 抱歉，【${name}】目前已下架售罄囉！`, true);
+        return;
+    }
+
     // 檢查冷卻時間
     if (orderCooldown > 0) {
         showToast(`⏳ 吧台正在接收訂單，請等待 ${orderCooldown} 秒後再點下一杯喔！`, 'warning');
@@ -1806,7 +1836,122 @@ function scrollToDrink(drinkName, keepFilters = false) {
 let isRouletteRunning = false;
 let recentlyDrawnDrinks = {}; // 紀錄最近抽中的酒款與時間
 
-// 🎲 隨機推薦邏輯
+// 🔊 搖桿拉動金屬機械聲
+function playLeverSound() {
+    try {
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        if (!AudioContext) return;
+        const ctx = new AudioContext();
+        const osc = ctx.createOscillator();
+        const osc2 = ctx.createOscillator();
+        const gain = ctx.createGain();
+        
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(130, ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(30, ctx.currentTime + 0.15);
+        
+        osc2.type = 'sawtooth';
+        osc2.frequency.setValueAtTime(90, ctx.currentTime);
+        osc2.frequency.exponentialRampToValueAtTime(10, ctx.currentTime + 0.1);
+        
+        gain.gain.setValueAtTime(0.18, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.2);
+        
+        osc.connect(gain);
+        osc2.connect(gain);
+        gain.connect(ctx.destination);
+        
+        osc.start();
+        osc.stop(ctx.currentTime + 0.2);
+        osc2.start();
+        osc2.stop(ctx.currentTime + 0.2);
+    } catch(e) {}
+}
+
+let isLeverInitialized = false;
+let slotMachineReady = false;
+let slotMachineTargetData = null;
+
+function setupSlotLever() {
+    if (isLeverInitialized) return;
+    const lever = document.getElementById('slot-lever');
+    if (!lever) return;
+    const arm = lever.querySelector('.lever-arm');
+    if (!arm) return;
+
+    let isDragging = false;
+    let startY = 0;
+    let deltaY = 0;
+
+    lever.addEventListener('pointerdown', (e) => {
+        if (!slotMachineReady) return;
+        isDragging = true;
+        startY = e.clientY;
+        deltaY = 0;
+        lever.releasePointerCapture(e.pointerId);
+        arm.style.transition = 'none';
+    });
+
+    window.addEventListener('pointermove', (e) => {
+        if (!isDragging) return;
+        deltaY = e.clientY - startY;
+        deltaY = Math.max(0, Math.min(65, deltaY));
+        const angle = (deltaY / 65) * 135;
+        arm.style.transform = `rotate(${angle}deg)`;
+    });
+
+    const endDrag = () => {
+        if (!isDragging) return;
+        isDragging = false;
+        arm.style.transition = 'transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+        
+        if (deltaY >= 35) {
+            triggerLeverPull();
+        } else {
+            arm.style.transform = '';
+        }
+    };
+
+    window.addEventListener('pointerup', endDrag);
+    window.addEventListener('pointercancel', endDrag);
+
+    lever.addEventListener('click', (e) => {
+        if (!slotMachineReady || isDragging) return;
+        triggerLeverPull();
+    });
+
+    isLeverInitialized = true;
+}
+
+function triggerLeverPull() {
+    if (!slotMachineReady) return;
+    slotMachineReady = false;
+    
+    const lever = document.getElementById('slot-lever');
+    if (lever) lever.classList.remove('ready-to-pull');
+
+    playLeverSound();
+
+    const arm = lever ? lever.querySelector('.lever-arm') : null;
+    if (arm) {
+        arm.style.transition = 'transform 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94)';
+        arm.style.transform = 'rotate(135deg)';
+    }
+
+    if ("vibrate" in navigator) { navigator.vibrate(35); }
+
+    setTimeout(() => {
+        if (arm) {
+            arm.style.transition = 'transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+            arm.style.transform = 'rotate(0deg)';
+        }
+        
+        if (slotMachineTargetData) {
+            startSlotMachineSpin(slotMachineTargetData);
+        }
+    }, 250);
+}
+
 function recommendRandomDrink() {
     if (isRouletteRunning) return; // 避免動畫期間重複點擊
 
@@ -1859,7 +2004,7 @@ function recommendRandomDrink() {
         if (btn) {
             // 暫存原本的文字以便恢復
             btn.dataset.originalText = btn.innerText;
-            btn.innerText = '⏳ 抽籤中';
+            btn.innerText = '⏳ 準備中';
             btn.style.background = '#7f8c8d'; // 變成代表等待中的灰色
             btn.disabled = true; // 暫時鎖定按鈕
         }
@@ -1884,10 +2029,29 @@ function recommendRandomDrink() {
         slotHint.innerText = hasFilters ? '🎯 正在從您篩選的結果中抽取...' : '🎲 正在從吧台所有酒款中抽取...';
     }
     
-    if (slotOverlay) {
-        slotOverlay.style.visibility = 'visible';
-        slotOverlay.style.opacity = '1';
-        if (slotContent) slotContent.style.transform = 'scale(1)';
+    // 預先準備好老虎機專用的圖片元素並隱藏它
+    let slotImg = document.getElementById('slot-machine-img');
+    if (!slotImg && slotContent) {
+        slotImg = document.createElement('img');
+        slotImg.id = 'slot-machine-img';
+        slotImg.style.cssText = 'width: 60px; height: 60px; object-fit: cover; border-radius: 8px; margin-bottom: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.5); display: none; margin-left: auto; margin-right: auto;';
+        slotContent.insertBefore(slotImg, slotText.parentNode); 
+    }
+    if (slotImg) {
+        slotImg.style.display = 'none';
+        slotImg.style.transform = '';
+        slotImg.style.border = '';
+        slotImg.style.boxShadow = '';
+    }
+
+    if (slotText) {
+        slotText.innerText = "👉 請拉下右側搖桿！";
+        slotText.style.transition = '';
+        slotText.style.transform = '';
+        slotText.style.color = '#fff';
+        slotText.style.textShadow = '0 0 10px rgba(255, 255, 255, 0.5)';
+        slotText.style.opacity = '1';
+        slotText.style.fontSize = '1.6em';
     }
 
     // 建立加權抽籤池：普通酒款 1 張籤，我的最愛酒款 3 張籤 (機率提升 3 倍)
@@ -1903,19 +2067,40 @@ function recommendRandomDrink() {
     const finalDrink = lotteryPool[Math.floor(Math.random() * lotteryPool.length)];
     recentlyDrawnDrinks[finalDrink.name] = now; // 記錄抽中時間，讓這杯酒進入 5 分鐘冷卻
     
+    // 初始化搖桿事件與狀態
+    setupSlotLever();
+    const lever = document.getElementById('slot-lever');
+    if (lever) {
+        lever.classList.add('ready-to-pull');
+    }
+    
+    // 儲存抽籤目標資料，等待拉桿觸發
+    slotMachineTargetData = {
+        finalDrink,
+        allAvailableDrinks,
+        hasFilters,
+        randBtns,
+        slotOverlay,
+        slotText,
+        slotContent,
+        slotImg
+    };
+    
+    slotMachineReady = true;
+
+    if (slotOverlay) {
+        slotOverlay.style.visibility = 'visible';
+        slotOverlay.style.opacity = '1';
+        if (slotContent) slotContent.style.transform = 'scale(1)';
+    }
+}
+
+function startSlotMachineSpin(data) {
+    const { finalDrink, allAvailableDrinks, hasFilters, randBtns, slotOverlay, slotText, slotContent, slotImg } = data;
+    
     let spins = 0;
     const maxSpins = 25; // 增加跳動次數讓老虎機轉久一點
     let delay = 40; // 初始速度加快，營造瘋狂轉動感
-    
-    // 預先準備好老虎機專用的圖片元素
-    let slotImg = document.getElementById('slot-machine-img');
-    if (!slotImg && slotContent) {
-        slotImg = document.createElement('img');
-        slotImg.id = 'slot-machine-img';
-        // 圖片預設隱藏，只在轉動時顯示
-        slotImg.style.cssText = 'width: 60px; height: 60px; object-fit: cover; border-radius: 8px; margin-bottom: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.5); display: none; margin-left: auto; margin-right: auto;';
-        slotContent.insertBefore(slotImg, slotText.parentNode); 
-    }
     
     function spinRoulette() {
         if (spins < maxSpins) {
@@ -1978,7 +2163,7 @@ function recommendRandomDrink() {
             if ("vibrate" in navigator) { navigator.vibrate([100, 50, 100]); } // 抽中時給予特殊震動回饋
             triggerConfetti(); // 抽出結果的瞬間發射紙花特效
             
-            // 停留 2 秒讓客人看清楚開獎結果，然後關閉老虎機並導航
+            // 停留 2.5 秒讓客人看清楚開獎結果，然後關閉老虎機並導航
             setTimeout(() => {
                 if (slotOverlay) {
                     slotOverlay.style.opacity = '0';
@@ -1995,7 +2180,6 @@ function recommendRandomDrink() {
                 randBtns.forEach(btn => {
                     if (btn) {
                         btn.disabled = false;
-                        // applyFilters 會負責把正確的文字與顏色塗上去
                     }
                 });
                 applyFilters(); // 強制觸發一次過濾以恢復按鈕的動態文字
@@ -2003,7 +2187,7 @@ function recommendRandomDrink() {
                 const prefix = hasFilters ? '🎯 根據您的口味偏好，推薦您：' : '🎲 吧台為您推薦：';
                 showToast(`${prefix}【${finalDrink.name}】！`);
                 scrollToDrink(finalDrink.name, true);
-            }, 2000);
+            }, 2500);
         }
     }
     
@@ -2350,6 +2534,16 @@ socket.on('sync-orders', (serverOrders) => {
     applyFilters();
     updateFAB();
     if (typeof checkAchievements === 'function') checkAchievements();
+});
+
+socket.on('order-error', (msg) => {
+    showToast(msg, true);
+    // 重設點餐按鈕狀態
+    applyFilters();
+});
+
+socket.on('rating-error', (msg) => {
+    showToast(`⚠️ ${msg}`, true);
 });
 
 socket.on('order-status-updated', (data) => {

@@ -32,6 +32,28 @@ const favoritesPath = path.join(__dirname, 'favorites.json');
 const avatarsPath = path.join(__dirname, 'avatars.json');
 const ratingsPath = path.join(__dirname, 'ratings.json');
 const campaignPath = path.join(__dirname, 'campaign.json');
+const soldOutPath = path.join(__dirname, 'soldout.json');
+
+let soldOutDrinks = []; // 儲存已下架的調酒名稱清單
+
+function loadSoldOutData() {
+    try {
+        if (fs.existsSync(soldOutPath)) {
+            soldOutDrinks = JSON.parse(fs.readFileSync(soldOutPath, 'utf8'));
+            console.log(`成功讀取 soldout.json，共載入 ${soldOutDrinks.length} 筆已下架調酒資料。`);
+        }
+    } catch (err) {
+        console.error("讀取 soldout.json 失敗:", err.message);
+    }
+}
+
+function saveSoldOutData() {
+    try {
+        fs.writeFileSync(soldOutPath, JSON.stringify(soldOutDrinks, null, 4), 'utf8');
+    } catch (err) {
+        console.error("寫入 soldout.json 失敗:", err);
+    }
+}
 
 function loadOrdersData() {
     try {
@@ -231,7 +253,7 @@ function loadDrinksData() {
                     sour: recipeInfo.sour,
                     tags: recipeInfo.tags,
                     description: recipeInfo.description,
-                    isSoldOut: oldSoldOutNames.includes(rawDrinkName),
+                    isSoldOut: soldOutDrinks.includes(rawDrinkName) || oldSoldOutNames.includes(rawDrinkName),
                     comingSoon: isMissingRecipe
                 });
             }
@@ -242,6 +264,7 @@ function loadDrinksData() {
     }
 }
 
+loadSoldOutData();
 loadDrinksData();
 loadOrdersData();
 loadFavoritesData();
@@ -301,6 +324,16 @@ io.on('connection', (socket) => {
     socket.emit('sync-campaign', campaignDatabase);
 
     socket.on('new-order', (orderData) => {
+        // 伺服器端防呆：檢查該調酒是否已下架/售罄
+        const targetDrink = allDrinks.find(d => d.name === orderData.drink);
+        if (targetDrink && targetDrink.isSoldOut) {
+            socket.emit('order-error', `⚠️ 抱歉，【${orderData.drink}】目前已下架售罄囉！`);
+            return;
+        }
+
+        // 限制備註最大字數為 30 字
+        orderData.notes = (orderData.notes || '').trim().slice(0, 30);
+
         if (!avatarsDatabase[orderData.guest]) {
             const randomStyle = defaultAvatarStyles[Math.floor(Math.random() * defaultAvatarStyles.length)];
             avatarsDatabase[orderData.guest] = randomStyle;
@@ -368,6 +401,17 @@ io.on('connection', (socket) => {
         const drink = allDrinks.find(d => d.id === id);
         if (drink) {
             drink.isSoldOut = !drink.isSoldOut;
+            
+            // 更新並儲存到 soldout.json
+            if (drink.isSoldOut) {
+                if (!soldOutDrinks.includes(drink.name)) {
+                    soldOutDrinks.push(drink.name);
+                }
+            } else {
+                soldOutDrinks = soldOutDrinks.filter(name => name !== drink.name);
+            }
+            saveSoldOutData();
+            
             io.emit('drink-sold-out-updated', { id, isSoldOut: drink.isSoldOut });
         }
     });
