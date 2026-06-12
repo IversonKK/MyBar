@@ -2651,7 +2651,7 @@ socket.on('drink-sold-out-updated', (data) => {
             const restocks = recentlyUpdatedDrinks.filter(d => !d.isSoldOut).map(d => d.name);
             
             if (soldOuts.length > 0) {
-                const msg = soldOuts.length > 3 ? `${soldOuts.slice(0, 3).join('、')}...等 ${soldOuts.length} 款酒` : restocks.join('、');
+                const msg = soldOuts.length > 3 ? `${soldOuts.slice(0, 3).join('、')}...等 ${soldOuts.length} 款酒` : soldOuts.join('、');
                 showToast(`📢 吧台公告：【${msg}】已售罄！`, true); // true 代表紅色警告背景
             } else if (restocks.length > 0) {
                 const msg = restocks.length > 3 ? `${restocks.slice(0, 3).join('、')}...等 ${restocks.length} 款酒` : restocks.join('、');
