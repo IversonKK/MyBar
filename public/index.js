@@ -2620,6 +2620,15 @@ socket.on('order-deleted', (orderId) => {
     updateFAB();
 });
 
+socket.on('sync-sold-out', (soldOutNames) => {
+    allDrinks.forEach(d => {
+        d.isSoldOut = soldOutNames.includes(d.name);
+    });
+    applyFilters();
+    renderFavorites();
+    renderCarousel();
+});
+
 let soldOutUpdateTimer = null;
 let recentlyUpdatedDrinks = [];
 

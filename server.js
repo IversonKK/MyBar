@@ -322,6 +322,7 @@ io.on('connection', (socket) => {
     socket.emit('sync-orders', orders);
     socket.emit('sync-avatars', avatarsDatabase);
     socket.emit('sync-campaign', campaignDatabase);
+    socket.emit('sync-sold-out', soldOutDrinks);
 
     socket.on('new-order', (orderData) => {
         // 伺服器端防呆：檢查該調酒是否已下架/售罄

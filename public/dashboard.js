@@ -262,6 +262,13 @@ socket.on('recipes-updated', () => {
     });
 });
 
+socket.on('sync-sold-out', (soldOutNames) => {
+    allDrinks.forEach(d => {
+        d.isSoldOut = soldOutNames.includes(d.name);
+    });
+    renderInventory();
+});
+
 socket.on('drink-sold-out-updated', (data) => {
     const drink = allDrinks.find(d => d.id === data.id);
     if (drink) {
