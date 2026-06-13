@@ -1335,15 +1335,64 @@ function openAdjustLeaderboardModal() {
     const customWrap = document.getElementById('manual-custom-drink-wrap');
     if (customWrap) customWrap.style.display = 'none';
 
-    // Populate Guests Datalist
-    const datalist = document.getElementById('existing-guests-datalist');
-    if (datalist) {
-        const guests = [...new Set(globalServerOrders.map(o => o.guest))].filter(g => g);
-        datalist.innerHTML = guests.map(g => `<option value="${g}"></option>`).join('');
+    // Populate Guests Checkboxes List
+    const container = document.getElementById('guest-checkboxes-container');
+    if (container) {
+        const guests = [...new Set(globalServerOrders.map(o => o.guest))].filter(g => g).sort((a, b) => a.localeCompare(b, 'zh-hant'));
+        container.innerHTML = guests.map(g => `
+            <div style="display: flex; align-items: center; gap: 6px;">
+                <input type="checkbox" value="${g}" id="guest-cb-${g}" style="cursor: pointer; width: 16px; height: 16px;">
+                <label for="guest-cb-${g}" style="color: #ccc; font-size: 0.9em; cursor: pointer; user-select: none;">${g}</label>
+            </div>
+        `).join('');
     }
 
     renderAdjustHistoryList();
     modal.classList.add('visible');
+}
+
+// --- 調整榜單輔助函式 ---
+function addTypedGuestToSelection() {
+    const nameInput = document.getElementById('manual-guest-name');
+    const name = nameInput ? nameInput.value.trim() : '';
+    if (!name) return;
+
+    const container = document.getElementById('guest-checkboxes-container');
+    if (!container) return;
+
+    const existingCheckboxes = Array.from(container.querySelectorAll('input[type="checkbox"]'));
+    const found = existingCheckboxes.find(cb => cb.value.toLowerCase() === name.toLowerCase());
+
+    if (found) {
+        found.checked = true;
+        found.parentElement.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    } else {
+        const div = document.createElement('div');
+        div.style.display = 'flex';
+        div.style.alignItems = 'center';
+        div.style.gap = '6px';
+        div.innerHTML = `
+            <input type="checkbox" value="${name}" id="guest-cb-${name}" checked style="cursor: pointer; width: 16px; height: 16px;">
+            <label for="guest-cb-${name}" style="color: #ffd700; font-size: 0.9em; cursor: pointer; user-select: none;">${name} (新)</label>
+        `;
+        container.insertBefore(div, container.firstChild);
+        container.scrollTop = 0;
+    }
+    nameInput.value = '';
+}
+
+function selectAllGuests() {
+    const container = document.getElementById('guest-checkboxes-container');
+    if (container) {
+        container.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = true);
+    }
+}
+
+function clearAllGuests() {
+    const container = document.getElementById('guest-checkboxes-container');
+    if (container) {
+        container.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = false);
+    }
 }
 
 function closeAdjustLeaderboardModal() {
@@ -1469,13 +1518,22 @@ window.selectPresetImage = function(element) {
 };
 
 function submitManualCompletedOrder() {
-    const guest = document.getElementById('manual-guest-name').value.trim();
-    const drinkVal = document.getElementById('manual-drink-select').value;
+    const nameInput = document.getElementById('manual-guest-name');
+    const typedName = nameInput ? nameInput.value.trim() : '';
     
-    if (!guest) {
-        alert('⚠️ 請輸入客人名稱！');
+    const container = document.getElementById('guest-checkboxes-container');
+    const checkedGuests = container ? Array.from(container.querySelectorAll('input[type="checkbox"]:checked')).map(cb => cb.value) : [];
+    
+    if (typedName && !checkedGuests.includes(typedName)) {
+        checkedGuests.push(typedName);
+    }
+    
+    if (checkedGuests.length === 0) {
+        alert('⚠️ 請輸入或勾選客人！');
         return;
     }
+
+    const drinkVal = document.getElementById('manual-drink-select').value;
     if (!drinkVal) {
         alert('⚠️ 請選擇要新增的飲品！');
         return;
@@ -1495,22 +1553,30 @@ function submitManualCompletedOrder() {
         finalDrinkName = drinkVal;
     }
 
-    // Emit event to add completed order
-    socket.emit('add-manual-completed-order', {
-        guest: guest,
-        drink: finalDrinkName,
-        time: new Date().toLocaleTimeString(),
-        notes: '手動補單',
-        status: 'completed',
-        presetImage: presetImage
+    // Emit event to add completed order for all selected/entered guests
+    checkedGuests.forEach(guest => {
+        socket.emit('add-manual-completed-order', {
+            guest: guest,
+            drink: finalDrinkName,
+            time: new Date().toLocaleTimeString(),
+            notes: '手動補單',
+            status: 'completed',
+            presetImage: presetImage
+        });
     });
 
-    showToast(`✅ 成功新增 ${guest} 的已完成調酒：${finalDrinkName}`);
+    showToast(`✅ 成功新增 ${checkedGuests.join(', ')} 的已完成調酒：${finalDrinkName}`);
 
-    // Clear name fields or keep for quick consecutive adds
+    // Clear fields
+    if (nameInput) nameInput.value = '';
     document.getElementById('manual-custom-drink-name').value = '';
     document.getElementById('manual-drink-select').value = '';
     document.getElementById('manual-custom-drink-wrap').style.display = 'none';
+    
+    // Uncheck checkboxes
+    if (container) {
+        container.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = false);
+    }
     
     const hiddenInput = document.getElementById('selected-preset-image');
     if (hiddenInput) hiddenInput.value = '';

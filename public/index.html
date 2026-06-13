@@ -283,6 +283,10 @@
                 💡 <strong>小提示：</strong> 選擇下方的標籤後再點擊「隨機」，就會只從您篩選的結果中抽一杯喔！
             </div>
 
+            <!-- 篩選結果即時顯示 -->
+            <div id="filter-status-hint" style="padding: 10px 15px; border-radius: 8px; margin-bottom: 15px; font-size: 1em; text-align: center; font-weight: bold; transition: all 0.3s ease;">
+            </div>
+
             <div class="filter-group" id="filter-base">
                 <span class="filter-label">基酒:</span>
                 <label><input type="checkbox" class="tag-checkbox" value="琴酒" onchange="applyFilters()"><span class="tag-btn">琴酒</span></label>
@@ -380,6 +384,34 @@
             <div style="display: flex; flex-direction: column; align-items: center; margin-top: 15px;">
                 <button class="btn-order-anim" onclick="submitOrderWithNotes()" style="background: #27ae60; color: white; width: 100%; padding: 12px; font-size: 1.1em; border-radius: 8px; box-shadow: 0 4px 10px rgba(39, 174, 96, 0.3);">送出訂單 ✓</button>
                 <button onclick="closeNotesModal()" style="background: transparent; color: #888; border: none; padding: 8px; margin-top: 5px; font-size: 0.85em; text-decoration: underline; cursor: pointer; width: auto;">不點了 / 取消</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 🎲 隨機抽中結果與自動點餐模態視窗 -->
+    <div id="random-result-modal-overlay">
+        <div id="random-result-modal-content">
+            <h2 style="color: #f1c40f; margin-top: 0; font-size: 1.5em; text-shadow: 0 0 10px rgba(241, 196, 15, 0.5);">🎰 抽中啦！為您自動點餐 🎰</h2>
+            
+            <div id="random-result-img-container" style="position: relative; width: 140px; height: 140px; margin: 15px auto; border-radius: 50%; overflow: hidden; border: 3px solid #f1c40f; box-shadow: 0 0 15px rgba(241, 196, 15, 0.3);">
+                <img id="random-result-img" src="" style="width: 100%; height: 100%; object-fit: cover;">
+            </div>
+            
+            <h3 id="random-result-name" style="color: #fff; font-size: 1.4em; margin: 10px 0;"></h3>
+            
+            <!-- 配方與故事 -->
+            <div id="random-result-details" style="max-height: 180px; overflow-y: auto; text-align: left; background: rgba(0,0,0,0.4); padding: 12px; border-radius: 8px; border: 1px solid #333; margin-bottom: 20px; font-size: 0.9em; line-height: 1.5; color: #ddd;">
+                <!-- 由 JS 動態生成 -->
+            </div>
+            
+            <!-- 倒數計時提示 -->
+            <div id="random-result-countdown" style="font-size: 1.05em; color: #f39c12; font-weight: bold; margin-bottom: 20px;">
+                ⏱️ 正在為您點餐... <span id="random-countdown-seconds" style="font-size: 1.3em; color: #fff; padding: 0 4px;">10</span> 秒後自動送單
+            </div>
+            
+            <div style="display: flex; gap: 10px; flex-direction: column;">
+                <button onclick="confirmRandomOrder()" style="background: #27ae60; color: white; width: 100%; padding: 12px; font-size: 1.1em; font-weight: bold; border-radius: 8px; border: none; cursor: pointer; box-shadow: 0 4px 15px rgba(39, 174, 96, 0.4); transition: 0.2s;">立即送單 ✓</button>
+                <button onclick="cancelRandomOrder()" style="background: transparent; color: #aaa; border: 1px solid #444; width: 100%; padding: 8px; font-size: 0.9em; border-radius: 8px; cursor: pointer; transition: 0.2s;">不要，取消抽籤 ✖</button>
             </div>
         </div>
     </div>

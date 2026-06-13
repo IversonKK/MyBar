@@ -193,18 +193,30 @@
             <div style="background: rgba(255,255,255,0.03); border: 1px solid #333; padding: 15px; border-radius: 8px; margin-bottom: 15px;">
                 <h3 style="color: #f39c12; margin-top: 0; margin-bottom: 10px; font-size: 1.05em;">➕ 手動新增已完成紀錄</h3>
                 
-                <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 10px;">
-                    <!-- 客人名稱 -->
-                    <div style="flex: 1; min-width: 130px;">
-                        <label style="display: block; font-size: 0.8em; color: #aaa; margin-bottom: 4px;">客人名稱</label>
-                        <input type="text" id="manual-guest-name" list="existing-guests-datalist" placeholder="輸入或選擇客人..." style="width: 100%; box-sizing: border-box; padding: 8px; border-radius: 6px; background: #222; border: 1px solid #444; color: #fff;">
-                        <datalist id="existing-guests-datalist"></datalist>
+                <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: stretch; margin-bottom: 10px;">
+                    <!-- 客人選擇 (複選) -->
+                    <div style="flex: 1.2; min-width: 200px; display: flex; flex-direction: column;">
+                        <label style="display: block; font-size: 0.85em; color: #aaa; margin-bottom: 4px; font-weight: bold;">選擇客人 (可多選，或輸入新名字)</label>
+                        <div style="display: flex; gap: 6px; margin-bottom: 6px;">
+                            <input type="text" id="manual-guest-name" placeholder="輸入新客人..." onkeypress="if(event.key === 'Enter'){ event.preventDefault(); addTypedGuestToSelection(); }" style="flex: 1; padding: 6px 10px; border-radius: 6px; background: #222; border: 1px solid #444; color: #fff; font-size: 0.9em; outline: none;">
+                            <button onclick="addTypedGuestToSelection()" class="pos-btn btn-primary" style="padding: 6px 10px; font-size: 0.85em; border-radius: 6px;" type="button">➕ 新增</button>
+                        </div>
+                        <!-- 快速選擇客人的 Checkbox 區域 -->
+                        <div id="guest-checkboxes-container" style="flex: 1; max-height: 100px; overflow-y: auto; background: #111; border: 1px solid #333; padding: 8px; border-radius: 6px; display: flex; flex-direction: column; gap: 6px;">
+                            <!-- JS 動態產生客人的 Checkbox -->
+                        </div>
                     </div>
                     
                     <!-- 選擇飲品 -->
-                    <div style="flex: 1.2; min-width: 180px;">
-                        <label style="display: block; font-size: 0.8em; color: #aaa; margin-bottom: 4px;">選擇飲品</label>
-                        <select id="manual-drink-select" onchange="handleManualDrinkSelectChange()" style="width: 100%; box-sizing: border-box; padding: 8px; border-radius: 6px; background: #222; border: 1px solid #444; color: #fff;"></select>
+                    <div style="flex: 1; min-width: 150px; display: flex; flex-direction: column; justify-content: space-between;">
+                        <div>
+                            <label style="display: block; font-size: 0.85em; color: #aaa; margin-bottom: 4px; font-weight: bold;">選擇飲品</label>
+                            <select id="manual-drink-select" onchange="handleManualDrinkSelectChange()" style="width: 100%; box-sizing: border-box; padding: 8px; border-radius: 6px; background: #222; border: 1px solid #444; color: #fff;"></select>
+                        </div>
+                        <div style="margin-top: 10px; display: flex; gap: 8px;">
+                            <button onclick="selectAllGuests()" class="pos-btn" style="flex: 1; padding: 6px; font-size: 0.8em; border-radius: 4px; background: #222; border-color: #444;">全選</button>
+                            <button onclick="clearAllGuests()" class="pos-btn" style="flex: 1; padding: 6px; font-size: 0.8em; border-radius: 4px; background: #222; border-color: #444;">清空</button>
+                        </div>
                     </div>
                 </div>
 

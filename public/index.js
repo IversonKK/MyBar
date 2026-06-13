@@ -15,6 +15,8 @@ let allDrinks = []; // 儲存所有酒單資訊供對照圖片
 let currentName = localStorage.getItem('bar_guest_name');
 let globalServerOrders = []; // 用來暫存伺服器的所有訂單，以計算即時榜單
 let globalFilteredDrinks = []; // 用來暫存目前符合篩選條件的酒款，供隨機推薦使用
+let randomDrawnDrinkData = null;
+let randomCountdownInterval = null;
 let knownGuestCounts = {}; // 用於記錄成就推播
 let isLeaderboardFirstLoad = true; // 避免首次載入時觸發大量成就動畫
 
@@ -701,15 +703,10 @@ function toggleAdvancedFilters() {
         return;
     }
     const panel = document.getElementById('advanced-filters');
-    const btn = document.getElementById('toggle-filter-btn');
-    panel.classList.toggle('expanded');
-    if (panel.classList.contains('expanded')) {
-        btn.classList.add('active');
-        btn.innerHTML = '收合 ▲';
-    } else {
-        btn.classList.remove('active');
-        btn.innerHTML = '篩選 ▼';
+    if (panel) {
+        panel.classList.toggle('expanded');
     }
+    applyFilters();
 }
 
 // 開啟底部篩選抽屜 (手機版)
@@ -1073,6 +1070,47 @@ function applyFilters() {
 
     globalFilteredDrinks = filteredDrinks;
     renderMenu(filteredDrinks);
+
+    // 更新篩選結果即時提示
+    const statusHint = document.getElementById('filter-status-hint');
+    if (statusHint) {
+        const count = filteredDrinks.length;
+        if (count === 0) {
+            statusHint.style.background = 'rgba(231, 76, 60, 0.15)';
+            statusHint.style.border = '1px dashed #e74c3c';
+            statusHint.style.color = '#ff6b6b';
+            statusHint.innerHTML = `⚠️ 沒有符合條件的酒，請試著減少或重設篩選條件！`;
+        } else {
+            statusHint.style.background = 'rgba(39, 174, 96, 0.15)';
+            statusHint.style.border = '1px dashed #27ae60';
+            statusHint.style.color = '#2ecc71';
+            statusHint.innerHTML = `🔍 當前條件下共有 <span style="font-size: 1.25em; color: #fff; margin: 0 4px; text-shadow: 0 0 5px rgba(255,255,255,0.5);">${count}</span> 款符合的選擇`;
+        }
+    }
+
+    // 更新手機版查看結果按鈕文字
+    const viewResultsBtn = document.querySelector('.view-results-btn');
+    if (viewResultsBtn) {
+        if (filteredDrinks.length === 0) {
+            viewResultsBtn.innerHTML = `查看篩選結果 (目前無符合酒款)`;
+        } else {
+            viewResultsBtn.innerHTML = `查看篩選結果 (共 ${filteredDrinks.length} 款)`;
+        }
+    }
+
+    // 更新電腦版篩選按鈕狀態與文字
+    const panel = document.getElementById('advanced-filters');
+    const toggleFilterBtn = document.getElementById('toggle-filter-btn');
+    if (toggleFilterBtn) {
+        const isExpanded = panel ? panel.classList.contains('expanded') : false;
+        if (isExpanded) {
+            toggleFilterBtn.classList.add('active');
+            toggleFilterBtn.innerHTML = `收合 (${filteredDrinks.length}) ▲`;
+        } else {
+            toggleFilterBtn.classList.remove('active');
+            toggleFilterBtn.innerHTML = `篩選 (${filteredDrinks.length}) ▼`;
+        }
+    }
 }
 
 // 計算字串相似度 (Levenshtein Distance)
@@ -1413,7 +1451,7 @@ function loadHistory() {
     let selectedDate = 'all';
     if (dateFilterSelect) {
         if (dateFilterSelect.options.length === 0) {
-            selectedDate = todayStr;
+            selectedDate = 'all';
         } else {
             selectedDate = dateFilterSelect.value;
         }
@@ -1770,7 +1808,30 @@ function finalizeOrder(name, btn, notes) {
     }, 800);
 }
 
+function checkUnratedOrder() {
+    const unratedOrder = globalServerOrders.find(o => 
+        o.guest === currentName && 
+        o.status === 'completed' && 
+        (!myRatings || !myRatings[o.id])
+    );
+    if (unratedOrder) {
+        showCustomConfirm(
+            `💡 點餐提示：您有一杯已完成的【${unratedOrder.drink}】尚未評分，請先為它評分後再點下一杯喔！`,
+            () => {
+                openRatingModal(unratedOrder.id, unratedOrder.drink);
+            },
+            () => {},
+            '前往評分 ⭐',
+            '取消'
+        );
+        return true;
+    }
+    return false;
+}
+
 function order(name, btn) {
+    if (checkUnratedOrder()) return;
+
     // 檢查是否已下架售罄
     const drink = allDrinks.find(d => d.name === name);
     if (drink && drink.isSoldOut) {
@@ -1953,6 +2014,7 @@ function triggerLeverPull() {
 }
 
 function recommendRandomDrink() {
+    if (checkUnratedOrder()) return;
     if (isRouletteRunning) return; // 避免動畫期間重複點擊
 
     const now = Date.now();
@@ -2163,7 +2225,7 @@ function startSlotMachineSpin(data) {
             if ("vibrate" in navigator) { navigator.vibrate([100, 50, 100]); } // 抽中時給予特殊震動回饋
             triggerConfetti(); // 抽出結果的瞬間發射紙花特效
             
-            // 停留 0.7 秒讓客人看清楚開獎結果，然後關閉老虎機並導航
+            // 停留 0.7 秒讓客人看清楚開獎結果，然後關閉老虎機並顯示自動點餐視窗
             setTimeout(() => {
                 if (slotOverlay) {
                     slotOverlay.style.opacity = '0';
@@ -2184,14 +2246,87 @@ function startSlotMachineSpin(data) {
                 });
                 applyFilters(); // 強制觸發一次過濾以恢復按鈕的動態文字
                 
-                const prefix = hasFilters ? '🎯 根據您的口味偏好，推薦您：' : '🎲 吧台為您推薦：';
-                showToast(`${prefix}【${finalDrink.name}】！`);
-                scrollToDrink(finalDrink.name, true);
+                // 顯示自動點餐模態視窗，包含圖片、配方、故事與 5 秒倒數
+                showRandomResultModal(finalDrink);
             }, 700);
         }
     }
     
     spinRoulette(); // 啟動輪盤
+}
+
+// ==================== 隨機抽中自動點餐模態視窗功能 ====================
+function showRandomResultModal(drink) {
+    randomDrawnDrinkData = drink;
+    
+    const overlay = document.getElementById('random-result-modal-overlay');
+    const nameEl = document.getElementById('random-result-name');
+    const imgEl = document.getElementById('random-result-img');
+    const detailsEl = document.getElementById('random-result-details');
+    const secondsEl = document.getElementById('random-countdown-seconds');
+    
+    if (!overlay || !nameEl || !imgEl || !detailsEl || !secondsEl) return;
+    
+    nameEl.innerText = drink.name;
+    
+    const encodedName = encodeURIComponent(drink.name);
+    imgEl.src = `/images/${encodedName}.jpg`;
+    imgEl.onerror = () => { imgEl.src = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHZpZXdCb3g9JzAgMCAyNCAyNCcgZmlsbD0nIzQ0NCc+PHBhdGggZD0nTTIxIDNIM3YybDggOHY3SDd2MmgxMHYtMmgtNHYtN2w4LThWM3onLz48L3N2Zz4="; };
+    
+    const parsed = parseDrinkDescription(drink.description);
+    const ingredientsHtml = formatDescription(drink.description);
+    let detailsHtml = '';
+    if (ingredientsHtml) detailsHtml += `<div style="margin-bottom: 10px;"><strong>調製材料：</strong>${ingredientsHtml}</div>`;
+    if (parsed.glass) detailsHtml += `<div style="margin-bottom: 4px; font-size: 0.9em; color: #bbb;"><strong>杯型：</strong>${parsed.glass}</div>`;
+    if (parsed.technique) detailsHtml += `<div style="margin-bottom: 4px; font-size: 0.9em; color: #bbb;"><strong>技法：</strong>${parsed.technique}</div>`;
+    if (parsed.garnish) detailsHtml += `<div style="margin-bottom: 4px; font-size: 0.9em; color: #bbb;"><strong>裝飾：</strong>${parsed.garnish}</div>`;
+    if (parsed.story) detailsHtml += `<div style="margin-top: 10px; font-style: italic; color: #aaa; border-top: 1px solid #333; padding-top: 10px; line-height: 1.4;">${parsed.story}</div>`;
+    
+    detailsEl.innerHTML = detailsHtml;
+    
+    let remaining = 10;
+    secondsEl.innerText = remaining;
+    
+    if (randomCountdownInterval) clearInterval(randomCountdownInterval);
+    
+    randomCountdownInterval = setInterval(() => {
+        remaining--;
+        secondsEl.innerText = remaining;
+        if (remaining <= 0) {
+            clearInterval(randomCountdownInterval);
+            confirmRandomOrder();
+        }
+    }, 1000);
+    
+    overlay.classList.add('visible');
+}
+
+function confirmRandomOrder() {
+    if (randomCountdownInterval) clearInterval(randomCountdownInterval);
+    
+    const overlay = document.getElementById('random-result-modal-overlay');
+    if (overlay) {
+        overlay.classList.remove('visible');
+    }
+    
+    if (randomDrawnDrinkData) {
+        // 直接調用系統的點餐功能
+        finalizeOrder(randomDrawnDrinkData.name, null, '🎲 隨機幸運抽中');
+    }
+    
+    randomDrawnDrinkData = null;
+}
+
+function cancelRandomOrder() {
+    if (randomCountdownInterval) clearInterval(randomCountdownInterval);
+    
+    const overlay = document.getElementById('random-result-modal-overlay');
+    if (overlay) {
+        overlay.classList.remove('visible');
+    }
+    
+    showToast('❌ 已取消自動點餐', 'warning');
+    randomDrawnDrinkData = null;
 }
 
 function cancelOrder(orderId, btn) {

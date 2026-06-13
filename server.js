@@ -3,6 +3,8 @@ const http = require('http');
 const { Server } = require('socket.io');
 const fs = require('fs');
 const path = require('path');
+const xlsx = require('xlsx');
+
 
 const app = express();
 const server = http.createServer(app);
@@ -190,6 +192,46 @@ function saveCompletedOrdersData() {
     }
 }
 
+function syncToExcel(recipeDatabase) {
+    const excelPath = path.join(__dirname, 'menu_database.xlsx');
+    const rows = [];
+    for (const [name, info] of Object.entries(recipeDatabase)) {
+        let materials = "", method = "", cup = "", garnish = "", story = "";
+        const descLines = (info.description || "").split('\n');
+        let storyLines = [];
+
+        descLines.forEach(line => {
+            if (line.startsWith('材料：') || line.startsWith('材料:')) materials = line.replace(/材料[：:]/, '');
+            else if (line.startsWith('技法：') || line.startsWith('技法:')) method = line.replace(/技法[：:]/, '');
+            else if (line.startsWith('杯型：') || line.startsWith('杯型:')) cup = line.replace(/杯型[：:]/, '');
+            else if (line.startsWith('裝飾：') || line.startsWith('裝飾:')) garnish = line.replace(/裝飾[：:]/, '');
+            else storyLines.push(line);
+        });
+
+        rows.push({
+            "酒名 (必須與圖片同名)": name,
+            "濃度 (%)": info.abv || 15,
+            "酒感 (1-5)": info.strong || 3,
+            "酸度 (1-5)": info.sour || 3,
+            "標籤 (用逗號隔開)": (info.tags || []).join(', '),
+            "材料": materials,
+            "技法": method,
+            "杯型": cup,
+            "裝飾": garnish,
+            "故事與敘述": storyLines.join('\n')
+        });
+    }
+    try {
+        const ws = xlsx.utils.json_to_sheet(rows);
+        const wb = xlsx.utils.book_new();
+        xlsx.utils.book_append_sheet(wb, ws, "酒單配方");
+        xlsx.writeFile(wb, excelPath);
+        console.log("🎉 已同步更新 menu_database.xlsx！");
+    } catch (err) {
+        console.error("同步至 Excel 失敗:", err.message);
+    }
+}
+
 function loadDrinksData() {
     const oldSoldOutNames = allDrinks.filter(d => d.isSoldOut).map(d => d.name);
     allDrinks = [];
@@ -213,54 +255,63 @@ function loadDrinksData() {
         }
         
         const files = fs.readdirSync(imagesDir);
-        let idCounter = 1;
-        
-        const processedNames = new Set();
+        const imageDrinkFiles = new Map(); // name -> ext
         files.forEach(file => {
             if (file.toLowerCase().endsWith('.jpg') || file.toLowerCase().endsWith('.png')) {
+                const ext = file.substring(file.lastIndexOf('.') + 1);
                 const rawDrinkName = file.replace(/\.(jpg|png)$/i, '');
-                if (processedNames.has(rawDrinkName)) return;
-                processedNames.add(rawDrinkName);
-                let recipeKey = rawDrinkName;
-                
-                if (!recipeDatabase[recipeKey]) {
-                    const normalize = (str) => str.toLowerCase().replace(/[^a-z0-9\u4e00-\u9fa5]/g, '');
-                    const normRaw = normalize(rawDrinkName);
-                    const knownKeys = Object.keys(recipeDatabase);
-                    
-                    let match = knownKeys.find(k => normalize(k) === normRaw);
-                    
-                    if (!match && normRaw.length >= 2) {
-                        match = knownKeys.find(k => normalize(k).includes(normRaw) || normRaw.includes(normalize(k)));
-                    }
-                    if (match) recipeKey = match;
+                if (!imageDrinkFiles.has(rawDrinkName)) {
+                    imageDrinkFiles.set(rawDrinkName, ext);
                 }
-
-                const isMissingRecipe = !recipeDatabase[recipeKey];
-                const recipeInfo = recipeDatabase[recipeKey] || {
-                    abv: 15,
-                    strong: 3,
-                    sour: 3,
-                    tags: ["其他"],
-                    description: "材料：配方待補充。杯型：待確認。裝飾：無。"
-                };
-                
-                allDrinks.push({
-                    id: idCounter++,
-                    name: rawDrinkName,
-                    abv: recipeInfo.abv,
-                    strong: recipeInfo.strong,
-                    sour: recipeInfo.sour,
-                    tags: recipeInfo.tags,
-                    description: recipeInfo.description,
-                    isSoldOut: soldOutDrinks.includes(rawDrinkName) || oldSoldOutNames.includes(rawDrinkName),
-                    comingSoon: isMissingRecipe
-                });
             }
+        });
+
+        // 收集所有在 recipeDatabase 中的名稱，以及所有在 imagesDir 中有圖檔的名稱
+        const allDrinkNames = new Set();
+        Object.keys(recipeDatabase).forEach(name => allDrinkNames.add(name));
+        imageDrinkFiles.forEach((ext, name) => allDrinkNames.add(name));
+
+        let idCounter = 1;
+        allDrinkNames.forEach(rawDrinkName => {
+            let recipeKey = rawDrinkName;
+            
+            if (!recipeDatabase[recipeKey]) {
+                const normalize = (str) => str.toLowerCase().replace(/[^a-z0-9\u4e00-\u9fa5]/g, '');
+                const normRaw = normalize(rawDrinkName);
+                const knownKeys = Object.keys(recipeDatabase);
+                
+                let match = knownKeys.find(k => normalize(k) === normRaw);
+                
+                if (!match && normRaw.length >= 2) {
+                    match = knownKeys.find(k => normalize(k).includes(normRaw) || normRaw.includes(normalize(k)));
+                }
+                if (match) recipeKey = match;
+            }
+
+            const isMissingRecipe = !recipeDatabase[recipeKey];
+            const recipeInfo = recipeDatabase[recipeKey] || {
+                abv: 15,
+                strong: 3,
+                sour: 3,
+                tags: ["其他"],
+                description: "材料：配方待補充。杯型：待確認。裝飾：無。"
+            };
+            
+            allDrinks.push({
+                id: idCounter++,
+                name: rawDrinkName,
+                abv: recipeInfo.abv,
+                strong: recipeInfo.strong,
+                sour: recipeInfo.sour,
+                tags: recipeInfo.tags,
+                description: recipeInfo.description,
+                isSoldOut: soldOutDrinks.includes(rawDrinkName) || oldSoldOutNames.includes(rawDrinkName),
+                comingSoon: isMissingRecipe
+            });
         });
         console.log(`掃描完成！成功載入了 ${allDrinks.length} 款調酒資料。`);
     } catch (err) {
-        console.error("讀取圖片資料夾失敗，請確認路徑是否正確:", err);
+        console.error("讀取圖片資料夾或配方庫失敗:", err);
     }
 }
 
@@ -451,6 +502,8 @@ io.on('connection', (socket) => {
 
             fs.writeFileSync(recipePath, JSON.stringify(currentRecipes, null, 4), 'utf8');
             console.log(`成功儲存配方並寫入檔案: ${recipeData.name}`);
+
+            syncToExcel(currentRecipes);
 
             loadDrinksData(); 
 
