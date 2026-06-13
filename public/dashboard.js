@@ -514,21 +514,102 @@ function parseDrinkDescription(desc) {
     return result;
 }
 
+function classifyIngredient(item) {
+    const itemLower = item.toLowerCase();
+    
+    // 1. Check for Syrup / Lemon / Lime juices / Sweeteners
+    const sweetSourKeywords = [
+        '糖', 'sugar', '蜂蜜', 'honey', '紅石榴', 'grenadine', '焦糖', 'syrup', '楓糖', '黑糖', '冬瓜糖', '椰糖', 
+        '檸檬汁', 'lemon juice', '萊姆汁', 'lime juice', '金桔汁', '柚子汁', '果汁', 'juice', '酸柑汁', '檸檬原汁', '萊姆原汁'
+    ];
+    
+    // 2. Check for Alcohol
+    const alcoholKeywords = [
+        '酒', 'spirit', 'liquor', '151', '艾碧斯', 'absinthe', '夏特留斯', 'chartreuse', '伏特加', 'vodka', '琴酒', 'gin', 
+        '蘭姆酒', 'rum', '龍舌蘭', 'tequila', '威士忌', 'whiskey', 'whisky', '白蘭地', 'brandy', '波本', 'bourbon', 
+        '干邑', 'cognac', '高粱', '卡夏莎', 'cachaça', 'cachaca', '梅斯卡爾', 'mezcal', '皮斯可', 'pisco', '君度', 'cointreau', 
+        '三秒膠', 'triple sec', 'tripe sec', '柑曼怡', 'grand marnier', '班尼狄克汀', '班尼迪克丁', 'd.o.m', 'benedictine', 
+        '苦精', 'bitters', '野格', 'jägermeister', 'jagermeister', '瑪拉斯奇諾', 'maraschino', '杏仁酒', '利口酒', 'amaretto', 
+        '迪薩諾羅', 'disaronno', '金巴利', 'campari', '皮姆', 'pimm', '藍柑橘', '藍橙皮', 'blue curacao', 'curaçao', 
+        'midori', '卡魯哇', 'kahlúa', 'kahlua', 'mr. black', 'frangelico', '百利甜', 'baileys', 'cassis', 'vermouth', 
+        '苦艾酒', '波特酒', 'port', '雪莉酒', 'sherry', '清酒', 'sake', '燒酎', 'shochu', '紅酒', '白酒', 'wine', '香檳', 
+        'champagne', '氣泡酒', '梅酒', '果酒', '甜酒', '阿佩羅', '艾普羅', 'aperol', '啤酒', 'beer', 'stout', 'ale', 'cider',
+        '琴汁', '香甜酒', '利口酒', '高梁', '紹興', '威末', '金巴莉'
+    ];
+
+    const isAlcohol = alcoholKeywords.some(kw => itemLower.includes(kw));
+    if (isAlcohol) {
+        return 'alcohol';
+    }
+
+    const isSweetSour = sweetSourKeywords.some(kw => itemLower.includes(kw));
+    if (isSweetSour) {
+        return 'sweetSour';
+    }
+
+    return 'other';
+}
+
 // 格式化酒保畫面的配方顯示 (以結構化方式呈現材料、杯型、技法、裝飾，並將故事淡化置底以降低干擾)
 function formatDashboardRecipe(desc) {
     if (!desc) return "";
     const parsed = parseDrinkDescription(desc);
     let html = "";
 
-    // 1. 渲染材料為膠囊標籤
+    // 1. 渲染材料為分門別類的膠囊標籤
     const lines = desc.split(/\r?\n/).map(line => line.trim()).filter(line => line);
     const materialsLine = lines.find(line => line.startsWith('材料：') || line.startsWith('材料:'));
     if (materialsLine) {
         const items = materialsLine.replace(/材料[：:]/, "").split(/[、，,。]/).map(i => i.trim()).filter(i => i);
-        const ingredientsHtml = `<ul class="ingredient-tags">` + 
-            items.map(i => `<li class="ingredient-tag">${i}</li>`).join('') + 
-            `</ul>`;
-        html += `<div style="margin-bottom: 8px;">${ingredientsHtml}</div>`;
+        
+        const alcohols = [];
+        const sweetSours = [];
+        const others = [];
+
+        items.forEach(item => {
+            const cat = classifyIngredient(item);
+            if (cat === 'alcohol') alcohols.push(item);
+            else if (cat === 'sweetSour') sweetSours.push(item);
+            else others.push(item);
+        });
+
+        let ingredientsHtml = '<div style="display: flex; flex-direction: column; gap: 8px;">';
+
+        if (alcohols.length > 0) {
+            ingredientsHtml += `
+                <div style="display: flex; flex-direction: column; gap: 2px;">
+                    <span style="font-size: 0.8em; color: #a5c7f7; font-weight: bold;">🍾 酒類：</span>
+                    <ul class="ingredient-tags">
+                        ${alcohols.map(i => `<li class="ingredient-tag tag-alcohol" style="background: rgba(52, 152, 219, 0.15); color: #5dade2; border-color: rgba(52, 152, 219, 0.4);">${i}</li>`).join('')}
+                    </ul>
+                </div>
+            `;
+        }
+
+        if (sweetSours.length > 0) {
+            ingredientsHtml += `
+                <div style="display: flex; flex-direction: column; gap: 2px;">
+                    <span style="font-size: 0.8em; color: #f8c471; font-weight: bold;">🍯 糖漿/酸汁：</span>
+                    <ul class="ingredient-tags">
+                        ${sweetSours.map(i => `<li class="ingredient-tag tag-sweetsour" style="background: rgba(230, 126, 34, 0.15); color: #f5b041; border-color: rgba(230, 126, 34, 0.4);">${i}</li>`).join('')}
+                    </ul>
+                </div>
+            `;
+        }
+
+        if (others.length > 0) {
+            ingredientsHtml += `
+                <div style="display: flex; flex-direction: column; gap: 2px;">
+                    <span style="font-size: 0.8em; color: #a9dfbf; font-weight: bold;">🍋 副材料：</span>
+                    <ul class="ingredient-tags">
+                        ${others.map(i => `<li class="ingredient-tag tag-other" style="background: rgba(46, 204, 113, 0.15); color: #52be80; border-color: rgba(46, 204, 113, 0.4);">${i}</li>`).join('')}
+                    </ul>
+                </div>
+            `;
+        }
+
+        ingredientsHtml += '</div>';
+        html += `<div style="margin-bottom: 10px;">${ingredientsHtml}</div>`;
     }
 
     // 2. 渲染製作細節 (杯型、技法、裝飾)
@@ -545,11 +626,6 @@ function formatDashboardRecipe(desc) {
     
     if (specsHtml) {
         html += `<div class="recipe-specs-container" style="display: flex; flex-direction: column; gap: 4px; margin-bottom: 8px; font-size: 0.9em; color: #ddd; background: rgba(255,255,255,0.03); padding: 8px 10px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.05);">${specsHtml}</div>`;
-    }
-
-    // 3. 渲染故事 (以極其淡雅的樣式置底)
-    if (parsed.story) {
-        html += `<div class="recipe-story-item" style="font-size: 0.82em; color: #777; font-style: italic; border-top: 1px dashed rgba(255,255,255,0.08); padding-top: 6px; margin-top: 6px; line-height: 1.4; white-space: pre-line;">📖 ${parsed.story}</div>`;
     }
 
     return html;
@@ -590,7 +666,6 @@ function renderOrder(data) {
     // Timer bar HTML (Only visible in making/overtime states via CSS)
     const timerBarHtml = `
         <div class="timer-wrapper">
-            <div class="timer-bar-bg"><div class="timer-bar-fill" id="timer-bar-${data.id}"></div></div>
             <div class="overtime-warning" id="warning-${data.id}">⚠️ 超時</div>
         </div>
     `;
@@ -607,17 +682,18 @@ function renderOrder(data) {
             </div>
         </div>
         
-        <div class="card-body">
-            <div class="drag-handle" title="拖曳改變狀態">☰</div>
-            <div class="card-img-wrap">
-                <img src="${imgSrc}" onerror="handleImgError(this, '${imgSrcPng}')" class="card-img" onclick="openImageModal(this.src)">
-                ${drinkInfo && drinkInfo.isSoldOut ? '<div class="sold-out-overlay">售罄</div>' : ''}
+        <div class="card-body" style="display: flex; flex-direction: column; gap: 8px; align-items: stretch;">
+            <div class="card-main-info" style="display: flex; gap: 12px; align-items: center;">
+                <div class="card-img-wrap" style="width: 80px; height: 80px; flex-shrink: 0; position: relative;">
+                    <img src="${imgSrc}" onerror="handleImgError(this, '${imgSrcPng}')" class="card-img" onclick="openImageModal(this.src)" style="width: 100%; height: 100%; border-radius: 8px; object-fit: contain; background: #000; border: 1px solid #333; cursor: zoom-in;">
+                    ${drinkInfo && drinkInfo.isSoldOut ? '<div class="sold-out-overlay">售罄</div>' : ''}
+                </div>
+                <div class="card-title-details" style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px;">
+                    <div class="card-drink-name" title="${data.drink}" style="font-size: 1.4em; font-weight: 900; color: #fff; margin: 0; line-height: 1.2;">${data.drink}</div>
+                    ${data.notes ? `<div class="card-notes" style="align-self: flex-start;">💬 ${data.notes}</div>` : ''}
+                </div>
             </div>
-            <div class="card-details">
-                <div class="card-drink-name" title="${data.drink}">${data.drink}</div>
-                ${data.notes ? `<div class="card-notes">💬 ${data.notes}</div>` : ''}
-                ${drinkInfo && drinkInfo.description ? `<div class="card-recipe" style="margin-top: 8px; padding: 10px; background: rgba(0,0,0,0.3); border-radius: 6px; font-size: 0.9em; max-height: 120px; overflow-y: auto; font-family: -apple-system, sans-serif;">${formatDashboardRecipe(drinkInfo.description)}</div>` : ''}
-            </div>
+            ${drinkInfo && drinkInfo.description ? `<div class="card-recipe" style="margin-top: 4px; padding: 10px; background: rgba(0,0,0,0.3); border-radius: 6px; font-size: 0.9em; font-family: -apple-system, sans-serif;">${formatDashboardRecipe(drinkInfo.description)}</div>` : ''}
         </div>
         
         ${timerBarHtml}
@@ -750,8 +826,7 @@ function initKanbanSortable() {
         if (!list) return;
         new Sortable(list, {
             group: 'kanban', 
-            handle: '.drag-handle', 
-            filter: 'button, .card-img, .card-guest, .card-recipe', 
+            filter: 'button, .card-img, .card-guest', 
             preventOnFilter: false,
             animation: 150,
             ghostClass: 'sortable-ghost',
@@ -1014,37 +1089,8 @@ function checkOvertime() {
             } else {
                 orderEl.classList.remove('status-overtime');
             }
-            
-            // Update Timer Bar for Making orders
-            if (order.status === 'making' && order.makingStartTime) {
-                const makingElapsedMs = now - order.makingStartTime;
-                // Assuming an average target making time of 3 minutes (180000ms) for the progress bar visual
-                const targetMakingMs = 180000; 
-                let progress = Math.min((makingElapsedMs / targetMakingMs) * 100, 100);
-                
-                const timerBar = document.getElementById('timer-bar-' + order.id);
-                if (timerBar) {
-                    timerBar.style.width = progress + '%';
-                    if (progress < 50) {
-                        timerBar.style.backgroundColor = '#2ecc71'; // Green
-                        timerBar.style.boxShadow = '0 0 5px rgba(46,204,113,0.5)';
-                    } else if (progress < 85) {
-                        timerBar.style.backgroundColor = '#f39c12'; // Orange
-                        timerBar.style.boxShadow = '0 0 5px rgba(243,156,18,0.5)';
-                    } else {
-                        timerBar.style.backgroundColor = '#e74c3c'; // Red
-                        timerBar.style.boxShadow = '0 0 5px rgba(231,76,60,0.5)';
-                    }
-                }
-            }
         } else {
             orderEl.classList.remove('status-overtime');
-            const timerBar = document.getElementById('timer-bar-' + order.id);
-            if (timerBar) {
-                timerBar.style.width = '100%';
-                timerBar.style.backgroundColor = order.status === 'completed' ? '#27ae60' : '#e74c3c';
-                timerBar.style.boxShadow = 'none';
-            }
         }
     });
 }
