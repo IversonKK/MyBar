@@ -13,7 +13,6 @@ const socket = io();
 let allDrinks = [];
 let globalServerOrders = []; // 用來暫存伺服器的訂單，確保配方載入時能重繪
 let globalAvatars = {};
-let globalRatings = {}; // { drinkName: { avg, count } }
 let globalCampaign = { active: false, text: '', tag: '活動', style: 'gold' };
 const localHiddenOrders = new Set(); // 紀錄本機端自動隱藏的訂單
 const finishedTimes = {}; // 紀錄訂單完成/退單的時間，供 10 分鐘自動清理使用
@@ -281,6 +280,68 @@ socket.on('admin-broadcast', (msg) => {
     showToast(msg);
 });
 
+let globalGuestTitles = {};
+
+socket.on('sync-guest-titles', (titles) => {
+    globalGuestTitles = titles || {};
+    renderAllOrders();
+});
+
+function getGuestTitleBadgeHtml(guestName) {
+    const title = globalGuestTitles[guestName];
+    if (!title || !title.text) return '';
+    return `<span class="title-badge-pill ${title.style || ''}">${title.text}</span>`;
+}
+
+let missingIngredients = [];
+let isStockCollapsed = false;
+
+const defaultStockIngredients = [
+    '薄荷', '鮮奶油', '鮮奶', '檸檬汁', '萊姆汁', '蔓越莓汁', '葡萄柚汁', '鳳梨汁', '柳橙汁',
+    '蛋白', '可樂', '通寧水', '蘇打水', '健力士黑啤酒', '琴酒', '伏特加', '威士忌', '蘭姆酒',
+    '龍舌蘭', '白蘭地', '君度橙酒', '金巴利', '杏仁香甜酒', '咖啡香甜酒', '奶酒', '蜜多麗蜜瓜香甜酒',
+    '野格', '夏特留斯', '苦艾酒', '白薄荷香甜酒', '黑櫻桃酒', '紅石榴糖漿', '純糖漿', '橄欖'
+];
+
+socket.on('sync-missing-ingredients', (data) => {
+    missingIngredients = data || [];
+    renderIngredientStockManager();
+    renderInventory(false);
+});
+
+function toggleIngredientStockCollapse() {
+    isStockCollapsed = !isStockCollapsed;
+    const container = document.getElementById('ingredient-stock-container');
+    if (container) {
+        container.style.display = isStockCollapsed ? 'none' : 'flex';
+    }
+}
+
+function renderIngredientStockManager() {
+    const container = document.getElementById('ingredient-stock-container');
+    if (!container) return;
+
+    if (isStockCollapsed) {
+        container.style.display = 'none';
+        return;
+    } else {
+        container.style.display = 'flex';
+    }
+
+    container.innerHTML = defaultStockIngredients.map(item => {
+        const isMissing = missingIngredients.includes(item);
+        return `
+            <div class="ingredient-stock-pill ${isMissing ? 'missing' : 'available'}" onclick="toggleMissingIngredient('${item}')" title="${isMissing ? '點擊恢復有貨' : '點擊標記缺貨'}">
+                ${isMissing ? '❌ ' + item : '✅ ' + item}
+            </div>
+        `;
+    }).join('');
+}
+
+function toggleMissingIngredient(item) {
+    socket.emit('toggle-missing-ingredient', item);
+}
+
 // 常缺貨快捷鍵配置
 const quickToggleKeywords = ['牛奶', '薄荷', '生啤', '可樂', '通寧水', '氣泡水'];
 
@@ -300,7 +361,7 @@ function renderQuickToggles() {
 
 function renderInventory(fullRender = true) {
     if (fullRender) {
-        renderQuickToggles();
+        renderIngredientStockManager();
     }
     const list = document.getElementById('inv-list');
     const searchInput = document.getElementById('inventory-search-input');
@@ -319,21 +380,21 @@ function renderInventory(fullRender = true) {
         const t = Date.now(); 
         const localPath = `/images/${encodedName}.jpg?t=${t}`;
         const localPathPng = `/images/${encodedName}.png?t=${t}`;
-        
-        // 評分徹章
-        const ratingData = globalRatings[d.name];
-        const ratingBadge = ratingData && ratingData.count > 0
-            ? `<span class="inv-rating-badge" onclick="openRatingDetailsModal('${safeName}')" title="${ratingData.count} 人評分">⭐ ${ratingData.avg.toFixed(1)} <small>(${ratingData.count})</small></span>`
-            : `<span class="inv-rating-badge no-rating" title="尚無評分">☆ 未評分</span>`;
+
+        // 檢查是否含有缺貨原料
+        const desc = (d.description || '').toLowerCase();
+        const tagsStr = (d.tags || []).join(' ').toLowerCase();
+        const missingFound = missingIngredients.filter(ing => desc.includes(ing.toLowerCase()) || tagsStr.includes(ing.toLowerCase()));
+        const isMissingIng = missingFound.length > 0;
         
         return `
-        <div class="inv-item ${d.isSoldOut ? 'sold-out' : ''}">
+        <div class="inv-item ${d.isSoldOut || isMissingIng ? 'sold-out' : ''}">
             <img src="${localPath}" onerror="handleImgError(this, '${localPathPng}')" onclick="openImageModal(this.src)">
             <div class="inv-item-info">
                 <div class="inv-item-name" title="${d.name}">${d.name}</div>
                 <div class="inv-item-meta">
-                    <div class="inv-item-status">${d.isSoldOut ? '🚫 已下架' : '✅ 供應中'}</div>
-                    ${ratingBadge}
+                    <div class="inv-item-status">${d.isSoldOut ? '🚫 已下架' : isMissingIng ? `⚠️ 缺 ${missingFound.join(', ')}` : '✅ 供應中'}</div>
+                    ${isMissingIng ? `<div class="inv-missing-tag">缺 ${missingFound.join(', ')}</div>` : ''}
                 </div>
             </div>
             <div class="inv-item-actions">
@@ -365,11 +426,7 @@ function toggleSoldOutByKeyword(keyword) {
     showToast(`✅ 已將「${keyword}」相關酒款設為 ${actionText}！`);
 }
 
-// 接收評分更新 → 即時刷新庫存列表星數
-socket.on('rating-updated', (data) => {
-    globalRatings[data.drinkName] = data.stats;
-    renderInventory(false); // 只更新清單，不重建快速鍵
-});
+
 
 function updateCampaignStatusBadge() {
     const btn = document.getElementById('btn-campaign-settings');
@@ -395,11 +452,7 @@ socket.on('sync-campaign', (data) => {
     updateCampaignStatusBadge();
 });
 
-// 初始化載入評分與活動資料
-fetch('/api/ratings').then(r => r.json()).then(data => {
-    globalRatings = data;
-    renderInventory();
-}).catch(() => {});
+// 初始化載入活動資料
 
 fetch('/api/campaign').then(r => r.json()).then(data => {
     globalCampaign = data;
@@ -456,6 +509,7 @@ function renderAllOrders() {
     
     updateCountsAndTitle();
     checkOvertime();
+    renderBatchSummaryBar();
 }
 
 function getListByStatus(status) {
@@ -670,11 +724,13 @@ function renderOrder(data) {
         </div>
     `;
     
+    const titleBadge = getGuestTitleBadgeHtml(data.guest);
+
     div.innerHTML = `
         <div class="card-header">
             <div class="card-guest" onclick="showGuestHistory('${safeGuest}')" title="查看 ${data.guest} 的紀錄">
                 <img src="${avatarUrl}" alt="Avatar">
-                ${data.guest}
+                ${data.guest} ${titleBadge}
             </div>
             <div class="card-id-time">
                 <span class="card-order-id">#${shortId}</span>
@@ -811,6 +867,7 @@ function updateStatus(orderId, newStatus, btn) {
     setTimeout(() => {
         reorderColumnDOM(targetList);
         updateCountsAndTitle();
+        renderBatchSummaryBar();
     }, 300);
 }
 
@@ -826,6 +883,7 @@ function initKanbanSortable() {
         if (!list) return;
         new Sortable(list, {
             group: 'kanban', 
+            handle: '.drag-handle',
             filter: 'button, .card-img, .card-guest', 
             preventOnFilter: false,
             animation: 150,
@@ -1036,7 +1094,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     else if (el.id === 'stats-modal-overlay') closeStatsModal();
                     else if (el.id === 'guest-history-modal-overlay') closeGuestHistoryModal();
                     else if (el.id === 'adjust-leaderboard-modal-overlay') closeAdjustLeaderboardModal();
-                    else if (el.id === 'rating-details-modal-overlay') closeRatingDetailsModal();
                     else if (el.id === 'campaign-modal-overlay') closeCampaignModal();
                 }
             });
@@ -1485,50 +1542,7 @@ function closeAdjustLeaderboardModal() {
     if (modal) modal.classList.remove('visible');
 }
 
-function openRatingDetailsModal(drinkName) {
-    const modal = document.getElementById('rating-details-modal-overlay');
-    const titleEl = document.getElementById('rating-details-drink-name');
-    const statsEl = document.getElementById('rating-details-stats');
-    const bodyEl = document.getElementById('rating-details-body');
 
-    if (!modal || !titleEl || !statsEl || !bodyEl) return;
-
-    titleEl.textContent = drinkName;
-    const stats = globalRatings[drinkName] || { avg: 0, count: 0, list: [] };
-    statsEl.textContent = `⭐ ${stats.avg.toFixed(1)} (${stats.count} 筆評分)`;
-
-    const reviews = stats.list || [];
-    if (reviews.length === 0) {
-        bodyEl.innerHTML = `<div style="text-align: center; color: #666; padding: 20px;">尚無任何留言與評論</div>`;
-    } else {
-        // 由新到舊排序
-        const sortedReviews = [...reviews].sort((a, b) => (b.ts || 0) - (a.ts || 0));
-        bodyEl.innerHTML = sortedReviews.map(r => {
-            const dateStr = r.ts ? new Date(r.ts).toLocaleString('zh-TW', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : '';
-            const starsStr = '★'.repeat(r.stars) + '☆'.repeat(5 - r.stars);
-            return `
-                <div class="review-card">
-                    <div class="review-header">
-                        <div class="review-user">
-                            <img src="${getAvatarUrl(r.guest)}" style="width: 24px; height: 24px; border-radius: 50%; background: #000; border: 1px solid #444;" onerror="this.src='/images/avatar-default.png'">
-                            <span>${r.guest}</span>
-                        </div>
-                        <span class="review-stars">${starsStr}</span>
-                    </div>
-                    ${r.comment ? `<div class="review-comment">"${r.comment}"</div>` : ''}
-                    <div class="review-time">${dateStr}</div>
-                </div>
-            `;
-        }).join('');
-    }
-
-    modal.classList.add('visible');
-}
-
-function closeRatingDetailsModal() {
-    const modal = document.getElementById('rating-details-modal-overlay');
-    if (modal) modal.classList.remove('visible');
-}
 
 function openCampaignModal() {
     const modal = document.getElementById('campaign-modal-overlay');
@@ -1953,3 +1967,180 @@ function checkAndRenderAdjustList() {
         renderAdjustHistoryList();
     }
 }
+
+// =====================================================
+// 🔥 POS 同酒款批量製作匯總欄 (Batch Making Aggregator) Engine
+// =====================================================
+let selectedBatchDrink = null;
+
+function renderBatchSummaryBar() {
+    const bar = document.getElementById('batch-summary-bar');
+    const pillsContainer = document.getElementById('batch-pills-container');
+    const actionsContainer = document.getElementById('batch-actions-container');
+
+    if (!bar || !pillsContainer || !actionsContainer) return;
+
+    const activeOrders = globalServerOrders.filter(o => 
+        !o.hiddenFromDashboard && 
+        !localHiddenOrders.has(o.id) && 
+        (o.status === 'pending' || o.status === 'making' || !o.status)
+    );
+
+    const drinkCounts = {};
+    activeOrders.forEach(o => {
+        drinkCounts[o.drink] = (drinkCounts[o.drink] || 0) + 1;
+    });
+
+    const entries = Object.entries(drinkCounts).filter(([_, count]) => count >= 1).sort((a, b) => b[1] - a[1]);
+
+    if (entries.length === 0) {
+        bar.style.display = 'none';
+        selectedBatchDrink = null;
+        clearBatchCardHighlights();
+        return;
+    }
+
+    bar.style.display = 'flex';
+
+    pillsContainer.innerHTML = entries.map(([drink, count]) => {
+        const isActive = selectedBatchDrink === drink;
+        const safeDrink = drink.replace(/'/g, "\\'");
+        return `
+            <div class="batch-pill ${isActive ? 'active' : ''}" onclick="toggleBatchHighlight('${safeDrink}')" title="點擊高亮 ${drink} 所有卡片">
+                <span>🍹 ${drink}</span>
+                <span class="batch-pill-count">${count}</span>
+            </div>
+        `;
+    }).join('');
+
+    if (selectedBatchDrink && drinkCounts[selectedBatchDrink]) {
+        const count = drinkCounts[selectedBatchDrink];
+        const safeDrink = selectedBatchDrink.replace(/'/g, "\\'");
+        actionsContainer.style.display = 'flex';
+        actionsContainer.innerHTML = `
+            <span style="font-size: 0.85em; color: #aaa;">⚡ 批次處理：</span>
+            <button class="batch-action-btn btn-make" onclick="batchUpdateStatus('${safeDrink}', 'making')">👨‍🍳 開做 (${count}杯)</button>
+            <button class="batch-action-btn btn-serve" onclick="batchUpdateStatus('${safeDrink}', 'completed')">✅ 全出餐 (${count}杯)</button>
+            <button class="batch-action-btn btn-cancel" onclick="clearBatchHighlight()">✖ 取消</button>
+        `;
+    } else {
+        selectedBatchDrink = null;
+        actionsContainer.style.display = 'none';
+        actionsContainer.innerHTML = '';
+        clearBatchCardHighlights();
+    }
+}
+
+function toggleBatchHighlight(drinkName) {
+    if (selectedBatchDrink === drinkName) {
+        clearBatchHighlight();
+        return;
+    }
+    selectedBatchDrink = drinkName;
+    renderBatchSummaryBar();
+    applyBatchCardHighlights(drinkName);
+}
+
+function clearBatchHighlight() {
+    selectedBatchDrink = null;
+    clearBatchCardHighlights();
+    renderBatchSummaryBar();
+}
+
+function clearBatchCardHighlights() {
+    document.querySelectorAll('.order-card.batch-highlighted').forEach(card => {
+        card.classList.remove('batch-highlighted');
+    });
+}
+
+function applyBatchCardHighlights(drinkName) {
+    clearBatchCardHighlights();
+    let firstCard = null;
+
+    globalServerOrders.forEach(o => {
+        if (o.drink === drinkName && (o.status === 'pending' || o.status === 'making' || !o.status)) {
+            const card = document.getElementById('order-' + o.id);
+            if (card) {
+                card.classList.add('batch-highlighted');
+                if (!firstCard) firstCard = card;
+            }
+        }
+    });
+
+    if (firstCard) {
+        firstCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+}
+
+function batchUpdateStatus(drinkName, newStatus) {
+    const targetOrders = globalServerOrders.filter(o => 
+        o.drink === drinkName && 
+        !o.hiddenFromDashboard && 
+        !localHiddenOrders.has(o.id) && 
+        (o.status === 'pending' || o.status === 'making' || !o.status)
+    );
+
+    if (targetOrders.length === 0) return;
+
+    targetOrders.forEach(o => {
+        updateStatus(o.id, newStatus, null);
+    });
+
+    showToast(`⚡ 已將 ${targetOrders.length} 杯【${drinkName}】批次設為 ${newStatus === 'making' ? '製作中' : '已完成出餐'}！`);
+    clearBatchHighlight();
+}
+
+// 📱 緊湊卡片檢視模式 Engine
+let isCompactView = localStorage.getItem('bar_pos_compact_view') === 'true';
+
+function applyCompactViewUI() {
+    const container = document.getElementById('kanban-container');
+    const btn = document.getElementById('btn-toggle-compact');
+    if (container) {
+        if (isCompactView) {
+            container.classList.add('compact-mode');
+        } else {
+            container.classList.remove('compact-mode');
+        }
+    }
+    if (btn) {
+        btn.innerHTML = isCompactView ? '📖 展開卡片' : '📱 緊湊卡片';
+    }
+}
+
+function toggleCompactCardView() {
+    isCompactView = !isCompactView;
+    localStorage.setItem('bar_pos_compact_view', isCompactView);
+    applyCompactViewUI();
+    showToast(isCompactView ? '📱 已切換至「緊湊卡片模式」！' : '📖 已切換至「詳細展開模式」！');
+}
+
+// 頁面載入時套用緊湊設定
+document.addEventListener('DOMContentLoaded', () => {
+    applyCompactViewUI();
+});
+setTimeout(applyCompactViewUI, 200);
+
+// ⚙️ 吧台工具箱 (Compact Header Toolbox) Engine
+function toggleToolboxMenu(e) {
+    if (e) e.stopPropagation();
+    const menu = document.getElementById('pos-toolbox-menu');
+    if (menu) {
+        menu.classList.toggle('visible');
+    }
+}
+
+function closeToolboxMenu() {
+    const menu = document.getElementById('pos-toolbox-menu');
+    if (menu) {
+        menu.classList.remove('visible');
+    }
+}
+
+window.addEventListener('click', (e) => {
+    const container = document.querySelector('.toolbox-dropdown-container');
+    if (container && !container.contains(e.target)) {
+        closeToolboxMenu();
+    }
+});
+

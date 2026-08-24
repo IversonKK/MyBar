@@ -10,6 +10,32 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
+// 智慧圖片相容處理：若請求 .jpg 且檔案不存在，但對應的 .png / .svg / .jpeg 存在時自動無縫傳送，避免 404 Console 報錯
+app.get('/images/:filename', (req, res, next) => {
+    const imagesDir = path.join(__dirname, 'public', 'images');
+    const requestedFile = req.params.filename;
+    const requestedPath = path.join(imagesDir, requestedFile);
+
+    if (fs.existsSync(requestedPath)) {
+        return next(); // 檔案存在，直接交給 express.static 處理
+    }
+
+    // 嘗試找尋其他副檔名相容檔案
+    const ext = path.extname(requestedFile);
+    const baseName = path.basename(requestedFile, ext);
+    const candidateExts = ['.png', '.jpg', '.jpeg', '.svg', '.webp'];
+
+    for (const altExt of candidateExts) {
+        if (altExt.toLowerCase() === ext.toLowerCase()) continue;
+        const altPath = path.join(imagesDir, baseName + altExt);
+        if (fs.existsSync(altPath)) {
+            return res.sendFile(altPath);
+        }
+    }
+
+    next();
+});
+
 // 設定 public 為靜態資料夾
 app.use(express.static(path.join(__dirname, 'public')));
 
@@ -19,7 +45,6 @@ let orders = [];
 let favoritesDatabase = {};
 let avatarsDatabase = {};
 let tunnelUrl = ''; // 儲存 cloudflared 隧道網址
-let ratingsDatabase = {}; // { drinkName: [{ guest, stars, comment, orderId, ts }] }
 let campaignDatabase = { active: false, text: '', tag: '活動', style: 'gold' };
 
 const defaultAvatarStyles = [
@@ -32,11 +57,14 @@ const ordersPath = path.join(__dirname, 'orders.json');
 const completedOrdersLogPath = path.join(__dirname, 'completed_orders.json');
 const favoritesPath = path.join(__dirname, 'favorites.json');
 const avatarsPath = path.join(__dirname, 'avatars.json');
-const ratingsPath = path.join(__dirname, 'ratings.json');
 const campaignPath = path.join(__dirname, 'campaign.json');
 const soldOutPath = path.join(__dirname, 'soldout.json');
+const missingIngredientsPath = path.join(__dirname, 'missing_ingredients.json');
+const titlesPath = path.join(__dirname, 'titles.json');
 
 let soldOutDrinks = []; // 儲存已下架的調酒名稱清單
+let missingIngredients = []; // 儲存缺料原料名稱清單 (例如: ['薄荷', '鮮奶油'])
+let guestTitlesDatabase = {}; // 儲存顧客尊榮稱號 (例如: { '小明': { id: 'legendary_drinker', text: '👑 傳奇酒豪', style: 'legendary' } })
 
 function loadSoldOutData() {
     try {
@@ -54,6 +82,44 @@ function saveSoldOutData() {
         fs.writeFileSync(soldOutPath, JSON.stringify(soldOutDrinks, null, 4), 'utf8');
     } catch (err) {
         console.error("寫入 soldout.json 失敗:", err);
+    }
+}
+
+function loadMissingIngredientsData() {
+    try {
+        if (fs.existsSync(missingIngredientsPath)) {
+            missingIngredients = JSON.parse(fs.readFileSync(missingIngredientsPath, 'utf8'));
+            console.log(`成功讀取 missing_ingredients.json，目前缺料 ${missingIngredients.length} 項。`);
+        }
+    } catch (err) {
+        console.error("讀取 missing_ingredients.json 失敗:", err.message);
+    }
+}
+
+function saveMissingIngredientsData() {
+    try {
+        fs.writeFileSync(missingIngredientsPath, JSON.stringify(missingIngredients, null, 4), 'utf8');
+    } catch (err) {
+        console.error("寫入 missing_ingredients.json 失敗:", err);
+    }
+}
+
+function loadTitlesData() {
+    try {
+        if (fs.existsSync(titlesPath)) {
+            guestTitlesDatabase = JSON.parse(fs.readFileSync(titlesPath, 'utf8'));
+            console.log(`成功讀取 titles.json，共載入 ${Object.keys(guestTitlesDatabase).length} 筆頭銜資料。`);
+        }
+    } catch (err) {
+        console.error("讀取 titles.json 失敗:", err.message);
+    }
+}
+
+function saveTitlesData() {
+    try {
+        fs.writeFileSync(titlesPath, JSON.stringify(guestTitlesDatabase, null, 4), 'utf8');
+    } catch (err) {
+        console.error("寫入 titles.json 失敗:", err);
     }
 }
 
@@ -136,25 +202,6 @@ function saveAvatarsData() {
     }
 }
 
-function loadRatingsData() {
-    try {
-        if (fs.existsSync(ratingsPath)) {
-            ratingsDatabase = JSON.parse(fs.readFileSync(ratingsPath, 'utf8'));
-            console.log("成功讀取 ratings.json！");
-        }
-    } catch (err) {
-        console.error("讀取 ratings.json 失敗:", err.message);
-    }
-}
-
-function saveRatingsData() {
-    try {
-        fs.writeFileSync(ratingsPath, JSON.stringify(ratingsDatabase, null, 4), 'utf8');
-    } catch (err) {
-        console.error("寫入 ratings.json 失敗:", err);
-    }
-}
-
 function loadCampaignData() {
     try {
         if (fs.existsSync(campaignPath)) {
@@ -172,14 +219,6 @@ function saveCampaignData() {
     } catch (err) {
         console.error("寫入 campaign.json 失敗:", err);
     }
-}
-
-// 計算一款酒的評分統計
-function calcRatingStats(drinkName) {
-    const list = ratingsDatabase[drinkName] || [];
-    if (list.length === 0) return { avg: 0, count: 0, list: [] };
-    const avg = list.reduce((s, r) => s + r.stars, 0) / list.length;
-    return { avg: Math.round(avg * 10) / 10, count: list.length, list };
 }
 
 function saveCompletedOrdersData() {
@@ -316,11 +355,12 @@ function loadDrinksData() {
 }
 
 loadSoldOutData();
+loadMissingIngredientsData();
+loadTitlesData();
 loadDrinksData();
 loadOrdersData();
 loadFavoritesData();
 loadAvatarsData();
-loadRatingsData();
 loadCampaignData();
 
 app.get('/api/drinks', (req, res) => {
@@ -342,15 +382,6 @@ app.post('/api/tunnel-url', (req, res) => {
     } else {
         res.status(400).json({ error: 'invalid url' });
     }
-});
-
-// 評分統計 API
-app.get('/api/ratings', (req, res) => {
-    const stats = {};
-    Object.keys(ratingsDatabase).forEach(drinkName => {
-        stats[drinkName] = calcRatingStats(drinkName);
-    });
-    res.json(stats);
 });
 
 app.get('/api/campaign', (req, res) => {
@@ -384,6 +415,8 @@ io.on('connection', (socket) => {
     socket.emit('sync-avatars', avatarsDatabase);
     socket.emit('sync-campaign', campaignDatabase);
     socket.emit('sync-sold-out', soldOutDrinks);
+    socket.emit('sync-missing-ingredients', missingIngredients);
+    socket.emit('sync-guest-titles', guestTitlesDatabase);
 
     socket.on('new-order', (orderData) => {
         // 伺服器端防呆：檢查該調酒是否已下架/售罄
@@ -582,34 +615,7 @@ io.on('connection', (socket) => {
         io.emit('favorites-updated', guest);
     });
 
-    // 評分系統
-    socket.on('submit-rating', (data) => {
-        const { drinkName, guest, stars, comment, orderId } = data;
-        if (!drinkName || !guest || !stars || stars < 1 || stars > 5) return;
 
-        if (!ratingsDatabase[drinkName]) ratingsDatabase[drinkName] = [];
-
-        // 防止同一筆訂單重複評分
-        const alreadyRated = ratingsDatabase[drinkName].some(r => r.orderId === orderId);
-        if (alreadyRated) {
-            socket.emit('rating-error', '您已經評分過這杯酒了！');
-            return;
-        }
-
-        const entry = {
-            guest,
-            stars: parseInt(stars),
-            comment: (comment || '').trim().slice(0, 100),
-            orderId,
-            ts: Date.now()
-        };
-        ratingsDatabase[drinkName].push(entry);
-        saveRatingsData();
-
-        const stats = calcRatingStats(drinkName);
-        io.emit('rating-updated', { drinkName, stats, entry });
-        console.log(`⭐ ${guest} 給「${drinkName}」評了 ${stars} 顆星`);
-    });
 
     socket.on('add-manual-completed-order', (data) => {
         const ts = data.timestamp || Date.now();
@@ -647,6 +653,26 @@ io.on('connection', (socket) => {
         orders.push(newOrder);
         appendToCompletedLog(newOrder);
         io.emit('sync-orders', orders);
+    });
+
+    socket.on('toggle-missing-ingredient', (ingredient) => {
+        if (!ingredient || typeof ingredient !== 'string') return;
+        const name = ingredient.trim();
+        if (missingIngredients.includes(name)) {
+            missingIngredients = missingIngredients.filter(i => i !== name);
+        } else {
+            missingIngredients.push(name);
+        }
+        saveMissingIngredientsData();
+        io.emit('sync-missing-ingredients', missingIngredients);
+        console.log(`📦 缺料變更: ${name} (${missingIngredients.includes(name) ? '缺貨' : '有貨'})`);
+    });
+
+    socket.on('update-guest-title', (data) => {
+        if (!data || !data.guest) return;
+        guestTitlesDatabase[data.guest] = data.title || null;
+        saveTitlesData();
+        io.emit('sync-guest-titles', guestTitlesDatabase);
     });
 
     socket.on('update-campaign', (data) => {

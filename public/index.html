@@ -246,8 +246,9 @@
             <input type="text" id="search-input" class="search-box" placeholder="🔍 搜尋酒名或描述..." oninput="applyFilters()" style="padding-right: 70px; width: 100%;">
             <span id="clear-search-btn" class="clear-search-btn" onclick="clearSearch()" style="display: none; position: absolute; right: 5px; cursor: pointer; color: #e74c3c; font-size: 1.2em; padding: 5px;">✖</span>
             <button id="voice-search-btn" class="voice-search-btn" onclick="startVoiceSearch()" title="語音搜尋" style="position: absolute; right: 35px;">🎙️</button>
-            <!-- 電腦版的隨機按鈕保留在此處 -->
-            <button id="random-btn" class="desktop-random-btn" onclick="recommendRandomDrink()" style="background: #8e44ad; color: white; border: none; padding: 0 12px; margin-left: 8px; margin-right: 8px; border-radius: 8px; cursor: pointer; font-weight: bold; white-space: nowrap; transition: 0.2s; position: relative;" onmouseover="if(!this.disabled) this.style.background='#9b59b6'" onmouseout="if(!this.disabled) this.style.background='#8e44ad'" title="不知道喝什麼？幫你抽一杯！">🎲 隨機</button>
+            <!-- 電腦版的隨機與問答按鈕 -->
+            <button id="random-btn" class="desktop-random-btn" onclick="recommendRandomDrink()" style="background: #8e44ad; color: white; border: none; padding: 0 12px; margin-left: 8px; margin-right: 6px; border-radius: 8px; cursor: pointer; font-weight: bold; white-space: nowrap; transition: 0.2s; position: relative;" onmouseover="if(!this.disabled) this.style.background='#9b59b6'" onmouseout="if(!this.disabled) this.style.background='#8e44ad'" title="不知道喝什麼？幫你抽一杯！">🎲 隨機</button>
+            <button id="wizard-btn" class="desktop-wizard-btn" onclick="openDrinkWizard()" style="background: linear-gradient(135deg, #d35400, #e67e22); color: white; border: none; padding: 0 12px; margin-right: 8px; border-radius: 8px; cursor: pointer; font-weight: bold; white-space: nowrap; transition: 0.2s; position: relative; box-shadow: 0 2px 8px rgba(211,84,0,0.4);" title="心理測驗：精準匹配適合您的調酒！">🧙‍♂️ 幫我挑酒</button>
             <button id="toggle-filter-btn" class="toggle-filter-btn" onclick="toggleAdvancedFilters()" style="position: relative;">篩選 ▼</button>
         </div>
         
@@ -272,8 +273,9 @@
                 <button onclick="closeFilterSheet()" class="mobile-close-btn" title="關閉">✖</button>
             </div>
 
-            <!-- 手機版專屬：醒目的隨機抽籤按鈕 -->
+            <!-- 手機版專屬：醒目的特調問答與隨機按鈕 -->
             <div class="mobile-random-area">
+                <button id="mobile-wizard-btn" class="filter-drawer-random-btn" onclick="openDrinkWizard(); closeFilterSheet();" style="background: linear-gradient(135deg, #d35400, #e67e22); color: white; box-shadow: 0 6px 20px rgba(211, 84, 0, 0.5); margin-bottom: 12px;">🧙‍♂️ 心理測驗幫我挑酒</button>
                 <button id="mobile-random-btn" class="filter-drawer-random-btn" onclick="recommendRandomDrink()" style="background: linear-gradient(135deg, #8e44ad, #9b59b6); color: white; box-shadow: 0 6px 20px rgba(142, 68, 173, 0.5);">🎰 幫我隨機抽一杯</button>
                 <div class="random-hint">💡 勾選下方標籤後再點擊，會自動從篩選結果中抽籤喔！</div>
             </div>
@@ -416,38 +418,120 @@
         </div>
     </div>
 
-    <!-- ⭐ 評分 Modal -->
-    <div id="rating-modal-overlay" onclick="if(event.target===this) closeRatingModal()">
-        <div id="rating-modal-content">
-            <h3 id="rating-modal-title" style="color: #f39c12; margin-top: 0; text-align: center;">⭐ 給這杯酒評分</h3>
-            <p id="rating-modal-drink" style="font-size: 1em; color: #ddd; text-align: center; margin-bottom: 20px;"></p>
-
-            <!-- 星星選擇器 -->
-            <div class="star-selector" id="star-selector">
-                <span class="star-btn" data-star="1" onclick="selectStar(1)">★</span>
-                <span class="star-btn" data-star="2" onclick="selectStar(2)">★</span>
-                <span class="star-btn" data-star="3" onclick="selectStar(3)">★</span>
-                <span class="star-btn" data-star="4" onclick="selectStar(4)">★</span>
-                <span class="star-btn" data-star="5" onclick="selectStar(5)">★</span>
+    <!-- 🧙‍♂️ 特調問答助手 (Cocktail Wizard) 模態視窗 -->
+    <div id="wizard-modal-overlay" onclick="if(event.target===this) closeDrinkWizard()">
+        <div id="wizard-modal-content">
+            <button class="wizard-close-btn" onclick="closeDrinkWizard()" title="關閉">✖</button>
+            <h2 style="color: #f39c12; margin-top: 0; text-align: center; font-size: 1.4em;">🧙‍♂️ 吧台特調問答助手</h2>
+            
+            <div id="wizard-step-indicator" class="wizard-progress-bar">
+                <div id="wizard-progress-fill" class="wizard-progress-fill" style="width: 33%;"></div>
             </div>
-            <p id="rating-label-text" style="text-align:center; font-size:0.9em; color:#888; min-height:1.3em; margin-bottom: 16px;"></p>
 
-            <!-- 留言 -->
-            <textarea id="rating-comment-input" placeholder="留下一句話吧！（可選，最多 100 字）" maxlength="100"
-                style="width:100%; box-sizing:border-box; background:#1a1a1a; border:1px solid #444; color:#e0e0e0;
-                       border-radius:8px; padding:10px; font-size:0.95em; resize:none; height:70px; outline:none;
-                       font-family:inherit; margin-bottom:16px;">
-            </textarea>
-
-            <div style="display:flex; flex-direction:column; gap:8px;">
-                <button id="rating-submit-btn" onclick="submitRating()"
-                    style="background:#f39c12; color:#000; width:100%; padding:12px; font-size:1.05em;
-                           border-radius:8px; border:none; font-weight:bold; cursor:pointer; opacity:0.4; transition:0.2s;"
-                    disabled>送出評分</button>
-                <button onclick="closeRatingModal()"
-                    style="background:transparent; color:#888; border:none; padding:6px; font-size:0.85em;
-                           text-decoration:underline; cursor:pointer;">取消</button>
+            <!-- Step 1: 心情氛圍 -->
+            <div id="wizard-step-1" class="wizard-step active">
+                <h3 class="wizard-q-title">Step 1. 您今晚的心情與氛圍是？</h3>
+                <div class="wizard-options-grid">
+                    <button class="wizard-opt-btn" onclick="selectWizardAnswer('mood', 'relax', 1)">
+                        <span class="wizard-opt-icon">😌</span>
+                        <span class="wizard-opt-text">放鬆舒壓<small>想下班後好好放空整天的疲勞</small></span>
+                    </button>
+                    <button class="wizard-opt-btn" onclick="selectWizardAnswer('mood', 'party', 1)">
+                        <span class="wizard-opt-icon">🔥</span>
+                        <span class="wizard-opt-text">嗨起來 Party<small>朋友聚會，氣氛正好想暢飲</small></span>
+                    </button>
+                    <button class="wizard-opt-btn" onclick="selectWizardAnswer('mood', 'vacation', 1)">
+                        <span class="wizard-opt-icon">🌴</span>
+                        <span class="wizard-opt-text">度假風情<small>想要充滿果香與陽光的熱帶感</small></span>
+                    </button>
+                    <button class="wizard-opt-btn" onclick="selectWizardAnswer('mood', 'night', 1)">
+                        <span class="wizard-opt-icon">🌙</span>
+                        <span class="wizard-opt-text">深夜沉思<small>適合獨自品飲的成熟大氣風味</small></span>
+                    </button>
+                </div>
             </div>
+
+            <!-- Step 2: 風味偏好 -->
+            <div id="wizard-step-2" class="wizard-step">
+                <h3 class="wizard-q-title">Step 2. 您偏好的口感風味？</h3>
+                <div class="wizard-options-grid">
+                    <button class="wizard-opt-btn" onclick="selectWizardAnswer('flavor', 'sour', 2)">
+                        <span class="wizard-opt-icon">🍋</span>
+                        <span class="wizard-opt-text">酸甜果香<span class="opt-desc">檸檬、柑橘類明亮酸爽</span></span>
+                    </button>
+                    <button class="wizard-opt-btn" onclick="selectWizardAnswer('flavor', 'sweet', 2)">
+                        <span class="wizard-opt-icon">🍬</span>
+                        <span class="wizard-opt-text">甜美濃郁<span class="opt-desc">香甜水果、奶香或焦糖</span></span>
+                    </button>
+                    <button class="wizard-opt-btn" onclick="selectWizardAnswer('flavor', 'bubbly', 2)">
+                        <span class="wizard-opt-icon">🫧</span>
+                        <span class="wizard-opt-text">氣泡清爽<span class="opt-desc">帶有氣泡感，暢快解渴</span></span>
+                    </button>
+                    <button class="wizard-opt-btn" onclick="selectWizardAnswer('flavor', 'herbal', 2)">
+                        <span class="wizard-opt-icon">🌿</span>
+                        <span class="wizard-opt-text">草本苦甜<span class="opt-desc">杜松子、藥草苦精風味</span></span>
+                    </button>
+                    <button class="wizard-opt-btn full-width" onclick="selectWizardAnswer('flavor', 'any', 2)">
+                        <span class="wizard-opt-icon">🎲</span>
+                        <span class="wizard-opt-text">不限制，由吧主驚喜搭配</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Step 3: 酒感強度 -->
+            <div id="wizard-step-3" class="wizard-step">
+                <h3 class="wizard-q-title">Step 3. 期待的酒感戰力值？</h3>
+                <div class="wizard-options-grid">
+                    <button class="wizard-opt-btn" onclick="selectWizardAnswer('strength', 'light', 3)">
+                        <span class="wizard-opt-icon">🥤</span>
+                        <span class="wizard-opt-text">輕微醺 (< 10%)<span class="opt-desc">輕鬆好入口，不易醉</span></span>
+                    </button>
+                    <button class="wizard-opt-btn" onclick="selectWizardAnswer('strength', 'medium', 3)">
+                        <span class="wizard-opt-icon">🍸</span>
+                        <span class="wizard-opt-text">標準經典 (10-20%)<span class="opt-desc">經典調酒平衡黃金比例</span></span>
+                    </button>
+                    <button class="wizard-opt-btn" onclick="selectWizardAnswer('strength', 'strong', 3)">
+                        <span class="wizard-opt-icon">🔥</span>
+                        <span class="wizard-opt-text">烈酒重砲 (>= 20%)<span class="opt-desc">厚實酒感，一杯到位</span></span>
+                    </button>
+                    <button class="wizard-opt-btn" onclick="selectWizardAnswer('strength', 'any', 3)">
+                        <span class="wizard-opt-icon">🎲</span>
+                        <span class="wizard-opt-text">都可以，酒精濃度隨緣</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Step 4: 推薦結果 -->
+            <div id="wizard-step-result" class="wizard-step">
+                <h3 style="color: #ffd700; margin-top: 0; text-align: center; font-size: 1.15em;">✨ 根據您的喜好，專屬推薦 Top 3：</h3>
+                <div id="wizard-results-container" class="wizard-results-list">
+                    <!-- 由 JS 動態生成 3 款匹配酒卡 -->
+                </div>
+                <div style="display: flex; gap: 10px; margin-top: 15px;">
+                    <button class="pos-btn" onclick="resetWizard()" style="flex: 1; padding: 10px; background: rgba(255,255,255,0.08); border-color: #555;">🔄 重測一次</button>
+                    <button class="pos-btn" onclick="closeDrinkWizard()" style="flex: 1; padding: 10px; background: transparent; border-color: #444;">✖ 關閉</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 🥂 全螢幕乾杯叫號慶祝模態視窗 (Order Ready Celebration) -->
+    <div id="order-ready-modal-overlay" onclick="if(event.target===this) closeOrderReadyCelebration()">
+        <div id="order-ready-modal-content">
+            <div class="order-ready-spotlight"></div>
+            <div class="order-ready-clink-icon">🥂</div>
+            
+            <h2 class="order-ready-title">✨ 您的調酒製作完成囉！</h2>
+            
+            <div class="order-ready-drink-card">
+                <img id="order-ready-drink-img" src="" class="order-ready-drink-img" alt="Drink">
+                <div class="order-ready-drink-name" id="order-ready-drink-name">【 Mojito 】</div>
+                <div class="order-ready-drink-hint">🍸 請至吧台跟酒保領取，祝您今晚微醺愉快！</div>
+            </div>
+
+            <button class="order-ready-toast-btn" onclick="closeOrderReadyCelebration()">
+                🥂 我要領酒 (乾杯！)
+            </button>
         </div>
     </div>
 

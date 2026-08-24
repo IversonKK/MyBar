@@ -18,83 +18,122 @@
             <h1>📝 吧台接單系統</h1>
         </div>
         <div class="header-right">
-            <div class="settings-wrap">
-                <label>⏰ 警告線</label>
-                <select id="overtime-threshold" onchange="checkOvertime()">
-                    <option value="10">10 分</option>
-                    <option value="15" selected>15 分</option>
-                    <option value="20">20 分</option>
-                    <option value="30">30 分</option>
-                    <option value="45">45 分</option>
-                    <option value="60">60 分</option>
-                </select>
-            </div>
             <button onclick="showTodayStats()" class="pos-btn">📊 統計</button>
-            <button onclick="openAdjustLeaderboardModal()" class="pos-btn" style="background: #8e44ad; color: #fff; border-color: #8e44ad;">🏆 調整榜單</button>
-            <button onclick="openCampaignModal()" class="pos-btn" id="btn-campaign-settings" style="background: #e67e22; color: #fff; border-color: #e67e22;">📢 活動設定</button>
-            <button onclick="clearFinished()" class="pos-btn">🧹 清理</button>
-            <button onclick="resetAllHistory()" class="pos-btn btn-danger">🔥 清空</button>
+            <button onclick="toggleCompactCardView()" class="pos-btn" id="btn-toggle-compact">📱 緊湊卡片</button>
             <button onclick="toggleSidebar()" class="pos-btn" id="btn-toggle-inv">📦 庫存</button>
+
+            <!-- ⚙️ 吧台工具箱 Dropdown Container -->
+            <div class="toolbox-dropdown-container" style="position: relative;">
+                <button onclick="toggleToolboxMenu(event)" class="pos-btn" id="btn-toggle-toolbox" style="background: #2c3e50; border-color: #34495e;">
+                    ⚙️ 工具 ▾
+                </button>
+                <div id="pos-toolbox-menu" class="pos-toolbox-menu" onclick="event.stopPropagation()">
+                    <div class="toolbox-menu-header">⚙️ 吧台管理工具</div>
+                    
+                    <div class="toolbox-menu-item">
+                        <span class="toolbox-label">⏰ 超時警告線</span>
+                        <select id="overtime-threshold" onchange="checkOvertime()" class="toolbox-select">
+                            <option value="10">10 分</option>
+                            <option value="15" selected>15 分</option>
+                            <option value="20">20 分</option>
+                            <option value="30">30 分</option>
+                            <option value="45">45 分</option>
+                            <option value="60">60 分</option>
+                        </select>
+                    </div>
+
+                    <div class="toolbox-divider"></div>
+
+                    <button onclick="openCampaignModal(); closeToolboxMenu();" class="toolbox-btn" id="btn-campaign-settings">
+                        📢 活動設定
+                    </button>
+                    <button onclick="openAdjustLeaderboardModal(); closeToolboxMenu();" class="toolbox-btn">
+                        🏆 調整榜單
+                    </button>
+
+                    <div class="toolbox-divider"></div>
+
+                    <button onclick="clearFinished(); closeToolboxMenu();" class="toolbox-btn">
+                        🧹 清理已完成訂單
+                    </button>
+                    <button onclick="resetAllHistory(); closeToolboxMenu();" class="toolbox-btn btn-danger-text">
+                        🔥 清空所有歷史紀錄
+                    </button>
+                </div>
+            </div>
         </div>
     </header>
 
     <!-- Main Workspace -->
     <div class="pos-workspace">
 
-        <!-- Kanban Board -->
-        <div class="kanban-container" id="kanban-container">
-            <!-- 待接單 Column -->
-            <div class="kanban-col" id="col-pending">
-                <div class="kanban-col-header">
-                    <span>⌛ 待處理 <span id="pending-count" class="pending-badge" style="display:none;">0</span></span>
-                    <span class="kanban-col-count" id="count-pending">0</span>
-                </div>
-                <div class="kanban-list" id="list-pending" data-status="pending"></div>
-            </div>
-
-            <!-- 製作中 Column -->
-            <div class="kanban-col" id="col-making">
-                <div class="kanban-col-header">
-                    <span>👨‍🍳 製作中</span>
-                    <span class="kanban-col-count" id="count-making">0</span>
-                </div>
-                <div class="kanban-list" id="list-making" data-status="making"></div>
-            </div>
-
-            <!-- 已完成 Column -->
-            <div class="kanban-col" id="col-completed">
-                <div class="kanban-col-header">
-                    <span>✅ 已出餐</span>
-                    <span class="kanban-col-count" id="count-completed">0</span>
-                </div>
-                <div class="kanban-list" id="list-completed" data-status="completed"></div>
-            </div>
+        <!-- 🔥 同酒款批量製作匯總欄 -->
+        <div id="batch-summary-bar" class="batch-summary-bar" style="display: none;">
+            <span class="batch-summary-title">🔥 待出餐匯總：</span>
+            <div id="batch-pills-container" class="batch-pills-container"></div>
+            <div id="batch-actions-container" class="batch-actions-container" style="display: none;"></div>
         </div>
 
-        <!-- Inventory Sidebar -->
-        <div class="inventory-sidebar hidden" id="inventory-sidebar">
-            <div class="inv-header">
-                <span>📦 庫存與配方管理</span>
-                <div class="inv-header-actions">
-                    <button onclick="openEditRecipeModal()" title="新增配方">➕ 新增</button>
-                    <button onclick="reloadRecipes()" title="重新載入配方庫" style="color: #2ecc71;">🔄 重載</button>
-                    <button onclick="toggleSidebar()" style="background: transparent; color: #aaa; font-size: 1.2em; padding: 0;">✖</button>
+        <!-- Main Board Wrapper -->
+        <div class="kanban-board-wrapper">
+            <!-- Kanban Board -->
+            <div class="kanban-container" id="kanban-container">
+                <!-- 待接單 Column -->
+                <div class="kanban-col" id="col-pending">
+                    <div class="kanban-col-header">
+                        <span>⌛ 待處理 <span id="pending-count" class="pending-badge" style="display:none;">0</span></span>
+                        <span class="kanban-col-count" id="count-pending">0</span>
+                    </div>
+                    <div class="kanban-list" id="list-pending" data-status="pending"></div>
+                </div>
+
+                <!-- 製作中 Column -->
+                <div class="kanban-col" id="col-making">
+                    <div class="kanban-col-header">
+                        <span>👨‍🍳 製作中</span>
+                        <span class="kanban-col-count" id="count-making">0</span>
+                    </div>
+                    <div class="kanban-list" id="list-making" data-status="making"></div>
+                </div>
+
+                <!-- 已完成 Column -->
+                <div class="kanban-col" id="col-completed">
+                    <div class="kanban-col-header">
+                        <span>✅ 已出餐</span>
+                        <span class="kanban-col-count" id="count-completed">0</span>
+                    </div>
+                    <div class="kanban-list" id="list-completed" data-status="completed"></div>
                 </div>
             </div>
-            
-            <div class="inv-content">
-                <div class="inv-tools-row" style="margin-bottom: 10px;">
-                    <input type="text" id="inventory-search-input" class="inv-search" placeholder="🔍 搜尋酒名、材料、標籤...">
+
+            <!-- Inventory Sidebar -->
+            <div class="inventory-sidebar hidden" id="inventory-sidebar">
+                <div class="inv-header">
+                    <span>📦 庫存與配方管理</span>
+                    <div class="inv-header-actions">
+                        <button onclick="openEditRecipeModal()" title="新增配方">➕ 新增</button>
+                        <button onclick="reloadRecipes()" title="重新載入配方庫" style="color: #2ecc71;">🔄 重載</button>
+                        <button onclick="toggleSidebar()" style="background: transparent; color: #aaa; font-size: 1.2em; padding: 0;">✖</button>
+                    </div>
                 </div>
 
-                <div>
-                    <div style="font-size: 0.85em; color: #888; font-weight: bold; margin-bottom: 8px;">⚡ 常缺貨快捷鍵</div>
-                    <div class="quick-toggles" id="quick-toggle-buttons"></div>
+                <div class="inv-content">
+                    <div class="inv-tools-row" style="margin-bottom: 10px;">
+                        <input type="text" id="inventory-search-input" class="inv-search" placeholder="🔍 搜尋酒名、材料、標籤...">
+                    </div>
+
+                    <div class="ingredient-stock-section" style="margin-bottom: 12px; background: rgba(0,0,0,0.2); padding: 10px; border-radius: 8px; border: 1px solid rgba(243,156,18,0.2);">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                            <span style="font-size: 0.88em; color: #f39c12; font-weight: bold;">📦 原料開瓶與缺料管理 (點擊切換)</span>
+                            <button onclick="toggleIngredientStockCollapse()" id="toggle-stock-collapse-btn" style="background: transparent; border: none; color: #aaa; font-size: 0.8em; cursor: pointer;">展開/收合</button>
+                        </div>
+                        <div id="ingredient-stock-container" class="ingredient-stock-container"></div>
+                    </div>
+
+                    <div style="height: 1px; background: #333; margin: 5px 0;"></div>
+
+                    <div class="inv-list" id="inv-list"></div>
                 </div>
-
-                <div style="height: 1px; background: #333; margin: 5px 0;"></div>
-
-                <div class="inv-list" id="inv-list"></div>
             </div>
         </div>
 
@@ -312,22 +351,6 @@
         </div>
     </div>
 
-    <!-- 評分詳情 Modal -->
-    <div id="rating-details-modal-overlay" class="modal-overlay">
-        <div class="modal-content" style="max-width: 500px; display: flex; flex-direction: column; max-height: 80vh;">
-            <div class="modal-header">
-                <h2 id="rating-details-title" style="color: #f39c12; margin: 0;">⭐ 評分與評論詳情</h2>
-                <button class="modal-close" onclick="closeRatingDetailsModal()">✖</button>
-            </div>
-            <div id="rating-details-summary" style="padding: 12px; background: rgba(243, 156, 18, 0.08); border-radius: 8px; margin-top: 10px; margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between;">
-                <div style="font-size: 1.1em; font-weight: bold; color: #fff;" id="rating-details-drink-name">Mojito</div>
-                <div style="font-size: 1.2em; font-weight: bold; color: #f39c12;" id="rating-details-stats">⭐ 0.0 (0 筆評分)</div>
-            </div>
-            <div id="rating-details-body" style="flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; padding-right: 5px;">
-                <!-- 評論列表將動態插入 -->
-            </div>
-        </div>
-    </div>
 
     <!-- 活動設定 Modal -->
     <div id="campaign-modal-overlay" class="modal-overlay">

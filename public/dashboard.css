@@ -1,4 +1,5 @@
 /* Base Reset */
+html, body { touch-action: manipulation; }
 body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: #080808; color: #e0e0e0; margin: 0; padding: 15px; display: flex; flex-direction: column; height: 100vh; height: 100dvh; overflow: hidden; box-sizing: border-box; gap: 15px; }
 
 /* Header */
@@ -12,6 +13,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helve
 @keyframes breathingBadge { 0% { box-shadow: 0 0 5px rgba(231,76,60,0.4); transform: scale(1); } 50% { box-shadow: 0 0 15px rgba(231,76,60,0.9); transform: scale(1.15); } 100% { box-shadow: 0 0 5px rgba(231,76,60,0.4); transform: scale(1); } }
 
 /* Buttons */
+button, .pos-btn { touch-action: manipulation; }
 .pos-btn { background: #222; color: #fff; border: 1px solid #444; padding: 8px 16px; border-radius: 8px; font-weight: bold; cursor: pointer; transition: 0.2s; font-size: 0.95em; display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
 .pos-btn:hover { background: #333; border-color: #555; transform: translateY(-2px); }
 .pos-btn:active { transform: translateY(0); }
@@ -25,8 +27,9 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helve
 .settings-wrap label { font-size: 0.85em; color: #aaa; font-weight: bold; }
 .settings-wrap select { background: transparent; color: #e74c3c; border: none; font-weight: bold; font-size: 1em; cursor: pointer; outline: none; }
 
-/* Main Workspace */
-.pos-workspace { flex: 1; display: flex; gap: 15px; overflow: hidden; position: relative; }
+/* Main Workspace & Board Wrapper */
+.pos-workspace { flex: 1; display: flex; flex-direction: column; gap: 10px; overflow: hidden; position: relative; }
+.kanban-board-wrapper { flex: 1; display: flex; gap: 15px; overflow: hidden; position: relative; width: 100%; }
 
 /* Kanban Container */
 .kanban-container { flex: 1; display: flex; gap: 15px; overflow: hidden; }
@@ -43,9 +46,10 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helve
 #col-completed .kanban-col-count { background: rgba(39, 174, 96, 0.2); color: #27ae60; }
 
 .kanban-list { flex: 1; padding: 12px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; min-height: 100px; }
-.kanban-list::-webkit-scrollbar { width: 6px; }
-.kanban-list::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
-.kanban-list::-webkit-scrollbar-track { background: transparent; }
+.kanban-list::-webkit-scrollbar { width: 10px; height: 10px; }
+.kanban-list::-webkit-scrollbar-thumb { background: linear-gradient(135deg, #f39c12, #d35400); border-radius: 5px; border: 1px solid rgba(255, 255, 255, 0.2); box-shadow: 0 0 8px rgba(243, 156, 18, 0.5); }
+.kanban-list::-webkit-scrollbar-thumb:hover { background: linear-gradient(135deg, #f1c40f, #e67e22); }
+.kanban-list::-webkit-scrollbar-track { background: rgba(0, 0, 0, 0.4); border-radius: 5px; }
 
 /* Order Card Redesign */
 .order-card { background: #1c1c1c; border-radius: 10px; border: 1px solid #333; padding: 12px; display: flex; flex-direction: column; gap: 10px; position: relative; cursor: grab; transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s, filter 0.3s; }
@@ -70,8 +74,9 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helve
 .card-time { font-size: 0.8em; color: #777; font-family: monospace; }
 
 .card-body { display: flex; gap: 12px; align-items: flex-start; margin-top: 2px; }
-.drag-handle { font-size: 1.5em; color: #444; cursor: grab; padding-right: 4px; transition: color 0.2s; display: flex; align-items: center; justify-content: center; align-self: center; }
-.drag-handle:hover { color: #888; }
+.drag-handle { font-size: 1.3em; color: #f39c12; cursor: grab; padding: 5px 7px; border-radius: 6px; background: rgba(243, 156, 18, 0.12); border: 1px solid rgba(243, 156, 18, 0.3); transition: all 0.2s; user-select: none; flex-shrink: 0; align-self: center; }
+.drag-handle:hover { background: rgba(243, 156, 18, 0.3); color: #fff; transform: scale(1.1); }
+.drag-handle:active { cursor: grabbing; transform: scale(0.95); }
 .card-img-wrap { position: relative; width: 64px; height: 64px; flex-shrink: 0; align-self: center;}
 .card-img { width: 100%; height: 100%; border-radius: 8px; object-fit: contain; background: #000; border: 1px solid #333; cursor: zoom-in; transition: transform 0.2s; }
 .card-img:hover { transform: scale(1.1); box-shadow: 0 4px 10px rgba(0,0,0,0.5); z-index: 10; }
@@ -229,77 +234,649 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helve
 .edit-form-group input:focus, .edit-form-group textarea:focus, .edit-form-group select:focus { border-color: #f39c12; }
 .edit-form-group textarea { resize: vertical; min-height: 80px; }
 
-/* Ratings & Reviews */
-.inv-rating-badge {
-    background: rgba(243, 156, 18, 0.15);
-    color: #f39c12;
-    padding: 3px 8px;
-    border-radius: 20px;
-    font-size: 0.85em;
-    font-weight: bold;
-    border: 1px solid rgba(243, 156, 18, 0.35);
+/* 📦 原料庫備貨管理樣式 */
+.ingredient-stock-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    max-height: 220px;
+    overflow-y: auto;
+    padding-right: 4px;
+}
+
+.ingredient-stock-pill {
+    font-size: 0.82em;
+    padding: 4px 9px;
+    border-radius: 12px;
+    border: 1px solid #444;
     cursor: pointer;
+    user-select: none;
+    transition: all 0.2s;
     display: inline-flex;
     align-items: center;
     gap: 4px;
-    transition: all 0.2s;
-    user-select: none;
-}
-.inv-rating-badge:hover {
-    background: #f39c12;
-    color: #000;
-    transform: scale(1.05);
-}
-.inv-rating-badge.no-rating {
-    background: rgba(255, 255, 255, 0.05);
-    color: #888;
-    border-color: rgba(255, 255, 255, 0.1);
-    cursor: default;
-}
-.inv-rating-badge.no-rating:hover {
-    background: rgba(255, 255, 255, 0.05);
-    color: #888;
-    transform: none;
 }
 
-/* Reviews List Styles */
-.review-card {
-    background: #1e1e1e;
-    border: 1px solid #2d2d2d;
-    border-radius: 8px;
-    padding: 12px;
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    transition: border-color 0.2s;
+.ingredient-stock-pill.available {
+    background: rgba(39, 174, 96, 0.15);
+    border-color: rgba(39, 174, 96, 0.4);
+    color: #2ecc71;
 }
-.review-card:hover {
-    border-color: #444;
+
+.ingredient-stock-pill.available:hover {
+    background: rgba(39, 174, 96, 0.3);
 }
-.review-header {
+
+.ingredient-stock-pill.missing {
+    background: rgba(231, 76, 60, 0.2);
+    border-color: #e74c3c;
+    color: #ff6b6b;
+    font-weight: bold;
+    box-shadow: 0 0 8px rgba(231, 76, 60, 0.3);
+}
+
+.ingredient-stock-pill.missing:hover {
+    background: rgba(231, 76, 60, 0.35);
+}
+
+.inv-missing-tag {
+    background: rgba(231, 76, 60, 0.25);
+    color: #ff6b6b;
+    border: 1px solid rgba(231, 76, 60, 0.5);
+    font-size: 0.75em;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-weight: bold;
+}
+
+/* 🏆 POS 特殊頭銜標籤樣式 */
+.title-badge-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    padding: 2px 7px;
+    border-radius: 10px;
+    font-size: 0.72em;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+    vertical-align: middle;
+    user-select: none;
+    line-height: 1.2;
+}
+
+.title-badge-pill.legendary { background: linear-gradient(135deg, #ffd700 0%, #ff8c00 100%); color: #1a0f00; border: 1px solid #ffe066; }
+.title-badge-pill.abyss { background: linear-gradient(135deg, #2b1055 0%, #7597de 100%); color: #fff; border: 1px solid #a29bfe; }
+.title-badge-pill.seven { background: linear-gradient(135deg, #00c6ff 0%, #0072ff 100%); color: #fff; border: 1px solid #70a1ff; }
+.title-badge-pill.five { background: linear-gradient(135deg, #ff4e50 0%, #f9d423 100%); color: #fff; border: 1px solid #ff7675; }
+.title-badge-pill.speed { background: linear-gradient(135deg, #f12711 0%, #f5af19 100%); color: #fff; border: 1px solid #ff9f43; }
+.title-badge-pill.fosen { background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); color: #002211; border: 1px solid #55efc4; }
+.title-badge-pill.first { background: linear-gradient(135deg, #fceabb 0%, #f8b500 100%); color: #3d2b00; border: 1px solid #ffeaa7; }
+
+/* =====================================================
+   🔥 POS 同酒款批量製作匯總欄 (Batch Making Aggregator) 樣式
+   ===================================================== */
+.batch-summary-bar {
+    background: rgba(243, 156, 18, 0.1);
+    border: 1px solid rgba(243, 156, 18, 0.35);
+    border-radius: 12px;
+    padding: 10px 16px;
+    margin-bottom: 12px;
     display: flex;
+    align-items: center;
     justify-content: space-between;
-    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    backdrop-filter: blur(6px);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+    animation: batchBarIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
-.review-user {
+
+@keyframes batchBarIn {
+    from { opacity: 0; transform: translateY(-8px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.batch-summary-title {
     font-weight: bold;
-    color: #fff;
+    font-size: 0.9em;
+    color: #f39c12;
+    white-space: nowrap;
+}
+
+.batch-pills-container {
     display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.batch-pill {
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 20px;
+    padding: 5px 12px;
+    font-size: 0.88em;
+    font-weight: bold;
+    color: #eee;
+    cursor: pointer;
+    user-select: none;
+    transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    display: inline-flex;
     align-items: center;
     gap: 6px;
 }
-.review-stars {
-    color: #f39c12;
+
+.batch-pill:hover {
+    background: rgba(243, 156, 18, 0.25);
+    border-color: #f39c12;
+    transform: translateY(-2px);
+}
+
+.batch-pill.active {
+    background: linear-gradient(135deg, #d35400, #e67e22);
+    color: #fff;
+    border-color: #ffd700;
+    box-shadow: 0 0 12px rgba(243, 156, 18, 0.6);
+    transform: scale(1.05);
+}
+
+.batch-pill-count {
+    background: #e74c3c;
+    color: #fff;
+    font-size: 0.78em;
+    padding: 1px 7px;
+    border-radius: 10px;
+}
+
+.batch-actions-container {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding-left: 10px;
+    border-left: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.batch-action-btn {
+    border: none;
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-size: 0.85em;
     font-weight: bold;
+    cursor: pointer;
+    transition: all 0.2s;
 }
-.review-comment {
+
+.batch-action-btn.btn-make {
+    background: #e67e22;
+    color: #fff;
+}
+
+.batch-action-btn.btn-make:hover {
+    background: #d35400;
+    box-shadow: 0 0 10px rgba(230, 126, 34, 0.5);
+}
+
+.batch-action-btn.btn-serve {
+    background: #27ae60;
+    color: #fff;
+}
+
+.batch-action-btn.btn-serve:hover {
+    background: #2ecc71;
+    box-shadow: 0 0 10px rgba(39, 174, 96, 0.5);
+}
+
+.batch-action-btn.btn-cancel {
+    background: transparent;
+    color: #aaa;
+    border: 1px solid #555;
+}
+
+.batch-action-btn.btn-cancel:hover {
+    color: #fff;
+    border-color: #888;
+}
+
+/* 高亮被選中酒款卡片 */
+.order-card.batch-highlighted {
+    border-color: #ffd700 !important;
+    box-shadow: 0 0 25px rgba(255, 215, 0, 0.7), 0 0 10px rgba(243, 156, 18, 0.9) !important;
+    animation: batchCardPulse 1.5s infinite alternate !important;
+}
+
+@keyframes batchCardPulse {
+    0% { transform: scale(1); box-shadow: 0 0 15px rgba(255, 215, 0, 0.5); }
+    100% { transform: scale(1.02); box-shadow: 0 0 30px rgba(255, 215, 0, 0.9); }
+}
+
+/* =====================================================
+   📱 行動裝置與手機橫置 (Mobile Landscape & Responsive) 優化
+   ===================================================== */
+@media (max-height: 680px), (max-width: 768px) {
+    body {
+        height: auto !important;
+        min-height: 100vh;
+        min-height: 100dvh;
+        overflow-y: auto !important;
+        overflow-x: hidden;
+        padding: 8px;
+        gap: 8px;
+    }
+
+    .pos-header {
+        padding: 6px 12px;
+        border-radius: 8px;
+    }
+
+    .header-left h1 {
+        font-size: 1.2em;
+    }
+
+    .pos-btn {
+        padding: 5px 10px;
+        font-size: 0.85em;
+    }
+
+    .settings-wrap {
+        padding: 4px 8px;
+    }
+
+    .batch-summary-bar {
+        padding: 6px 10px;
+        margin-bottom: 8px;
+    }
+
+    .batch-summary-title {
+        font-size: 0.82em;
+    }
+
+    .batch-pill {
+        padding: 3px 8px;
+        font-size: 0.8em;
+    }
+
+    .batch-action-btn {
+        padding: 4px 8px;
+        font-size: 0.8em;
+    }
+
+    .pos-workspace {
+        overflow: visible !important;
+        flex: none !important;
+    }
+
+    .kanban-board-wrapper {
+        overflow: visible !important;
+        flex: none !important;
+        display: flex;
+        flex-direction: row;
+        width: 100%;
+    }
+
+    .kanban-container {
+        overflow: visible !important;
+        flex-direction: row;
+        align-items: stretch;
+        gap: 10px;
+        overflow-x: auto !important;
+        padding-bottom: 10px;
+    }
+
+    .kanban-col {
+        min-width: 270px;
+        max-height: none !important;
+        overflow: visible !important;
+    }
+
+    .kanban-col-header {
+        padding: 8px 12px;
+        font-size: 1em;
+        position: sticky;
+        top: 0;
+    }
+
+    .kanban-list {
+        max-height: none !important;
+        overflow-y: visible !important;
+        padding: 8px;
+        gap: 8px;
+    }
+
+    .order-card {
+        padding: 8px 10px;
+        gap: 6px;
+    }
+
+    .card-img-wrap {
+        width: 48px;
+        height: 48px;
+    }
+
+    .card-drink-name {
+        font-size: 1.1em;
+    }
+
+    .ingredient-tag {
+        font-size: 0.8em;
+        padding: 2px 6px;
+    }
+}
+
+@media (max-width: 600px) {
+    .kanban-container {
+        flex-direction: column !important;
+        overflow-x: visible !important;
+    }
+
+    .kanban-col {
+        min-width: 100% !important;
+    }
+}
+
+/* =====================================================
+   📱 緊湊檢視模式 (Compact Card View) 樣式
+   ===================================================== */
+.compact-mode .order-card {
+    padding: 8px 10px !important;
+    gap: 5px !important;
+}
+
+.compact-mode .card-img-wrap {
+    width: 42px !important;
+    height: 42px !important;
+}
+
+.compact-mode .card-drink-name {
+    font-size: 1.05em !important;
+    margin-bottom: 2px !important;
+}
+
+.compact-mode .ingredient-tag {
+    font-size: 0.78em !important;
+    padding: 1px 5px !important;
+}
+
+.compact-mode .recipe-specs-container {
+    padding: 4px 6px !important;
+    font-size: 0.8em !important;
+    gap: 2px !important;
+    margin-bottom: 4px !important;
+}
+
+.compact-mode .card-header {
+    margin-bottom: 2px !important;
+}
+
+.compact-mode .card-guest {
+    font-size: 0.95em !important;
+}
+
+.compact-mode .card-guest img {
+    width: 22px !important;
+    height: 22px !important;
+}
+
+/* =====================================================
+   ⚙️ 吧台工具箱 (Compact Header Toolbox Dropdown) 樣式
+   ===================================================== */
+.pos-toolbox-menu {
+    display: none;
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    width: 220px;
+    background: #181818;
+    border: 1px solid #333;
+    border-radius: 12px;
+    padding: 10px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7);
+    z-index: 1000;
+    backdrop-filter: blur(10px);
+    flex-direction: column;
+    gap: 8px;
+    box-sizing: border-box;
+    animation: toolboxPopIn 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.pos-toolbox-menu.visible {
+    display: flex;
+}
+
+@keyframes toolboxPopIn {
+    from { opacity: 0; transform: translateY(-8px) scale(0.95); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.toolbox-menu-header {
+    font-size: 0.82em;
+    font-weight: bold;
+    color: #f39c12;
+    padding-bottom: 6px;
+    border-bottom: 1px solid #2a2a2a;
+    letter-spacing: 0.5px;
+}
+
+.toolbox-menu-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 0.88em;
     color: #ccc;
-    font-size: 0.95em;
-    line-height: 1.4;
-    word-break: break-all;
+    padding: 4px 0;
 }
-.review-time {
-    color: #666;
+
+.toolbox-select {
+    background: #222;
+    color: #f39c12;
+    border: 1px solid #444;
+    border-radius: 6px;
+    padding: 3px 8px;
+    font-size: 0.9em;
+    font-weight: bold;
+    outline: none;
+}
+
+.toolbox-divider {
+    height: 1px;
+    background: #2a2a2a;
+    margin: 2px 0;
+}
+
+.toolbox-btn {
+    background: #222;
+    color: #eee;
+    border: 1px solid #333;
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-size: 0.88em;
+    font-weight: bold;
+    text-align: left;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.toolbox-btn:hover {
+    background: #333;
+    border-color: #555;
+    color: #fff;
+}
+
+.toolbox-btn.btn-danger-text {
+    color: #e74c3c;
+    border-color: rgba(231, 76, 60, 0.3);
+    background: rgba(231, 76, 60, 0.08);
+}
+
+.toolbox-btn.btn-danger-text:hover {
+    background: #e74c3c;
+    color: #fff;
+}
+
+/* =====================================================
+   👨‍🍳 同酒款批量製作匯總欄 (Batch Making Aggregator) 樣式
+   ===================================================== */
+.batch-summary-bar {
+    flex: 0 0 auto;
+    width: 100%;
+    background: rgba(25, 20, 15, 0.95);
+    border: 1px solid rgba(243, 156, 18, 0.35);
+    border-radius: 10px;
+    padding: 6px 12px;
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(8px);
+    box-sizing: border-box;
+    overflow: visible;
+}
+
+.batch-summary-title {
+    font-size: 0.82em;
+    font-weight: bold;
+    color: #f39c12;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+    display: inline-flex;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+.batch-pills-container {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.batch-pill {
+    background: #222;
+    color: #eee;
+    border: 1px solid #444;
+    border-radius: 16px;
+    padding: 3px 10px;
     font-size: 0.8em;
-    align-self: flex-end;
+    font-weight: bold;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.2s ease;
+    user-select: none;
+    touch-action: manipulation;
+    white-space: nowrap;
 }
+
+.batch-pill:hover {
+    background: #333;
+    border-color: #f39c12;
+    transform: translateY(-1px);
+}
+
+.batch-pill.active {
+    background: linear-gradient(135deg, #f39c12, #d35400);
+    color: #fff;
+    border-color: #f39c12;
+    box-shadow: 0 0 10px rgba(243, 156, 18, 0.6);
+    animation: batchPillPulse 1.5s infinite alternate;
+}
+
+@keyframes batchPillPulse {
+    from { box-shadow: 0 0 6px rgba(243, 156, 18, 0.4); }
+    to { box-shadow: 0 0 14px rgba(243, 156, 18, 0.9); }
+}
+
+.batch-pill-count {
+    background: rgba(0, 0, 0, 0.4);
+    color: #ffd700;
+    padding: 1px 6px;
+    border-radius: 10px;
+    font-size: 0.85em;
+}
+
+.batch-actions-container {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.batch-action-btn {
+    border: none;
+    border-radius: 6px;
+    padding: 3px 9px;
+    font-size: 0.78em;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.2s;
+    touch-action: manipulation;
+}
+
+.batch-action-btn.btn-make {
+    background: #27ae60;
+    color: white;
+}
+.batch-action-btn.btn-make:hover {
+    background: #219150;
+}
+
+.batch-action-btn.btn-serve {
+    background: #2980b9;
+    color: white;
+}
+.batch-action-btn.btn-serve:hover {
+    background: #1c5980;
+}
+
+.batch-action-btn.btn-cancel {
+    background: #444;
+    color: #ccc;
+}
+.batch-action-btn.btn-cancel:hover {
+    background: #555;
+    color: #fff;
+}
+
+/* 高亮調酒卡片邊框閃爍 */
+.order-card.batch-highlighted {
+    border: 2px solid #f39c12 !important;
+    box-shadow: 0 0 20px rgba(243, 156, 18, 0.8) !important;
+    animation: cardBatchHighlightPulse 1.2s infinite alternate !important;
+}
+
+@keyframes cardBatchHighlightPulse {
+    from { box-shadow: 0 0 8px rgba(243, 156, 18, 0.5); }
+    to { box-shadow: 0 0 22px rgba(243, 156, 18, 1); transform: scale(1.02); }
+}
+
+/* 📱 手機橫置視角優化 (Mobile Landscape) */
+@media (max-height: 680px) {
+    .batch-summary-bar {
+        padding: 4px 10px;
+        gap: 6px;
+    }
+    .batch-summary-title {
+        font-size: 0.76em;
+    }
+    .batch-pill {
+        padding: 2px 8px;
+        font-size: 0.76em;
+    }
+    .batch-action-btn {
+        padding: 2px 7px;
+        font-size: 0.72em;
+    }
+}
+
+
+
+
+
+
+
