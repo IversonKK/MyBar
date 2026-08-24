@@ -357,6 +357,16 @@ app.get('/api/campaign', (req, res) => {
     res.json(campaignDatabase);
 });
 
+// 列出已有酒品圖片 API
+app.get('/api/images', (req, res) => {
+    const imagesDir = path.join(__dirname, 'public', 'images');
+    fs.readdir(imagesDir, (err, files) => {
+        if (err) return res.status(500).json({ error: '無法讀取圖片資料夾' });
+        const imageFiles = files.filter(f => /\.(jpg|jpeg|png|gif|webp)$/i.test(f));
+        res.json(imageFiles);
+    });
+});
+
 app.get('/api/music', (req, res) => {
     const musicDir = path.join(__dirname, 'public', 'music');
     fs.readdir(musicDir, (err, files) => {
@@ -498,6 +508,34 @@ io.on('connection', (socket) => {
                 const imagePath = path.join(__dirname, 'public', 'images', `${recipeData.name}.${ext}`);
                 fs.writeFileSync(imagePath, base64Data, 'base64');
                 console.log(`成功儲存圖片: ${recipeData.name}.${ext}`);
+            } else if (recipeData.presetImage) {
+                const presetPath = path.join(__dirname, 'public', 'images', 'presets', recipeData.presetImage);
+                const ext = path.extname(recipeData.presetImage) || '.png';
+                const targetPath = path.join(__dirname, 'public', 'images', `${recipeData.name}${ext}`);
+                try {
+                    if (fs.existsSync(presetPath)) {
+                        fs.copyFileSync(presetPath, targetPath);
+                        console.log(`成功複製預設圖片 ${recipeData.presetImage} 至: ${targetPath}`);
+                    }
+                } catch (err) {
+                    console.error("複製預設圖片失敗:", err);
+                }
+            } else if (recipeData.existingImage) {
+                // 從已有的酒品圖片複製
+                const sourcePath = path.join(__dirname, 'public', 'images', recipeData.existingImage);
+                const ext = path.extname(recipeData.existingImage) || '.jpg';
+                const targetPath = path.join(__dirname, 'public', 'images', `${recipeData.name}${ext}`);
+                try {
+                    if (fs.existsSync(sourcePath)) {
+                        // 如果來源與目標不同，才複製
+                        if (path.resolve(sourcePath) !== path.resolve(targetPath)) {
+                            fs.copyFileSync(sourcePath, targetPath);
+                            console.log(`成功複製既有圖片 ${recipeData.existingImage} 至: ${targetPath}`);
+                        }
+                    }
+                } catch (err) {
+                    console.error("複製既有圖片失敗:", err);
+                }
             }
 
             fs.writeFileSync(recipePath, JSON.stringify(currentRecipes, null, 4), 'utf8');
@@ -574,7 +612,8 @@ io.on('connection', (socket) => {
     });
 
     socket.on('add-manual-completed-order', (data) => {
-        const orderId = Date.now() + '-' + Math.floor(Math.random() * 1000);
+        const ts = data.timestamp || Date.now();
+        const orderId = ts + '-' + Math.floor(Math.random() * 1000);
         const newOrder = {
             id: orderId,
             guest: data.guest,
@@ -582,7 +621,8 @@ io.on('connection', (socket) => {
             time: data.time || new Date().toLocaleTimeString(),
             notes: data.notes || '手動新增',
             status: 'completed',
-            completedTime: new Date().toLocaleTimeString()
+            completedTime: new Date().toLocaleTimeString(),
+            hiddenFromDashboard: data.hiddenFromDashboard || false
         };
 
         // 如果選擇了預設配圖，將檔案複製到 images/ 之下

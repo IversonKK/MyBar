@@ -118,22 +118,19 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helve
 }
 .btn-reject-quick:hover { background: #e74c3c !important; color: #fff; border-color: #e74c3c !important; opacity: 1; }
 
-.btn-make { background: rgba(52, 152, 219, 0.15); color: #3498db; border: 1px solid rgba(52, 152, 219, 0.4); }
+.btn-pending { background: rgba(243, 156, 18, 0.1); color: #f39c12; border: 1px solid rgba(243, 156, 18, 0.3); }
+.btn-pending:hover { background: #f39c12; color: #000; box-shadow: 0 4px 10px rgba(243,156,18,0.4); }
+
+.btn-make { background: rgba(52, 152, 219, 0.1); color: #3498db; border: 1px solid rgba(52, 152, 219, 0.3); }
 .btn-make:hover { background: #3498db; color: #fff; box-shadow: 0 4px 10px rgba(52,152,219,0.4); }
 
-.btn-serve { background: rgba(39, 174, 96, 0.15); color: #2ecc71; border: 1px solid rgba(39, 174, 96, 0.4); }
+.btn-serve { background: rgba(39, 174, 96, 0.1); color: #2ecc71; border: 1px solid rgba(39, 174, 96, 0.3); }
 .btn-serve:hover { background: #27ae60; color: #fff; box-shadow: 0 4px 10px rgba(39,174,96,0.4); }
 
-.btn-revert { background: rgba(149, 165, 166, 0.1); color: #95a5a6; border: 1px solid rgba(149, 165, 166, 0.3); display: none; }
-.btn-revert:hover { background: #7f8c8d; color: #fff; }
-
-/* Action Visibility Logic */
-.status-pending .btn-serve, .status-pending .btn-revert { display: none; }
-.status-making .btn-make, .status-making .btn-revert, .status-making .btn-reject-quick { display: none; }
-.status-completed .btn-make, .status-completed .btn-serve, .status-completed .btn-reject-quick { display: none; }
-.status-rejected .btn-make, .status-rejected .btn-serve, .status-rejected .btn-reject-quick { display: none; }
-
-.status-completed .btn-revert, .status-rejected .btn-revert { display: block; }
+/* Active status highlighting */
+.status-pending .btn-pending { background: #f39c12; color: #000; font-weight: bold; }
+.status-making .btn-make { background: #3498db; color: #fff; font-weight: bold; }
+.status-completed .btn-serve { background: #27ae60; color: #fff; font-weight: bold; }
 .status-completed:hover, .status-rejected:hover { opacity: 1; filter: grayscale(0); } /* Hover to see details */
 
 /* Sortable Ghost */

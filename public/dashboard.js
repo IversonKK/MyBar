@@ -700,9 +700,9 @@ function renderOrder(data) {
         
         <div class="card-actions">
             <button class="btn-reject-quick" onclick="updateStatus('${data.id}', 'rejected', this)" title="快速退單">✖</button>
-            <button class="btn-make" onclick="updateStatus('${data.id}', 'making', this)">👨‍🍳 製作</button>
-            <button class="btn-serve" onclick="updateStatus('${data.id}', 'completed', this)">✅ 出餐</button>
-            <button class="btn-revert" onclick="updateStatus('${data.id}', 'pending', this)">↩️ 撤銷回待處理</button>
+            <button class="btn-pending" onclick="updateStatus('${data.id}', 'pending', this)">⏳ 待處理</button>
+            <button class="btn-make" onclick="updateStatus('${data.id}', 'making', this)">👨‍🍳 製作中</button>
+            <button class="btn-serve" onclick="updateStatus('${data.id}', 'completed', this)">✅ 已完成</button>
         </div>
     `;
     targetList.appendChild(div);
@@ -1119,6 +1119,23 @@ function openEditRecipeModal(drinkName = '') {
     if (quickSelect) quickSelect.value = '';
     if (quickAmount) quickAmount.value = '';
 
+    const hiddenEditPreset = document.getElementById('selected-edit-preset-image');
+    if (hiddenEditPreset) hiddenEditPreset.value = '';
+    document.querySelectorAll('.edit-preset-img-option').forEach(el => {
+        el.style.borderColor = 'transparent';
+        el.style.boxShadow = 'none';
+    });
+    
+    // Reset new image tab UI
+    const hiddenExisting = document.getElementById('selected-edit-existing-image');
+    if (hiddenExisting) hiddenExisting.value = '';
+    const existingPreview = document.getElementById('existing-img-selected-preview');
+    if (existingPreview) existingPreview.style.display = 'none';
+    const searchInput = document.getElementById('existing-img-search');
+    if (searchInput) searchInput.value = '';
+    switchImgTab('upload'); // 預設回到「上傳」tab
+    loadExistingImages();   // 非同步載入既有圖片清單
+
     if (drinkName) {
         title.innerText = '✏️ 編輯酒單配方';
         const drink = allDrinks.find(d => d.name === drinkName);
@@ -1156,6 +1173,13 @@ function previewCroppedImage(event) {
     const previewImg = document.getElementById('edit-image-preview');
 
     if (file) {
+        const hiddenEditPreset = document.getElementById('selected-edit-preset-image');
+        if (hiddenEditPreset) hiddenEditPreset.value = '';
+        document.querySelectorAll('.edit-preset-img-option').forEach(el => {
+            el.style.borderColor = 'transparent';
+            el.style.boxShadow = 'none';
+        });
+
         const reader = new FileReader();
         reader.onload = function(e) {
             const img = new Image();
@@ -1198,7 +1222,11 @@ function saveRecipe() {
     };
 
     const imageInput = document.getElementById('edit-recipe-image');
-    const file = imageInput.files[0];
+    const file = imageInput ? imageInput.files[0] : null;
+    const presetImage = document.getElementById('selected-edit-preset-image')?.value || '';
+    const existingImage = document.getElementById('selected-edit-existing-image')?.value || '';
+    recipeData.presetImage = presetImage;
+    recipeData.existingImage = existingImage;
 
     if (file) {
         const reader = new FileReader();
@@ -1231,7 +1259,8 @@ function saveRecipe() {
     } else {
         socket.emit('save-recipe', recipeData);
         closeEditRecipeModal();
-        showToast(`正在儲存 ${name} 的配方...`);
+        const imgMsg = existingImage ? `（套用既有圖：${existingImage}）` : '';
+        showToast(`正在儲存 ${name} 的配方...${imgMsg}`);
     }
 }
 
@@ -1350,6 +1379,16 @@ function openAdjustLeaderboardModal() {
     document.getElementById('adjust-search-input').value = '';
     const dateFilter = document.getElementById('adjust-date-filter');
     if (dateFilter) dateFilter.innerHTML = ''; // Clear to trigger default date selection
+    
+    // Set default date input to today
+    const today = new Date();
+    const yyyy = today.getFullYear();
+    const mm = String(today.getMonth() + 1).padStart(2, '0');
+    const dd = String(today.getDate()).padStart(2, '0');
+    const dateInput = document.getElementById('manual-order-date');
+    if (dateInput) {
+        dateInput.value = `${yyyy}-${mm}-${dd}`;
+    }
     
     // Populate Drink Select
     const select = document.getElementById('manual-drink-select');
@@ -1563,6 +1602,149 @@ window.selectPresetImage = function(element) {
     }
 };
 
+window.selectEditPresetImage = function(element) {
+    const hiddenInput = document.getElementById('selected-edit-preset-image');
+    const presetName = element.getAttribute('data-preset');
+    if (!hiddenInput) return;
+
+    if (hiddenInput.value === presetName) {
+        element.style.borderColor = 'transparent';
+        element.style.boxShadow = 'none';
+        hiddenInput.value = '';
+    } else {
+        document.querySelectorAll('.edit-preset-img-option').forEach(el => {
+            el.style.borderColor = 'transparent';
+            el.style.boxShadow = 'none';
+        });
+        element.style.borderColor = '#f39c12';
+        element.style.boxShadow = '0 0 8px rgba(243, 156, 18, 0.6)';
+        hiddenInput.value = presetName;
+        
+        // Clear file input when preset is selected
+        const fileInput = document.getElementById('edit-recipe-image');
+        if (fileInput) fileInput.value = '';
+        const previewContainer = document.getElementById('edit-image-preview-container');
+        if (previewContainer) {
+            previewContainer.style.display = 'none';
+            document.getElementById('edit-image-preview').src = '';
+        }
+    }
+};
+
+// ==================== 圖片選擇功能 ====================
+
+let _allExistingImages = []; // 快取圖片清單
+
+function switchImgTab(tab) {
+    const uploadPanel = document.getElementById('img-tab-panel-upload');
+    const existingPanel = document.getElementById('img-tab-panel-existing');
+    const uploadBtn = document.getElementById('img-tab-upload');
+    const existingBtn = document.getElementById('img-tab-existing');
+    if (!uploadPanel || !existingPanel) return;
+
+    if (tab === 'upload') {
+        uploadPanel.style.display = 'block';
+        existingPanel.style.display = 'none';
+        if (uploadBtn) { uploadBtn.style.background = '#333'; uploadBtn.style.color = '#f39c12'; }
+        if (existingBtn) { existingBtn.style.background = '#222'; existingBtn.style.color = '#888'; }
+    } else {
+        uploadPanel.style.display = 'none';
+        existingPanel.style.display = 'block';
+        if (uploadBtn) { uploadBtn.style.background = '#222'; uploadBtn.style.color = '#888'; }
+        if (existingBtn) { existingBtn.style.background = '#333'; existingBtn.style.color = '#f39c12'; }
+        renderExistingImageGrid(_allExistingImages);
+    }
+}
+
+function loadExistingImages() {
+    fetch(`/api/images?t=${Date.now()}`)
+        .then(r => r.json())
+        .then(files => {
+            _allExistingImages = files;
+        })
+        .catch(() => { _allExistingImages = []; });
+}
+
+function renderExistingImageGrid(files) {
+    const grid = document.getElementById('existing-img-grid');
+    if (!grid) return;
+    const searchTerm = (document.getElementById('existing-img-search')?.value || '').toLowerCase();
+    const filtered = files.filter(f => f.toLowerCase().includes(searchTerm));
+    const selectedVal = document.getElementById('selected-edit-existing-image')?.value || '';
+
+    if (filtered.length === 0) {
+        grid.innerHTML = `<div style="grid-column:1/-1; text-align:center; color:#555; padding:20px; font-size:0.85em;">找不到符合的圖片 🔍</div>`;
+        return;
+    }
+
+    grid.innerHTML = filtered.map(filename => {
+        const encodedName = encodeURIComponent(filename);
+        const isSelected = selectedVal === filename;
+        const label = filename.replace(/\.[^.]+$/, ''); // 去副檔名
+        return `
+            <div onclick="selectExistingImage('${filename.replace(/'/g, "\\'")}')"
+                data-filename="${filename}"
+                title="${label}"
+                style="cursor:pointer; border-radius:6px; overflow:hidden; border:2px solid ${isSelected ? '#f39c12' : 'transparent'};
+                       box-shadow:${isSelected ? '0 0 8px rgba(243,156,18,0.6)' : 'none'};
+                       transition:border-color 0.2s, box-shadow 0.2s; background:#000; aspect-ratio:1; display:flex; flex-direction:column; align-items:center;">
+                <img src="/images/${encodedName}?t=${Date.now()}" loading="lazy"
+                    style="width:100%; height:100%; object-fit:contain;"
+                    onerror="this.src='data:image/svg+xml;base64,PHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHZpZXdCb3g9JzAgMCAyNCAyNCcgZmlsbD0nIzQ0NCc+PHBhdGggZD0nTTIxIDNIM3YybDggOHY3SDd2MmgxMHYtMmgtNHYtN2w4LThWM3onLz48L3N2Zz4='">
+            </div>
+        `;
+    }).join('');
+}
+
+function filterExistingImages() {
+    renderExistingImageGrid(_allExistingImages);
+}
+
+function selectExistingImage(filename) {
+    const hiddenInput = document.getElementById('selected-edit-existing-image');
+    if (!hiddenInput) return;
+
+    if (hiddenInput.value === filename) {
+        // 取消選取
+        hiddenInput.value = '';
+        const preview = document.getElementById('existing-img-selected-preview');
+        if (preview) preview.style.display = 'none';
+    } else {
+        hiddenInput.value = filename;
+
+        // 顯示選取預覽
+        const preview = document.getElementById('existing-img-selected-preview');
+        const thumb = document.getElementById('existing-img-selected-thumb');
+        const nameEl = document.getElementById('existing-img-selected-name');
+        if (preview && thumb && nameEl) {
+            thumb.src = `/images/${encodeURIComponent(filename)}?t=${Date.now()}`;
+            nameEl.textContent = `✅ 已選：${filename.replace(/\.[^.]+$/, '')}`;
+            preview.style.display = 'flex';
+        }
+
+        // 清除上傳檔案
+        const fileInput = document.getElementById('edit-recipe-image');
+        if (fileInput) fileInput.value = '';
+        const previewContainer = document.getElementById('edit-image-preview-container');
+        if (previewContainer) {
+            previewContainer.style.display = 'none';
+            const imgEl = document.getElementById('edit-image-preview');
+            if (imgEl) imgEl.src = '';
+        }
+    }
+    renderExistingImageGrid(_allExistingImages);
+}
+
+function clearExistingImageSelection() {
+    const hiddenInput = document.getElementById('selected-edit-existing-image');
+    if (hiddenInput) hiddenInput.value = '';
+    const preview = document.getElementById('existing-img-selected-preview');
+    if (preview) preview.style.display = 'none';
+    const searchInput = document.getElementById('existing-img-search');
+    if (searchInput) searchInput.value = '';
+    renderExistingImageGrid(_allExistingImages);
+}
+
 function submitManualCompletedOrder() {
     const nameInput = document.getElementById('manual-guest-name');
     const typedName = nameInput ? nameInput.value.trim() : '';
@@ -1599,6 +1781,26 @@ function submitManualCompletedOrder() {
         finalDrinkName = drinkVal;
     }
 
+    const dateInput = document.getElementById('manual-order-date');
+    const selectedDate = dateInput ? dateInput.value : '';
+    
+    let timestamp = Date.now();
+    let isToday = true;
+    if (selectedDate) {
+        const todayStr = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-${String(new Date().getDate()).padStart(2, '0')}`;
+        isToday = (selectedDate === todayStr);
+        
+        const parts = selectedDate.split('-');
+        if (parts.length === 3) {
+            const year = parseInt(parts[0], 10);
+            const month = parseInt(parts[1], 10) - 1;
+            const day = parseInt(parts[2], 10);
+            const d = new Date();
+            d.setFullYear(year, month, day);
+            timestamp = d.getTime();
+        }
+    }
+
     // Emit event to add completed order for all selected/entered guests
     checkedGuests.forEach(guest => {
         socket.emit('add-manual-completed-order', {
@@ -1607,7 +1809,9 @@ function submitManualCompletedOrder() {
             time: new Date().toLocaleTimeString(),
             notes: '手動補單',
             status: 'completed',
-            presetImage: presetImage
+            presetImage: presetImage,
+            timestamp: timestamp,
+            hiddenFromDashboard: !isToday
         });
     });
 

@@ -1057,6 +1057,12 @@ function applyFilters() {
             const bIsFav = guestFavorites.includes(b.name) ? 1 : 0;
             if (aIsFav !== bIsFav) return bIsFav - aIsFav;
 
+            // 來一杯shot 和 佛森特調 緊接在「我的最愛」之後
+            const specialDrinks = ['來一杯shot', '佛森特調'];
+            const aIsSpecial = specialDrinks.includes(a.name) ? 1 : 0;
+            const bIsSpecial = specialDrinks.includes(b.name) ? 1 : 0;
+            if (aIsSpecial !== bIsSpecial) return bIsSpecial - aIsSpecial;
+
             const aIsHot = (a.tags || []).includes('熱門推薦') || top3Drinks.includes(a.name) ? 1 : 0;
             const bIsHot = (b.tags || []).includes('熱門推薦') || top3Drinks.includes(b.name) ? 1 : 0;
             return bIsHot - aIsHot; // 1 (熱門) 優先於 0 (非熱門)
@@ -3914,12 +3920,12 @@ const badgesDefinition = [
         }
     },
     {
-        id: 'first_step',
-        name: '微醺起步',
-        desc: '今天點了第一杯酒',
-        icon: '🍺',
+        id: 'fosen_special',
+        name: '已完成一杯佛森特調',
+        desc: '今天完成了一杯佛森特調',
+        icon: '🍸',
         color: 'linear-gradient(135deg, #84fab0 0%, #8fd3f4 100%)',
-        check: (myTodayOrders, myTodayRatings) => myTodayOrders.length >= 1
+        check: (myTodayOrders, myTodayRatings) => myTodayOrders.some(o => o.drink === '佛森特調')
     },
     {
         id: 'double_drink',
