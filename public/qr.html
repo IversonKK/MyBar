@@ -420,20 +420,26 @@
             const url = await fetchTunnelUrl();
             if (url) {
                 generateQR(url);
-            } else {
-                document.getElementById('loading-state')?.remove();
-                document.getElementById('error-state').style.display = 'block';
+                return;
             }
+
+            // 若隧道仍在建立中，每 1.5 秒重試一次（最多 25 次約 35 秒）
+            let attempts = 0;
+            const checkTimer = setInterval(async () => {
+                attempts++;
+                const retryUrl = await fetchTunnelUrl();
+                if (retryUrl) {
+                    generateQR(retryUrl);
+                    clearInterval(checkTimer);
+                } else if (attempts >= 25) {
+                    clearInterval(checkTimer);
+                    document.getElementById('loading-state')?.remove();
+                    document.getElementById('error-state').style.display = 'block';
+                }
+            }, 1500);
         }
 
         init();
-
-        // 每 30 秒自動嘗試刷新（若 cloudflared 剛啟動）
-        const autoRefresh = setInterval(async () => {
-            if (currentUrl) { clearInterval(autoRefresh); return; }
-            const url = await fetchTunnelUrl();
-            if (url) { generateQR(url); clearInterval(autoRefresh); }
-        }, 30000);
     </script>
 </body>
 </html>

@@ -4,6 +4,7 @@ const { Server } = require('socket.io');
 const fs = require('fs');
 const path = require('path');
 const xlsx = require('xlsx');
+const { spawn } = require('child_process');
 
 
 const app = express();
@@ -37,6 +38,7 @@ app.get('/images/:filename', (req, res, next) => {
 });
 
 // 設定 public 為靜態資料夾
+app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
 let allDrinks = [];
@@ -45,6 +47,18 @@ let orders = [];
 let favoritesDatabase = {};
 let avatarsDatabase = {};
 let tunnelUrl = ''; // 儲存 cloudflared 隧道網址
+
+app.get('/api/tunnel-url', (req, res) => {
+    res.json({ url: tunnelUrl || null });
+});
+
+app.post('/api/tunnel-url', (req, res) => {
+    if (req.body && req.body.url) {
+        tunnelUrl = req.body.url;
+        console.log(`[API] 收到外部隧道網址: ${tunnelUrl}`);
+    }
+    res.json({ success: true, url: tunnelUrl });
+});
 let campaignDatabase = { active: false, text: '', tag: '活動', style: 'gold' };
 
 const defaultAvatarStyles = [
@@ -688,7 +702,61 @@ io.on('connection', (socket) => {
     });
 });
 
+let cfProcess = null;
+function startCloudflareTunnel(port) {
+    const candidates = [
+        'C:\\Program Files (x86)\\cloudflared\\cloudflared.exe',
+        'C:\\Program Files\\cloudflared\\cloudflared.exe',
+        path.join(__dirname, 'cloudflared.exe'),
+        'cloudflared'
+    ];
+    let cfBin = '';
+    for (const cand of candidates) {
+        if (cand === 'cloudflared') {
+            cfBin = 'cloudflared';
+            break;
+        }
+        if (fs.existsSync(cand)) {
+            cfBin = cand;
+            break;
+        }
+    }
+
+    if (!cfBin) return;
+
+    console.log(`🌐 正在啟動 Cloudflare 隧道 (${cfBin})...`);
+    try {
+        cfProcess = spawn(cfBin, ['tunnel', '--url', `http://localhost:${port}`, '--no-autoupdate']);
+
+        const urlPattern = /https:\/\/[a-zA-Z0-9\-]+\.trycloudflare\.com/;
+        const onData = (chunk) => {
+            const text = chunk.toString();
+            const match = text.match(urlPattern);
+            if (match && !tunnelUrl) {
+                tunnelUrl = match[0];
+                console.log('\n============================================');
+                console.log('  ✅ Cloudflare HTTPS 隧道建立成功！');
+                console.log(`  🔗 客人連線網址: ${tunnelUrl}`);
+                console.log('============================================\n');
+                io.emit('tunnel-url-ready', { url: tunnelUrl });
+            }
+        };
+
+        cfProcess.stdout.on('data', onData);
+        cfProcess.stderr.on('data', onData);
+        cfProcess.on('error', (err) => {
+            console.log('⚠️ Cloudflare 隧道無法啟動（使用本機模式）:', err.message);
+        });
+    } catch (err) {
+        console.log('⚠️ 啟動 Cloudflare 失敗:', err.message);
+    }
+}
+
+process.on('exit', () => { if (cfProcess) cfProcess.kill(); });
+process.on('SIGINT', () => { if (cfProcess) cfProcess.kill(); process.exit(); });
+
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
     console.log(`伺服器已啟動: http://localhost:${PORT}`);
+    startCloudflareTunnel(PORT);
 });
