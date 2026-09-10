@@ -4,14 +4,21 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>🍸 Iverson Bar — 掃碼點餐</title>
-    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+    <!-- 本機端 qrcode.min.js，離線或無外網時也能 100% 穩定生成 -->
+    <script src="/qrcode.min.js"></script>
+    <script>
+        if (typeof QRCode === 'undefined') {
+            document.write('<script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"><\/script>');
+        }
+    </script>
+    <script src="/socket.io/socket.io.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;900&display=swap" rel="stylesheet">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
 
         body {
-            font-family: 'Inter', 'Segoe UI', sans-serif;
+            font-family: 'Inter', 'Segoe UI', -apple-system, sans-serif;
             background: #0a0a0f;
             color: #e0e0e0;
             min-height: 100vh;
@@ -19,12 +26,12 @@
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            padding: 20px;
-            overflow: hidden;
+            padding: 24px 16px;
+            overflow-x: hidden;
             position: relative;
         }
 
-        /* 動態星空背景 */
+        /* 動態流光背景光暈 */
         .bg-orb {
             position: fixed;
             border-radius: 50%;
@@ -34,8 +41,8 @@
             pointer-events: none;
         }
         .bg-orb-1 { width: 400px; height: 400px; background: #f39c12; top: -100px; left: -100px; animation-delay: 0s; }
-        .bg-orb-2 { width: 300px; height: 300px; background: #8e44ad; bottom: -80px; right: -80px; animation-delay: 3s; }
-        .bg-orb-3 { width: 200px; height: 200px; background: #27ae60; top: 50%; left: 50%; animation-delay: 6s; }
+        .bg-orb-2 { width: 320px; height: 320px; background: #8e44ad; bottom: -80px; right: -80px; animation-delay: 3s; }
+        .bg-orb-3 { width: 220px; height: 220px; background: #27ae60; top: 50%; left: 50%; animation-delay: 6s; }
 
         @keyframes orbFloat {
             0%, 100% { transform: translate(0, 0) scale(1); }
@@ -49,8 +56,8 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 28px;
-            max-width: 480px;
+            gap: 20px;
+            max-width: 450px;
             width: 100%;
         }
 
@@ -60,10 +67,11 @@
         }
 
         .brand-emoji {
-            font-size: 3.5em;
+            font-size: 3.4em;
             display: block;
-            margin-bottom: 8px;
+            margin-bottom: 6px;
             animation: drinkBounce 3s ease-in-out infinite;
+            user-select: none;
         }
 
         @keyframes drinkBounce {
@@ -82,45 +90,87 @@
         }
 
         .brand p {
-            font-size: 0.95em;
+            font-size: 0.88em;
             color: #888;
             margin-top: 4px;
             letter-spacing: 2px;
             text-transform: uppercase;
         }
 
+        /* 雙模切換 Tab */
+        .mode-tabs {
+            display: flex;
+            background: rgba(255,255,255,0.06);
+            border: 1px solid rgba(255,255,255,0.12);
+            border-radius: 30px;
+            padding: 4px;
+            gap: 6px;
+            width: 100%;
+            max-width: 360px;
+        }
+
+        .mode-tab {
+            flex: 1;
+            padding: 8px 12px;
+            border-radius: 24px;
+            border: none;
+            background: transparent;
+            color: #888;
+            font-size: 0.85em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.25s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        .mode-tab.active {
+            background: linear-gradient(135deg, rgba(243, 156, 18, 0.25), rgba(230, 126, 34, 0.25));
+            border: 1px solid rgba(243, 156, 18, 0.5);
+            color: #f39c12;
+            box-shadow: 0 2px 10px rgba(243, 156, 18, 0.2);
+        }
+
         /* QR Code 卡片 */
         .qr-card {
-            background: rgba(255,255,255,0.05);
+            background: rgba(255,255,255,0.04);
             border: 1px solid rgba(255,255,255,0.12);
             border-radius: 24px;
-            padding: 28px;
+            padding: 24px 20px 20px;
             text-align: center;
             backdrop-filter: blur(20px);
             -webkit-backdrop-filter: blur(20px);
-            box-shadow: 0 20px 60px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.1);
+            box-shadow: 0 20px 60px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.1);
             width: 100%;
             transition: transform 0.3s ease;
         }
 
         .qr-card:hover {
-            transform: translateY(-4px);
+            transform: translateY(-2px);
         }
 
         /* QR Code 容器（白底確保掃描正確） */
         #qr-canvas-wrap {
-            display: inline-block;
-            background: #fff;
-            border-radius: 16px;
-            padding: 16px;
-            margin: 0 auto 20px;
-            box-shadow: 0 8px 30px rgba(0,0,0,0.4);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background: #ffffff;
+            border-radius: 18px;
+            padding: 14px;
+            margin: 0 auto 14px;
+            box-shadow: 0 10px 35px rgba(0,0,0,0.45);
             position: relative;
+            min-width: 258px;
+            min-height: 258px;
         }
 
         #qr-canvas-wrap canvas {
             display: block;
-            border-radius: 8px;
+            border-radius: 10px;
+            width: 230px !important;
+            height: 230px !important;
         }
 
         /* 中央 Logo 覆蓋 */
@@ -128,45 +178,59 @@
             position: absolute;
             top: 50%; left: 50%;
             transform: translate(-50%, -50%);
-            width: 44px; height: 44px;
-            background: #fff;
-            border-radius: 10px;
+            width: 46px; height: 46px;
+            background: #ffffff;
+            border-radius: 12px;
             display: flex;
             align-items: center;
             justify-content: center;
             font-size: 1.6em;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            box-shadow: 0 2px 10px rgba(0,0,0,0.25);
+            pointer-events: none;
+            user-select: none;
         }
 
         .qr-label {
             font-size: 1.05em;
-            color: #ccc;
-            margin-bottom: 6px;
+            color: #ddd;
+            font-weight: 600;
+            margin-bottom: 4px;
         }
 
         .qr-sublabel {
             font-size: 0.82em;
-            color: #666;
-            margin-bottom: 18px;
+            color: #777;
+            margin-bottom: 14px;
         }
 
-        /* URL 顯示 */
+        /* DNS / 狀態提示文字 */
+        .status-hint {
+            font-size: 0.8em;
+            margin-bottom: 12px;
+            padding: 6px 12px;
+            border-radius: 8px;
+            background: rgba(255,255,255,0.03);
+            display: inline-block;
+            transition: all 0.3s;
+        }
+
+        /* URL 顯示卡片 */
         .url-box {
             background: rgba(243, 156, 18, 0.08);
-            border: 1px solid rgba(243, 156, 18, 0.25);
-            border-radius: 10px;
+            border: 1px solid rgba(243, 156, 18, 0.3);
+            border-radius: 12px;
             padding: 10px 14px;
             cursor: pointer;
             transition: all 0.2s;
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 10px;
             justify-content: space-between;
         }
 
         .url-box:hover {
-            background: rgba(243, 156, 18, 0.15);
-            border-color: rgba(243, 156, 18, 0.5);
+            background: rgba(243, 156, 18, 0.16);
+            border-color: rgba(243, 156, 18, 0.6);
         }
 
         .url-text {
@@ -174,37 +238,40 @@
             color: #f39c12;
             word-break: break-all;
             text-align: left;
-            font-family: 'Courier New', monospace;
+            font-family: 'Consolas', 'Courier New', monospace;
+            line-height: 1.4;
         }
 
         .copy-icon {
-            font-size: 1.1em;
+            font-size: 1.15em;
             flex-shrink: 0;
-            opacity: 0.7;
+            opacity: 0.8;
+            transition: transform 0.15s;
         }
+        .url-box:hover .copy-icon { transform: scale(1.15); }
 
         /* 複製成功提示 */
         .copy-toast {
             position: fixed;
-            top: 20px;
+            top: 24px;
             left: 50%;
-            transform: translateX(-50%) translateY(-80px);
+            transform: translateX(-50%) translateY(-100px);
             background: #27ae60;
             color: #fff;
-            padding: 10px 22px;
+            padding: 10px 24px;
             border-radius: 30px;
             font-size: 0.9em;
             font-weight: 600;
-            box-shadow: 0 4px 15px rgba(39, 174, 96, 0.4);
+            box-shadow: 0 6px 20px rgba(39, 174, 96, 0.45);
             transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
             z-index: 1000;
         }
         .copy-toast.show { transform: translateX(-50%) translateY(0); }
 
-        /* 狀態指示 */
+        /* 狀態指示列 */
         .status-row {
             display: flex;
-            gap: 12px;
+            gap: 10px;
             justify-content: center;
             flex-wrap: wrap;
         }
@@ -213,25 +280,42 @@
             display: flex;
             align-items: center;
             gap: 6px;
-            background: rgba(39, 174, 96, 0.1);
-            border: 1px solid rgba(39, 174, 96, 0.3);
             border-radius: 20px;
-            padding: 5px 12px;
-            font-size: 0.8em;
+            padding: 6px 14px;
+            font-size: 0.82em;
+            font-weight: 500;
+            transition: all 0.3s;
+        }
+
+        .status-pill.online {
+            background: rgba(39, 174, 96, 0.12);
+            border: 1px solid rgba(39, 174, 96, 0.35);
             color: #2ecc71;
+        }
+
+        .status-pill.tunnel {
+            background: rgba(52, 152, 219, 0.12);
+            border: 1px solid rgba(52, 152, 219, 0.35);
+            color: #3498db;
+        }
+
+        .status-pill.lan {
+            background: rgba(243, 156, 18, 0.12);
+            border: 1px solid rgba(243, 156, 18, 0.35);
+            color: #f39c12;
         }
 
         .status-dot {
             width: 7px;
             height: 7px;
             border-radius: 50%;
-            background: #2ecc71;
+            background: currentColor;
             animation: pulse 1.5s ease-in-out infinite;
         }
 
         @keyframes pulse {
             0%, 100% { transform: scale(1); opacity: 1; }
-            50% { transform: scale(1.3); opacity: 0.6; }
+            50% { transform: scale(1.3); opacity: 0.5; }
         }
 
         /* Loading state */
@@ -239,12 +323,12 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 16px;
-            padding: 40px 0;
+            gap: 14px;
+            padding: 30px 0;
         }
 
         .loading-spinner {
-            width: 48px; height: 48px;
+            width: 44px; height: 44px;
             border: 3px solid rgba(243,156,18,0.2);
             border-top-color: #f39c12;
             border-radius: 50%;
@@ -253,17 +337,45 @@
 
         @keyframes spin { to { transform: rotate(360deg); } }
 
-        .loading-text { color: #888; font-size: 0.9em; }
+        .loading-text { color: #888; font-size: 0.88em; }
 
         /* Error state */
         .error-state {
             background: rgba(231, 76, 60, 0.1);
             border: 1px solid rgba(231, 76, 60, 0.3);
             border-radius: 12px;
-            padding: 20px;
+            padding: 16px;
             text-align: center;
             color: #e74c3c;
             display: none;
+            margin-top: 10px;
+            font-size: 0.88em;
+        }
+
+        /* 刷新按鈕組 */
+        .btn-group {
+            display: flex;
+            gap: 10px;
+        }
+
+        .action-btn {
+            background: rgba(255,255,255,0.06);
+            border: 1px solid rgba(255,255,255,0.12);
+            color: #ccc;
+            padding: 8px 18px;
+            border-radius: 10px;
+            font-size: 0.85em;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .action-btn:hover {
+            background: rgba(255,255,255,0.14);
+            color: #fff;
+            transform: translateY(-1px);
         }
 
         /* 底部說明 */
@@ -273,19 +385,6 @@
             color: #555;
             line-height: 1.6;
         }
-
-        /* 刷新按鈕 */
-        .refresh-btn {
-            background: rgba(255,255,255,0.06);
-            border: 1px solid rgba(255,255,255,0.12);
-            color: #aaa;
-            padding: 8px 18px;
-            border-radius: 8px;
-            font-size: 0.85em;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-        .refresh-btn:hover { background: rgba(255,255,255,0.12); color: #fff; }
     </style>
 </head>
 <body>
@@ -293,33 +392,44 @@
     <div class="bg-orb bg-orb-2"></div>
     <div class="bg-orb bg-orb-3"></div>
 
-    <div class="copy-toast" id="copy-toast">✅ 已複製到剪貼簿！</div>
+    <div class="copy-toast" id="copy-toast">✅ 已複製點餐網址！</div>
 
     <div class="container">
-        <!-- 品牌 -->
+        <!-- 品牌標題 -->
         <div class="brand">
             <span class="brand-emoji">🍸</span>
             <h1>Iverson Bar</h1>
             <p>掃碼點餐 · Scan to Order</p>
         </div>
 
+        <!-- 雙模連線切換 Tab -->
+        <div class="mode-tabs">
+            <button class="mode-tab active" id="tab-tunnel" onclick="switchMode('tunnel')">
+                🌐 雲端外網 (4G/5G)
+            </button>
+            <button class="mode-tab" id="tab-lan" onclick="switchMode('lan')">
+                📶 現場 Wi-Fi (直連)
+            </button>
+        </div>
+
         <!-- QR 卡片 -->
         <div class="qr-card">
             <p class="qr-label">📱 用手機掃描下方 QR Code</p>
-            <p class="qr-sublabel">掃描後即可進入點餐頁面</p>
+            <p class="qr-sublabel" id="mode-sublabel">掃描後即可使用行動網路遠端進入點餐</p>
+
+            <div id="status-hint" class="status-hint" style="display:none;"></div>
 
             <div id="qr-canvas-wrap">
                 <div class="loading-state" id="loading-state">
                     <div class="loading-spinner"></div>
-                    <p class="loading-text">正在產生 QR Code...</p>
+                    <p class="loading-text">正在連接伺服器與生成 QR Code...</p>
                 </div>
             </div>
 
             <div class="error-state" id="error-state">
-                ⚠️ 未偵測到隧道網址<br>
-                <small style="color:#aaa; margin-top:8px; display:block;">
-                    請確認 cloudflared 已啟動<br>
-                    並以 <code>?url=https://xxx.trycloudflare.com</code> 附加網址
+                ⚠️ 未能取得連線網址<br>
+                <small style="color:#aaa; margin-top:6px; display:block;">
+                    請確認伺服器已啟動，或切換上方「現場 Wi-Fi」模式
                 </small>
             </div>
 
@@ -331,115 +441,261 @@
             </div>
         </div>
 
-        <!-- 狀態列 -->
+        <!-- 狀態指示列 -->
         <div class="status-row">
-            <div class="status-pill">
+            <div class="status-pill online">
                 <div class="status-dot"></div>
-                吧台伺服器運行中
+                吧台主機已啟動
             </div>
-            <div class="status-pill" id="tunnel-status-pill" style="display:none;">
+            <div class="status-pill tunnel" id="network-status-pill" style="display:none;">
                 <div class="status-dot"></div>
-                HTTPS 隧道已啟用
+                <span id="network-status-text">連線就緒</span>
             </div>
         </div>
 
-        <!-- 刷新 -->
-        <button class="refresh-btn" onclick="window.location.reload()">🔄 重新整理</button>
+        <!-- 操作按鈕 -->
+        <div class="btn-group">
+            <button class="action-btn" onclick="window.location.reload()">🔄 重新整理</button>
+            <a class="action-btn" id="open-link-btn" href="#" target="_blank" style="display:none;">🌐 在新分頁開啟</a>
+        </div>
 
         <p class="footer-note">
-            此頁面僅供吧台主機使用<br>
-            客人掃描 QR Code 後即可點餐
+            此頁面供吧台螢幕常駐顯示<br>
+            訪客或好友掃描後即可直接點單至吧台
         </p>
     </div>
 
     <script>
-        let currentUrl = '';
+        let currentMode = 'tunnel'; // 'tunnel' | 'lan'
+        let tunnelUrl = '';
+        let localUrl = '';
+        let activeDisplayedUrl = '';
 
         function getUrlParam(name) {
             const params = new URLSearchParams(window.location.search);
             return params.get(name);
         }
 
-        async function fetchTunnelUrl() {
-            // 優先從 URL 參數讀取（由 PowerShell 腳本傳入）
+        async function fetchTunnelInfo() {
             const paramUrl = getUrlParam('url');
-            if (paramUrl && paramUrl.startsWith('https://')) {
-                return paramUrl;
+            if (paramUrl && paramUrl.startsWith('http')) {
+                if (paramUrl.startsWith('https://')) {
+                    tunnelUrl = paramUrl;
+                } else {
+                    localUrl = paramUrl;
+                }
             }
 
-            // 嘗試從伺服器 API 讀取（由 server.js 提供）
             try {
-                const res = await fetch('/api/tunnel-url', { signal: AbortSignal.timeout(3000) });
+                const res = await fetch('/api/tunnel-url', { signal: AbortSignal.timeout(3500) });
                 if (res.ok) {
                     const data = await res.json();
-                    if (data.url) return data.url;
+                    if (data.url) tunnelUrl = data.url;
+                    if (data.localUrl) localUrl = data.localUrl;
                 }
-            } catch (e) {}
-
-            return null;
+            } catch (e) {
+                console.warn('讀取 /api/tunnel-url 失敗:', e.message);
+            }
         }
 
-        function generateQR(url) {
+        function switchMode(mode) {
+            currentMode = mode;
+            document.getElementById('tab-tunnel').classList.toggle('active', mode === 'tunnel');
+            document.getElementById('tab-lan').classList.toggle('active', mode === 'lan');
+
+            const sublabel = document.getElementById('mode-sublabel');
+            if (mode === 'tunnel') {
+                sublabel.textContent = '掃描後即可使用 4G/5G 行動網路遠端點餐';
+                if (tunnelUrl) {
+                    renderQRCode(tunnelUrl, true);
+                    verifyTunnelReachable(tunnelUrl);
+                } else {
+                    showLoading('正在等待 Cloudflare 隧道建立...');
+                    pollTunnel();
+                }
+            } else {
+                sublabel.textContent = '手機連上店內相同 Wi-Fi 即可極速直連點餐';
+                if (localUrl) {
+                    renderQRCode(localUrl, false);
+                    setHint('📶 店內 Wi-Fi 模式：手機需連接相同 Wi-Fi 網路', '#2ecc71');
+                } else {
+                    showLoading('正在取得本機 Wi-Fi 位址...');
+                }
+            }
+        }
+
+        function showLoading(text) {
+            const wrap = document.getElementById('qr-canvas-wrap');
+            wrap.innerHTML = `
+                <div class="loading-state" id="loading-state">
+                    <div class="loading-spinner"></div>
+                    <p class="loading-text">${text}</p>
+                </div>`;
+            document.getElementById('url-section').style.display = 'none';
+            document.getElementById('open-link-btn').style.display = 'none';
+        }
+
+        function setHint(text, color) {
+            const hint = document.getElementById('status-hint');
+            hint.style.display = 'inline-block';
+            hint.innerHTML = text;
+            hint.style.color = color || '#888';
+        }
+
+        function renderQRCode(url, isTunnel) {
+            if (!url) return;
+            activeDisplayedUrl = url;
+
             const wrap = document.getElementById('qr-canvas-wrap');
             document.getElementById('loading-state')?.remove();
+            document.getElementById('error-state').style.display = 'none';
 
-            const canvas = document.createElement('canvas');
             wrap.innerHTML = '';
+            const canvas = document.createElement('canvas');
             wrap.appendChild(canvas);
 
-            // QR Logo 覆蓋
             const logoDiv = document.createElement('div');
             logoDiv.className = 'qr-logo-overlay';
             logoDiv.textContent = '🍸';
             wrap.appendChild(logoDiv);
 
-            QRCode.toCanvas(canvas, url, {
-                width: 220,
-                margin: 1,
-                color: { dark: '#0a0a0f', light: '#ffffff' },
-                errorCorrectionLevel: 'H'
-            });
-
-            // 顯示 URL
-            document.getElementById('url-display').textContent = url;
-            document.getElementById('url-section').style.display = 'block';
-            document.getElementById('tunnel-status-pill').style.display = 'flex';
-            currentUrl = url;
-        }
-
-        function copyUrl() {
-            if (!currentUrl) return;
-            navigator.clipboard.writeText(currentUrl).then(() => {
-                const toast = document.getElementById('copy-toast');
-                toast.classList.add('show');
-                setTimeout(() => toast.classList.remove('show'), 2500);
-            });
-        }
-
-        async function init() {
-            const url = await fetchTunnelUrl();
-            if (url) {
-                generateQR(url);
+            if (typeof QRCode === 'undefined') {
+                setTimeout(() => renderQRCode(url, isTunnel), 300);
                 return;
             }
 
-            // 若隧道仍在建立中，每 1.5 秒重試一次（最多 25 次約 35 秒）
+            try {
+                QRCode.toCanvas(canvas, url, {
+                    width: 230,
+                    margin: 1,
+                    color: { dark: '#0a0a0f', light: '#ffffff' },
+                    errorCorrectionLevel: 'H'
+                });
+            } catch (e) {
+                console.error('QRCode 繪製失敗:', e);
+            }
+
+            document.getElementById('url-display').textContent = url;
+            document.getElementById('url-section').style.display = 'block';
+
+            const openBtn = document.getElementById('open-link-btn');
+            openBtn.href = url;
+            openBtn.style.display = 'inline-flex';
+
+            const pill = document.getElementById('network-status-pill');
+            const pillText = document.getElementById('network-status-text');
+            pill.style.display = 'flex';
+
+            if (isTunnel) {
+                pill.className = 'status-pill tunnel';
+                pillText.textContent = '🌐 公網 HTTPS 隧道';
+            } else {
+                pill.className = 'status-pill lan';
+                pillText.textContent = '📶 區網 Wi-Fi 直連';
+            }
+        }
+
+        // 探測 Cloudflare DNS 是否已全球生效
+        async function verifyTunnelReachable(url) {
+            setHint('⏳ 正在驗證全球 DNS（通常約需 5~15 秒），若手機暫時連不上可切換上方「現場 Wi-Fi」', '#f39c12');
+            
+            let ok = false;
+            for (let i = 0; i < 15; i++) {
+                try {
+                    // 使用 fetch no-cors 測試 DNS 與網路通路
+                    await fetch(url + '/api/tunnel-url', { mode: 'no-cors', cache: 'no-cache', signal: AbortSignal.timeout(2000) });
+                    ok = true;
+                    break;
+                } catch (e) {
+                    await new Promise(r => setTimeout(r, 1500));
+                }
+            }
+
+            if (currentMode === 'tunnel') {
+                if (ok) {
+                    setHint('✅ 雲端隧道已就緒！手機可立即掃碼點餐', '#2ecc71');
+                } else {
+                    setHint('⚠️ 雲端 DNS 仍在同步中；急用請切換上方<b>「現場 Wi-Fi」</b>直連！', '#e67e22');
+                }
+            }
+        }
+
+        function copyUrl() {
+            if (!activeDisplayedUrl) return;
+            navigator.clipboard.writeText(activeDisplayedUrl).then(() => {
+                const toast = document.getElementById('copy-toast');
+                toast.classList.add('show');
+                setTimeout(() => toast.classList.remove('show'), 2200);
+            }).catch(() => {
+                const input = document.createElement('input');
+                input.value = activeDisplayedUrl;
+                document.body.appendChild(input);
+                input.select();
+                document.execCommand('copy');
+                document.body.removeChild(input);
+                const toast = document.getElementById('copy-toast');
+                toast.classList.add('show');
+                setTimeout(() => toast.classList.remove('show'), 2200);
+            });
+        }
+
+        function pollTunnel() {
             let attempts = 0;
-            const checkTimer = setInterval(async () => {
+            const timer = setInterval(async () => {
                 attempts++;
-                const retryUrl = await fetchTunnelUrl();
-                if (retryUrl) {
-                    generateQR(retryUrl);
-                    clearInterval(checkTimer);
+                await fetchTunnelInfo();
+                if (tunnelUrl) {
+                    clearInterval(timer);
+                    if (currentMode === 'tunnel') {
+                        renderQRCode(tunnelUrl, true);
+                        verifyTunnelReachable(tunnelUrl);
+                    }
                 } else if (attempts >= 25) {
-                    clearInterval(checkTimer);
-                    document.getElementById('loading-state')?.remove();
-                    document.getElementById('error-state').style.display = 'block';
+                    clearInterval(timer);
+                    if (currentMode === 'tunnel' && !tunnelUrl) {
+                        if (localUrl) {
+                            switchMode('lan');
+                        } else {
+                            document.getElementById('loading-state')?.remove();
+                            document.getElementById('error-state').style.display = 'block';
+                        }
+                    }
                 }
             }, 1500);
         }
 
-        init();
+        async function init() {
+            // 監聽 Socket.IO 即時推播
+            if (typeof io !== 'undefined') {
+                try {
+                    const socket = io();
+                    socket.on('tunnel-url-ready', (data) => {
+                        if (data && data.url) {
+                            console.log('⚡ Socket 收到最新隧道網址:', data.url);
+                            tunnelUrl = data.url;
+                            if (currentMode === 'tunnel') {
+                                renderQRCode(tunnelUrl, true);
+                                verifyTunnelReachable(tunnelUrl);
+                            }
+                        }
+                    });
+                } catch (err) {}
+            }
+
+            await fetchTunnelInfo();
+
+            if (tunnelUrl) {
+                switchMode('tunnel');
+            } else if (localUrl) {
+                // 如果外網隧道還在建立，先顯示現場 Wi-Fi，並在背景等待隧道
+                switchMode('lan');
+                pollTunnel();
+            } else {
+                pollTunnel();
+            }
+        }
+
+        window.addEventListener('DOMContentLoaded', init);
     </script>
 </body>
 </html>

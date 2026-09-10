@@ -68,7 +68,7 @@ if ($cfExe) {
     if (Test-Path $cfLog) { Remove-Item $cfLog -Force -ErrorAction SilentlyContinue }
 
     $cfProc = Start-Process -FilePath $cfExe `
-        -ArgumentList "tunnel --url http://localhost:3000 --no-autoupdate" `
+        -ArgumentList "tunnel --url http://localhost:3000 --no-autoupdate --protocol http2 --edge-ip-version 4" `
         -RedirectStandardError $cfLog `
         -RedirectStandardOutput $cfLog `
         -WindowStyle Hidden `

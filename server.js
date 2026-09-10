@@ -4,6 +4,7 @@ const { Server } = require('socket.io');
 const fs = require('fs');
 const path = require('path');
 const xlsx = require('xlsx');
+const os = require('os');
 const { spawn } = require('child_process');
 
 
@@ -48,14 +49,34 @@ let favoritesDatabase = {};
 let avatarsDatabase = {};
 let tunnelUrl = ''; // 儲存 cloudflared 隧道網址
 
+function getLocalIp() {
+    try {
+        const interfaces = os.networkInterfaces();
+        for (const name of Object.keys(interfaces)) {
+            for (const iface of interfaces[name]) {
+                if (iface.family === 'IPv4' && !iface.internal && !iface.address.startsWith('169.254')) {
+                    return iface.address;
+                }
+            }
+        }
+    } catch (e) {}
+    return 'localhost';
+}
+
 app.get('/api/tunnel-url', (req, res) => {
-    res.json({ url: tunnelUrl || null });
+    const port = server.address() ? server.address().port : (process.env.PORT || 3000);
+    const localIp = getLocalIp();
+    res.json({
+        url: tunnelUrl || null,
+        localUrl: `http://${localIp}:${port}`
+    });
 });
 
 app.post('/api/tunnel-url', (req, res) => {
     if (req.body && req.body.url) {
         tunnelUrl = req.body.url;
-        console.log(`[API] 收到外部隧道網址: ${tunnelUrl}`);
+        console.log(`✅ [API] 收到並廣播隧道網址: ${tunnelUrl}`);
+        io.emit('tunnel-url-ready', { url: tunnelUrl });
     }
     res.json({ success: true, url: tunnelUrl });
 });
@@ -319,24 +340,33 @@ function loadDrinksData() {
             }
         });
 
-        // 收集所有在 recipeDatabase 中的名稱，以及所有在 imagesDir 中有圖檔的名稱
-        const allDrinkNames = new Set();
-        Object.keys(recipeDatabase).forEach(name => allDrinkNames.add(name));
-        imageDrinkFiles.forEach((ext, name) => allDrinkNames.add(name));
+        const normalize = (str) => (str || '').toLowerCase().replace(/[^a-z0-9\u4e00-\u9fa5]/g, '');
+        const recipeKeys = Object.keys(recipeDatabase);
+
+        // 收集所有標準調酒名稱：以 recipeDatabase (有完整配方者) 為第一優先
+        const allDrinkNames = new Set(recipeKeys);
+
+        // 圖片資料夾中的圖檔：若已經匹配現有配方庫中的酒款，則不重複新增；僅無配方的孤兒圖片才視為 comingSoon
+        imageDrinkFiles.forEach((ext, rawDrinkName) => {
+            const normRaw = normalize(rawDrinkName);
+            const exists = recipeKeys.some(k => {
+                const normK = normalize(k);
+                return normK === normRaw || (normRaw.length >= 2 && (normK.includes(normRaw) || normRaw.includes(normK)));
+            });
+            if (!exists) {
+                allDrinkNames.add(rawDrinkName);
+            }
+        });
 
         let idCounter = 1;
         allDrinkNames.forEach(rawDrinkName => {
             let recipeKey = rawDrinkName;
             
             if (!recipeDatabase[recipeKey]) {
-                const normalize = (str) => str.toLowerCase().replace(/[^a-z0-9\u4e00-\u9fa5]/g, '');
                 const normRaw = normalize(rawDrinkName);
-                const knownKeys = Object.keys(recipeDatabase);
-                
-                let match = knownKeys.find(k => normalize(k) === normRaw);
-                
+                let match = recipeKeys.find(k => normalize(k) === normRaw);
                 if (!match && normRaw.length >= 2) {
-                    match = knownKeys.find(k => normalize(k).includes(normRaw) || normRaw.includes(normalize(k)));
+                    match = recipeKeys.find(k => normalize(k).includes(normRaw) || normRaw.includes(normalize(k)));
                 }
                 if (match) recipeKey = match;
             }
@@ -381,21 +411,11 @@ app.get('/api/drinks', (req, res) => {
     res.json(allDrinks);
 });
 
-// Cloudflared 隧道 URL API
-app.get('/api/tunnel-url', (req, res) => {
-    res.json({ url: tunnelUrl });
-});
-
-app.use(express.json());
-app.post('/api/tunnel-url', (req, res) => {
-    const { url } = req.body;
-    if (url && url.startsWith('https://')) {
-        tunnelUrl = url;
-        console.log(`✅ 已記錄隧道網址: ${url}`);
-        res.json({ ok: true });
-    } else {
-        res.status(400).json({ error: 'invalid url' });
-    }
+app.post('/api/reload-drinks', (req, res) => {
+    loadDrinksData();
+    io.emit('drinks-updated', allDrinks);
+    console.log(`🍹 已重新整理酒單，目前共有 ${allDrinks.length} 款調酒。`);
+    res.json({ success: true, count: allDrinks.length });
 });
 
 app.get('/api/campaign', (req, res) => {
@@ -726,13 +746,13 @@ function startCloudflareTunnel(port) {
 
     console.log(`🌐 正在啟動 Cloudflare 隧道 (${cfBin})...`);
     try {
-        cfProcess = spawn(cfBin, ['tunnel', '--url', `http://localhost:${port}`, '--no-autoupdate']);
+        cfProcess = spawn(cfBin, ['tunnel', '--url', `http://localhost:${port}`, '--no-autoupdate', '--protocol', 'http2', '--edge-ip-version', '4']);
 
         const urlPattern = /https:\/\/[a-zA-Z0-9\-]+\.trycloudflare\.com/;
         const onData = (chunk) => {
             const text = chunk.toString();
             const match = text.match(urlPattern);
-            if (match && !tunnelUrl) {
+            if (match && tunnelUrl !== match[0]) {
                 tunnelUrl = match[0];
                 console.log('\n============================================');
                 console.log('  ✅ Cloudflare HTTPS 隧道建立成功！');
@@ -740,12 +760,18 @@ function startCloudflareTunnel(port) {
                 console.log('============================================\n');
                 io.emit('tunnel-url-ready', { url: tunnelUrl });
             }
+            if (text.includes('ERR') || text.includes('failed') || text.includes('error')) {
+                console.log(`[Cloudflare Log] ${text.trim()}`);
+            }
         };
 
         cfProcess.stdout.on('data', onData);
         cfProcess.stderr.on('data', onData);
         cfProcess.on('error', (err) => {
             console.log('⚠️ Cloudflare 隧道無法啟動（使用本機模式）:', err.message);
+        });
+        cfProcess.on('close', (code) => {
+            console.log(`ℹ️ Cloudflare 隧道程序已結束 (代碼: ${code})`);
         });
     } catch (err) {
         console.log('⚠️ 啟動 Cloudflare 失敗:', err.message);
